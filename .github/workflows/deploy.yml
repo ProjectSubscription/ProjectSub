@@ -45,7 +45,7 @@ jobs:
             git pull origin main
 
             # 컨테이너 빌드 및 실행
-            docker-compose up --build -d
+            DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker-compose up --build -d
 
             # 불필요한 이미지 삭제
             docker image prune -f
