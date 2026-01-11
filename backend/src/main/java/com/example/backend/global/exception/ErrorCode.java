@@ -19,8 +19,13 @@ public enum ErrorCode {
 
     /* ===== Subscription ===== */
     DUPLICATE_SUBSCRIPTION_PLAN(HttpStatus.CONFLICT, "이미 존재하는 구독 상품입니다."),
+    DUPLICATE_ACTIVE_SUBSCRIPTION(HttpStatus.CONFLICT, "이미 활성화된 구독이 존재합니다."),
     INVALID_SUBSCRIPTION_STATE(HttpStatus.BAD_REQUEST, "구독 상태가 올바르지 않습니다."),
-    SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "구독 정보를 찾을 수 없습니다.");
+    SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "구독 정보를 찾을 수 없습니다."),
+
+    /* ===== Subscription Plan ===== */
+    SUBSCRIPTION_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND,"구독 상품을 찾을 수 없습니다."),
+    INACTIVE_SUBSCRIPTION_PLAN(HttpStatus.BAD_REQUEST, "비활성화된 구독 상품입니다.");
 
     private final HttpStatus status;
     private final String message;
