@@ -1,0 +1,152 @@
+### Subscription API Test File
+### 이 파일은 IntelliJ IDEA의 HTTP Client 또는 VS Code의 REST Client 확장에서 사용할 수 있습니다.
+### 
+### 참고: 아래 테스트는 SQL 테스트 데이터를 기반으로 작성되었습니다.
+### - 채널 ID: 1(프로그래밍 기초), 2(웹 개발), 3(디자인), 4(데이터 분석)
+### - 크리에이터 ID: 3, 4
+### - 멤버 ID: 1(일반사용자1), 2(일반사용자2), 6(OAuth사용자)
+### - 구독 플랜 ID: 1~8
+
+### 변수 설정
+@baseUrl = http://localhost:8080
+
+### ============================================
+### 1. 구독 상품(플랜) 조회
+### ============================================
+
+### 채널 1 (프로그래밍 기초 강의)의 구독 상품 조회
+GET {{baseUrl}}/api/channels/1/plans
+
+### 채널 2 (웹 개발 마스터)의 구독 상품 조회
+GET {{baseUrl}}/api/channels/2/plans
+
+### 채널 3 (디자인 튜토리얼)의 구독 상품 조회
+GET {{baseUrl}}/api/channels/3/plans
+
+### 채널 4 (데이터 분석 강의)의 구독 상품 조회
+GET {{baseUrl}}/api/channels/4/plans
+
+### ============================================
+### 2. 구독 상품(플랜) 생성
+### ============================================
+
+### 채널 1에 월간 구독 플랜 생성 (크리에이터 3)
+### SQL 데이터: plan_id 1 (MONTHLY, 19900)
+POST {{baseUrl}}/api/channels/1/plans?creatorId=3
+Content-Type: application/json
+
+{
+  "planType": "MONTHLY",
+  "price": 19900
+}
+
+### 채널 1에 연간 구독 플랜 생성 (크리에이터 3)
+### SQL 데이터: plan_id 2 (YEARLY, 199000)
+POST {{baseUrl}}/api/channels/1/plans?creatorId=3
+Content-Type: application/json
+
+{
+  "planType": "YEARLY",
+  "price": 199000
+}
+
+### 채널 2에 월간 구독 플랜 생성 (크리에이터 3)
+### SQL 데이터: plan_id 3 (MONTHLY, 29900)
+POST {{baseUrl}}/api/channels/2/plans?creatorId=3
+Content-Type: application/json
+
+{
+  "planType": "MONTHLY",
+  "price": 29900
+}
+
+### 채널 2에 연간 구독 플랜 생성 (크리에이터 3)
+### SQL 데이터: plan_id 4 (YEARLY, 299000)
+POST {{baseUrl}}/api/channels/2/plans?creatorId=3
+Content-Type: application/json
+
+{
+  "planType": "YEARLY",
+  "price": 299000
+}
+
+### 채널 3에 월간 구독 플랜 생성 (크리에이터 4)
+### SQL 데이터: plan_id 5 (MONTHLY, 14900)
+POST {{baseUrl}}/api/channels/3/plans?creatorId=4
+Content-Type: application/json
+
+{
+  "planType": "MONTHLY",
+  "price": 14900
+}
+
+### 채널 3에 연간 구독 플랜 생성 (크리에이터 4)
+### SQL 데이터: plan_id 6 (YEARLY, 149000)
+POST {{baseUrl}}/api/channels/3/plans?creatorId=4
+Content-Type: application/json
+
+{
+  "planType": "YEARLY",
+  "price": 149000
+}
+
+### 채널 4에 월간 구독 플랜 생성 (크리에이터 4)
+### SQL 데이터: plan_id 7 (MONTHLY, 24900)
+POST {{baseUrl}}/api/channels/4/plans?creatorId=4
+Content-Type: application/json
+
+{
+  "planType": "MONTHLY",
+  "price": 24900
+}
+
+### 채널 4에 연간 구독 플랜 생성 (크리에이터 4)
+### SQL 데이터: plan_id 8 (YEARLY, 249000)
+POST {{baseUrl}}/api/channels/4/plans?creatorId=4
+Content-Type: application/json
+
+{
+  "planType": "YEARLY",
+  "price": 249000
+}
+
+### ============================================
+### 3. 구독 신청
+### ============================================
+
+### 멤버 1이 채널 1의 플랜 1(월간) 구독 신청
+### SQL 데이터: member_id 1, channel_id 1, plan_id 1 (ACTIVE)
+POST {{baseUrl}}/api/channels/1/subscriptions?memberId=1&planId=1
+
+### 멤버 1이 채널 2의 플랜 3(월간) 구독 신청
+### SQL 데이터: member_id 1, channel_id 2, plan_id 3 (ACTIVE)
+POST {{baseUrl}}/api/channels/2/subscriptions?memberId=1&planId=3
+
+### 멤버 2가 채널 1의 플랜 2(연간) 구독 신청
+### SQL 데이터: member_id 2, channel_id 1, plan_id 2 (ACTIVE)
+POST {{baseUrl}}/api/channels/1/subscriptions?memberId=2&planId=2
+
+### 멤버 2가 채널 3의 플랜 5(월간) 구독 신청
+### SQL 데이터: member_id 2, channel_id 3, plan_id 5 (EXPIRED)
+POST {{baseUrl}}/api/channels/3/subscriptions?memberId=2&planId=5
+
+### 멤버 6(OAuth 사용자)이 채널 2의 플랜 4(연간) 구독 신청
+### SQL 데이터: member_id 6, channel_id 2, plan_id 4 (ACTIVE)
+POST {{baseUrl}}/api/channels/2/subscriptions?memberId=6&planId=4
+
+### 멤버 6이 채널 4의 플랜 7(월간) 구독 신청
+### SQL 데이터: member_id 6, channel_id 4, plan_id 7 (CANCELED)
+POST {{baseUrl}}/api/channels/4/subscriptions?memberId=6&planId=7
+
+### ============================================
+### 4. 추가 테스트 시나리오
+### ============================================
+
+### 멤버 2가 채널 2의 플랜 3(월간) 구독 신청 (새 구독)
+POST {{baseUrl}}/api/channels/2/subscriptions?memberId=2&planId=3
+
+### 멤버 1이 채널 3의 플랜 6(연간) 구독 신청 (새 구독)
+POST {{baseUrl}}/api/channels/3/subscriptions?memberId=1&planId=6
+
+### 멤버 6이 채널 1의 플랜 2(연간) 구독 신청 (새 구독)
+POST {{baseUrl}}/api/channels/1/subscriptions?memberId=6&planId=2
