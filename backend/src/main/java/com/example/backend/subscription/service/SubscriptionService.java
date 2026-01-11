@@ -34,14 +34,7 @@ public class SubscriptionService {
 
         LocalDate startDate = LocalDate.now();
         LocalDate endDate = calculateEndDate(startDate, plan.getPlanType());
-
-        Subscription subscription = Subscription.active(
-                memberId,
-                channelId,
-                planId,
-                startDate,
-                endDate
-        );
+        Subscription subscription = Subscription.active(memberId, channelId, planId, startDate, endDate);
 
         return subscriptionRepository.save(subscription).getId();
     }

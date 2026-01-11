@@ -22,23 +22,28 @@ public class SubscriptionPlan {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "channel_id", nullable = false)
     private Long channelId;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "plan_type", nullable = false)
     private PlanType planType;
 
+    @Column(nullable = false)
     private int price;
 
+    @Column(name = "is_active", nullable = false)
     private boolean isActive;
 
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private SubscriptionPlan(Long channelId, PlanType planType, int price, boolean active) {
+    private SubscriptionPlan(Long channelId, PlanType planType, int price) {
         this.channelId = channelId;
         this.planType = planType;
         this.price = price;
-        this.isActive = active;
+        this.isActive = true;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -47,7 +52,6 @@ public class SubscriptionPlan {
                 .channelId(channelId)
                 .planType(planType)
                 .price(price)
-                .active(true)
                 .build();
     }
 

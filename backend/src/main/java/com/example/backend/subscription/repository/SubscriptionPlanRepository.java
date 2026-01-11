@@ -12,5 +12,5 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
     boolean existsByChannelIdAndPlanType(Long channelId, PlanType planType);
 
     @Query("SELECT sp FROM SubscriptionPlan sp WHERE sp.channelId = :channelId AND sp.isActive = true ORDER BY sp.planType")
-    List<SubscriptionPlan> findByChannelIdAndIsActiveTrue(@Param("channelId") Long channelId);
+    List<SubscriptionPlan> findActivePlans(@Param("channelId") Long channelId);
 }

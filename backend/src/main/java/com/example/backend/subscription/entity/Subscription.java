@@ -1,5 +1,7 @@
 package com.example.backend.subscription.entity;
 
+import com.example.backend.global.exception.BusinessException;
+import com.example.backend.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -17,14 +19,23 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "member_id", nullable = false)
     private Long memberId;
+
+    @Column(name = "channel_id", nullable = false)
     private Long channelId;
+
+    @Column(name = "plan_id", nullable = false)
     private Long planId;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private SubscriptionStatus status;
 
+    @Column(nullable = false)
     private LocalDate startDate;
+
+    @Column(nullable = false)
     private LocalDate endDate;
 
     @Builder(access = AccessLevel.PRIVATE)
@@ -50,14 +61,14 @@ public class Subscription {
 
     public void cancel() {
         if (this.status != SubscriptionStatus.ACTIVE) {
-            throw new IllegalStateException("활성된 구독(ACTIVE)만 취소 처리 가능합니다.");
+            throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
         this.status = SubscriptionStatus.CANCELED;
     }
 
     public void expire() {
         if (this.status != SubscriptionStatus.ACTIVE) {
-            throw new IllegalStateException("활성된 구독(ACTIVE)만 만료 처리 가능합니다.");
+            throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
         this.status = SubscriptionStatus.EXPIRED;
     }

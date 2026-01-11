@@ -1,6 +1,6 @@
 package com.example.backend.subscription.service;
 
-import com.example.backend.channel.ChannelValidator;
+import com.example.backend.channel.validator.ChannelValidator;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.subscription.dto.response.SubscriptionPlanResponse;
@@ -38,14 +38,9 @@ public class SubscriptionPlanService {
     }
 
     public List<SubscriptionPlanResponse> getPlansByChannelId(Long channelId) {
-        List<SubscriptionPlan> plans = subscriptionPlanRepository.findByChannelIdAndIsActiveTrue(channelId);
-
-        return plans.stream()
-                .map(plan -> new SubscriptionPlanResponse(
-                        plan.getId(),
-                        plan.getPlanType(),
-                        plan.getPrice()
-                ))
+        return subscriptionPlanRepository.findActivePlans(channelId)
+                .stream()
+                .map(p -> new SubscriptionPlanResponse(p.getId(), p.getPlanType(), p.getPrice()))
                 .toList();
     }
 }
