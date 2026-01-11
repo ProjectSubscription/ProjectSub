@@ -20,8 +20,9 @@ public class SecurityConfig {
                 )
 
                 // ✅ CSRF 비활성화 (H2 Console 사용 시 필수)
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/h2-console/**")
+                //todo: 배포 시 수정해야함.
+
+                .csrf(csrf -> csrf.disable()
                 )
 
                 // ✅ H2 Console iframe 허용
