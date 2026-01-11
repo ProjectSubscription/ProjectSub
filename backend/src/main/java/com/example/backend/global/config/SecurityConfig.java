@@ -4,6 +4,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -20,8 +22,9 @@ public class SecurityConfig {
                 )
 
                 // ✅ CSRF 비활성화 (H2 Console 사용 시 필수)
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/h2-console/**")
+                //todo: 배포 시 수정해야함.
+
+                .csrf(csrf -> csrf.disable()
                 )
 
                 // ✅ H2 Console iframe 허용
@@ -34,5 +37,10 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable());
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

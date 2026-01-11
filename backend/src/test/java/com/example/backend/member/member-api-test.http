@@ -1,0 +1,294 @@
+### Member API 테스트
+### 서버 설정
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+###############################################
+# 1. 회원가입 테스트
+###############################################
+
+### 1-1. 일반 회원가입 (성공)
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "password1234",
+  "nickname": "테스트유저",
+  "oauthProvider": null,
+  "birthYear": 1995
+}
+
+### 1-2. OAuth 회원가입 (성공) - 비밀번호 없음
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "google@example.com",
+  "password": null,
+  "nickname": "구글유저",
+  "oauthProvider": "GOOGLE",
+  "birthYear": 1990
+}
+
+### 1-3. 회원가입 실패 - 이메일 중복
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "password1234",
+  "nickname": "다른닉네임",
+  "oauthProvider": null,
+  "birthYear": 1995
+}
+
+### 1-4. 회원가입 실패 - 닉네임 중복
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "another@example.com",
+  "password": "password1234",
+  "nickname": "테스트유저",
+  "oauthProvider": null,
+  "birthYear": 1995
+}
+
+### 1-5. 회원가입 실패 - 이메일 형식 오류
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid-email",
+  "password": "password1234",
+  "nickname": "유저3",
+  "oauthProvider": null,
+  "birthYear": 1995
+}
+
+### 1-6. 회원가입 실패 - 비밀번호 짧음
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "user4@example.com",
+  "password": "short",
+  "nickname": "유저4",
+  "oauthProvider": null,
+  "birthYear": 1995
+}
+
+### 1-7. 회원가입 실패 - 비밀번호와 OAuth 동시 사용
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "user5@example.com",
+  "password": "password1234",
+  "nickname": "유저5",
+  "oauthProvider": "GOOGLE",
+  "birthYear": 1995
+}
+
+###############################################
+# 2. 회원 조회 테스트
+###############################################
+
+### 2-1. 단건 조회 - 공개 프로필 (성공)
+GET {{baseUrl}}/api/members/1
+Accept: {{contentType}}
+
+### 2-2. 단건 조회 - 존재하지 않는 회원
+GET {{baseUrl}}/api/members/999
+Accept: {{contentType}}
+
+### 2-3. 전체 회원 조회 (성공)
+GET {{baseUrl}}/api/members
+Accept: {{contentType}}
+
+###############################################
+# 3. 내 정보 조회 (Spring Security 필요)
+###############################################
+
+### 3-1. 내 정보 조회
+# TODO: Spring Security 설정 후 Authorization 헤더 추가 필요
+GET {{baseUrl}}/api/members/me
+Accept: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+###############################################
+# 4. 비밀번호 변경 테스트 (Spring Security 필요)
+###############################################
+
+### 4-1. 비밀번호 변경 (성공)
+# TODO: Spring Security 설정 후 Authorization 헤더 추가 필요
+PATCH {{baseUrl}}/api/members/password
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "newPassword": "newpassword1234"
+}
+
+### 4-2. 비밀번호 변경 실패 - OAuth 회원
+# TODO: OAuth 회원으로 로그인 후 테스트
+PATCH {{baseUrl}}/api/members/password
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "newPassword": "newpassword1234"
+}
+
+### 4-3. 비밀번호 변경 실패 - 짧은 비밀번호
+PATCH {{baseUrl}}/api/members/password
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "newPassword": "short"
+}
+
+###############################################
+# 5. 닉네임 변경 테스트 (Spring Security 필요)
+###############################################
+
+### 5-1. 닉네임 변경 (성공)
+PATCH {{baseUrl}}/api/members/nickname
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "newNickname": "변경된닉네임"
+}
+
+### 5-2. 닉네임 변경 실패 - 기존 닉네임과 동일
+PATCH {{baseUrl}}/api/members/nickname
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "newNickname": "테스트유저"
+}
+
+### 5-3. 닉네임 변경 실패 - 이미 사용 중
+PATCH {{baseUrl}}/api/members/nickname
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "newNickname": "구글유저"
+}
+
+###############################################
+# 6. 생년 입력 테스트 (Spring Security 필요)
+###############################################
+
+### 6-1. 생년 최초 입력 (성공)
+# 주의: birthYear가 null인 회원으로 로그인 필요
+PATCH {{baseUrl}}/api/members/birthyear
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "birthYear": 1992
+}
+
+### 6-2. 생년 입력 실패 - 이미 입력됨
+PATCH {{baseUrl}}/api/members/birthyear
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "birthYear": 1993
+}
+
+### 6-3. 생년 입력 실패 - 잘못된 범위
+PATCH {{baseUrl}}/api/members/birthyear
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "birthYear": 1800
+}
+
+### 6-4. 생년 입력 실패 - 미래 연도
+PATCH {{baseUrl}}/api/members/birthyear
+Content-Type: {{contentType}}
+# Authorization: Bearer {JWT_TOKEN}
+
+{
+  "birthYear": 2030
+}
+
+###############################################
+# 7. 회원 탈퇴 테스트 (Spring Security 필요)
+###############################################
+
+### 7-1. 회원 탈퇴 (성공)
+DELETE {{baseUrl}}/api/members
+# Authorization: Bearer {JWT_TOKEN}
+
+### 7-2. 탈퇴한 회원 조회 - 조회 안 됨 (@SQLRestriction)
+GET {{baseUrl}}/api/members/1
+Accept: {{contentType}}
+
+###############################################
+# 8. 통합 시나리오 테스트
+###############################################
+
+### 시나리오 1: 일반 회원 전체 플로우
+# 1) 회원가입
+POST {{baseUrl}}/api/members/register
+Content-Type: {{contentType}}
+
+{
+  "email": "scenario@example.com",
+  "password": "password1234",
+  "nickname": "시나리오테스트",
+  "oauthProvider": null,
+  "birthYear": null
+}
+
+# 2) 로그인 (TODO: Spring Security 설정 후)
+
+# 3) 내 정보 조회
+# GET {{baseUrl}}/api/members/me
+
+# 4) 생년 입력
+# PATCH {{baseUrl}}/api/members/birthyear
+# { "birthYear": 1995 }
+
+# 5) 비밀번호 변경
+# PATCH {{baseUrl}}/api/members/password
+# { "newPassword": "newpassword1234" }
+
+# 6) 닉네임 변경
+# PATCH {{baseUrl}}/api/members/nickname
+# { "newNickname": "새로운닉네임" }
+
+# 7) 회원 탈퇴
+# DELETE {{baseUrl}}/api/members
+
+###############################################
+# 참고사항
+###############################################
+
+# 1. Spring Security 설정 전에는 @AuthenticationPrincipal이 필요한 API는 500 에러 발생
+# 2. Spring Security 설정 후에는 Authorization 헤더에 JWT 토큰 추가 필요
+# 3. @SQLRestriction으로 탈퇴한 회원은 자동 필터링됨
+# 4. 테스트 순서대로 실행하면 데이터 의존성 문제 발생 가능 (DB 초기화 필요)
+
+###############################################
+# 환경별 설정 (선택사항)
+###############################################
+
+### Local 환경
+# @baseUrl = http://localhost:8080
+
+### Dev 환경
+# @baseUrl = https://dev-api.example.com
+
+### Prod 환경
+# @baseUrl = https://api.example.com
