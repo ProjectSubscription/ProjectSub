@@ -9,6 +9,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(
+    name = "subscription_plans",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_channel_plan_type", columnNames = {"channel_id", "plan_type"})
+    }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SubscriptionPlan {
