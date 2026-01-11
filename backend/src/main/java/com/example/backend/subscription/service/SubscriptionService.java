@@ -2,6 +2,7 @@ package com.example.backend.subscription.service;
 
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
+import com.example.backend.subscription.dto.response.SubscriptionResponse;
 import com.example.backend.subscription.entity.PlanType;
 import com.example.backend.subscription.entity.Subscription;
 import com.example.backend.subscription.entity.SubscriptionPlan;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,24 @@ public class SubscriptionService {
         Subscription subscription = Subscription.active(memberId, channelId, planId, startDate, endDate);
 
         return subscriptionRepository.save(subscription).getId();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionResponse> getMySubscriptions(Long memberId) {
+        if (memberId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        List<Subscription> subscriptions = subscriptionRepository.findByMemberIdOrderByStartDateDesc(memberId);
+        return subscriptions.stream()
+                .map(subscription -> new SubscriptionResponse(
+                        subscription.getId(),
+                        subscription.getChannelId(),
+                        subscription.getPlanId(),
+                        subscription.getStatus(),
+                        subscription.getStartDate(),
+                        subscription.getEndDate()
+                ))
+                .toList();
     }
 
     private LocalDate calculateEndDate(LocalDate startDate, PlanType planType) {
