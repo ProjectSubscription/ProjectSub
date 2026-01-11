@@ -25,7 +25,8 @@ public enum ErrorCode {
 
     /* ===== Subscription Plan ===== */
     SUBSCRIPTION_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND,"구독 상품을 찾을 수 없습니다."),
-    INACTIVE_SUBSCRIPTION_PLAN(HttpStatus.BAD_REQUEST, "비활성화된 구독 상품입니다.");
+    INACTIVE_SUBSCRIPTION_PLAN(HttpStatus.BAD_REQUEST, "비활성화된 구독 상품입니다."),
+    INVALID_SUBSCRIPTION_STATUS(HttpStatus.BAD_REQUEST,"현재 상태에서는 해당 작업을 수행할 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
