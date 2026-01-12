@@ -22,5 +22,5 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
             Pageable pageable
     );
 
-    List<Channel> findByCreatorId(Long creatorId);
+    Optional<Channel> findOneByCreatorId(Long creatorId);
 }
