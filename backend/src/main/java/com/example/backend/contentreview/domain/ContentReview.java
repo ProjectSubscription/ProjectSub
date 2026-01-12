@@ -1,6 +1,6 @@
 package com.example.backend.contentreview.domain;
 
-import com.example.backend.content.domain.Content;
+import com.example.backend.content.entity.Content;
 import com.example.backend.member.entity.Member;
 import com.example.backend.global.entity.AuditableEntity;
 import jakarta.persistence.*;
