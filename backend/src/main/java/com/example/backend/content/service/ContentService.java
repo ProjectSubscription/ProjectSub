@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -218,14 +219,14 @@ public class ContentService {
      */
     public long getTotalContentCountByCreatorId(Long creatorId) {
         // creatorId로 채널 조회 (ChannelRepository의 기존 메서드 사용)
-        List<Channel> channels = channelRepository.findByCreatorId(creatorId);
+        Optional<Channel> channel = channelRepository.findOneByCreatorId(creatorId);
         
-        if (channels.isEmpty()) {
+        if (channel.isEmpty()) {
             return 0;
         }
         
         // 한 크리에이터당 하나의 채널만 존재하므로 첫 번째 채널 사용
-        Long channelId = channels.get(0).getId();
+        Long channelId = channel.get().getId();
         
         return contentRepository.countByChannelIdAndIsDeletedFalse(channelId);
     }
@@ -236,14 +237,14 @@ public class ContentService {
      */
     public long getTotalViewCountByCreatorId(Long creatorId) {
         // creatorId로 채널 조회 (ChannelRepository의 기존 메서드 사용)
-        List<Channel> channels = channelRepository.findByCreatorId(creatorId);
+        Optional<Channel> channel = channelRepository.findOneByCreatorId(creatorId);
         
-        if (channels.isEmpty()) {
+        if (channel.isEmpty()) {
             return 0;
         }
         
         // 한 크리에이터당 하나의 채널만 존재하므로 첫 번째 채널 사용
-        Long channelId = channels.get(0).getId();
+        Long channelId = channel.get().getId();
         
         return contentRepository.getTotalViewCountByChannelId(channelId);
     }
@@ -257,14 +258,14 @@ public class ContentService {
         LocalDateTime fiveDaysAgo = now.minusDays(5);
         
         // creatorId로 채널 조회 (ChannelRepository의 기존 메서드 사용)
-        List<Channel> channels = channelRepository.findByCreatorId(creatorId);
+        Optional<Channel> channel = channelRepository.findOneByCreatorId(creatorId);
         
-        if (channels.isEmpty()) {
+        if (channel.isEmpty()) {
             return 0;
         }
         
         // 한 크리에이터당 하나의 채널만 존재하므로 첫 번째 채널 사용
-        Long channelId = channels.get(0).getId();
+        Long channelId = channel.get().getId();
         
         return contentRepository.countByChannelIdAndPublishedAtBetweenAndIsDeletedFalse(
                 channelId, fiveDaysAgo, now);
