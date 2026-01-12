@@ -1,6 +1,6 @@
 package com.example.backend.contentreview.service;
 
-import com.example.backend.content.domain.Content;
+import com.example.backend.content.entity.Content;
 import com.example.backend.content.repository.ContentRepository;
 import com.example.backend.contentreview.domain.ContentReview;
 import com.example.backend.contentreview.dto.request.ContentReviewRequestDto;
@@ -24,7 +24,6 @@ public class ContentReviewService {
 
     private final ContentReviewRepository contentReviewRepository;
     private final MemberService memberService;
-    // Content 관련 Service 도입 후 수정 예정
     private final ContentRepository contentRepository;
 
     @Transactional
@@ -36,6 +35,7 @@ public class ContentReviewService {
 
         Member member = memberService.findMemberById(request.getMemberId());
 
+        // ContentService는 DTO만 반환하므로 엔티티 참조를 위해 Repository 직접 사용
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CONTENT_NOT_FOUND));
 
