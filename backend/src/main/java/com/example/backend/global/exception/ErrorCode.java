@@ -19,15 +19,20 @@ public enum ErrorCode {
 
     /* ===== Subscription ===== */
     DUPLICATE_SUBSCRIPTION_PLAN(HttpStatus.CONFLICT, "이미 존재하는 구독 상품입니다."),
+    DUPLICATE_ACTIVE_SUBSCRIPTION(HttpStatus.CONFLICT, "이미 활성화된 구독이 존재합니다."),
     INVALID_SUBSCRIPTION_STATE(HttpStatus.BAD_REQUEST, "구독 상태가 올바르지 않습니다."),
     SUBSCRIPTION_NOT_FOUND(HttpStatus.NOT_FOUND, "구독 정보를 찾을 수 없습니다."),
+
+    /* ===== Subscription Plan ===== */
+    SUBSCRIPTION_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND,"구독 상품을 찾을 수 없습니다."),
+    INACTIVE_SUBSCRIPTION_PLAN(HttpStatus.BAD_REQUEST, "비활성화된 구독 상품입니다."),
+    INVALID_SUBSCRIPTION_STATUS(HttpStatus.BAD_REQUEST,"현재 상태에서는 해당 작업을 수행할 수 없습니다."),
 
     /* ===== CreatorApplication ===== */
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND,"해당 크리에이터 신청 내역을 찾을 수 없습니다."),
     APPLICATION_ALREADY_REQUEST(HttpStatus.BAD_REQUEST,"이미 승인 대기 중인 신청 건이 존재합니다."),
     APPLICATION_FORBIDDEN(HttpStatus.FORBIDDEN,"해당 신청 내역에 대한 접근 권한이 없습니다."),
     APPLICATION_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST,"이미 승인 또는 반려 처리가 완료된 신청입니다."),
-
 
     /* ===== Creator ===== */
     CREATOR_NOT_FOUND(HttpStatus.NOT_FOUND,"해당 크리에이터를 찾을 수 없습니다."),
