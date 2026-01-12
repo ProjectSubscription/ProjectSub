@@ -1,4 +1,4 @@
-package com.example.backend.contentreview.domain;
+package com.example.backend.contentreview.entity;
 
 import com.example.backend.content.entity.Content;
 import com.example.backend.member.entity.Member;

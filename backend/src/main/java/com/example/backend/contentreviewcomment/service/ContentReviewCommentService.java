@@ -1,8 +1,8 @@
 package com.example.backend.contentreviewcomment.service;
 
-import com.example.backend.contentreview.domain.ContentReview;
+import com.example.backend.contentreview.entity.ContentReview;
 import com.example.backend.contentreview.service.ContentReviewService;
-import com.example.backend.contentreviewcomment.domain.ContentReviewComment;
+import com.example.backend.contentreviewcomment.entity.ContentReviewComment;
 import com.example.backend.contentreviewcomment.repository.ContentReviewCommentRepository;
 import com.example.backend.contentreviewcomment.dto.request.ContentReviewCommentRequestDto;
 import com.example.backend.contentreviewcomment.dto.response.ContentReviewCommentResponseDto;

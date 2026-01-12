@@ -1,6 +1,6 @@
 package com.example.backend.contentreviewcomment.repository;
 
-import com.example.backend.contentreviewcomment.domain.ContentReviewComment;
+import com.example.backend.contentreviewcomment.entity.ContentReviewComment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

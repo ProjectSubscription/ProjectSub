@@ -1,6 +1,6 @@
-package com.example.backend.contentreviewcomment.domain;
+package com.example.backend.contentreviewcomment.entity;
 
-import com.example.backend.contentreview.domain.ContentReview;
+import com.example.backend.contentreview.entity.ContentReview;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.member.entity.Member;

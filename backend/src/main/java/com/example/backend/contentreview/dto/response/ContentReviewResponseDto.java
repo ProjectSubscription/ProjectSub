@@ -1,6 +1,6 @@
 package com.example.backend.contentreview.dto.response;
 
-import com.example.backend.contentreview.domain.ContentReview;
+import com.example.backend.contentreview.entity.ContentReview;
 import lombok.Getter;
 
 import java.time.LocalDateTime;

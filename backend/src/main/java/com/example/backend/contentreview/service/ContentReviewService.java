@@ -2,7 +2,7 @@ package com.example.backend.contentreview.service;
 
 import com.example.backend.content.entity.Content;
 import com.example.backend.content.repository.ContentRepository;
-import com.example.backend.contentreview.domain.ContentReview;
+import com.example.backend.contentreview.entity.ContentReview;
 import com.example.backend.contentreview.dto.request.ContentReviewRequestDto;
 import com.example.backend.contentreview.dto.response.ContentReviewResponseDto;
 import com.example.backend.contentreview.repository.ContentReviewRepository;
