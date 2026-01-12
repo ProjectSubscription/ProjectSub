@@ -26,4 +26,11 @@ public class SubscriptionController {
     public List<SubscriptionResponse> getMySubscriptions(@RequestParam(required = false) Long memberId) {
         return subscriptionService.getMySubscriptions(memberId);
     }
+
+    @DeleteMapping("/api/subscriptions/{subscriptionId}")
+    // TODO: 테스트용 임시 수정 - 인증 구현 후 @AuthenticationPrincipal로 변경 예정
+    // public void cancelSubscription(@AuthenticationPrincipal Long memberId, @PathVariable Long subscriptionId) {
+    public void cancelSubscription(@RequestParam(required = false) Long memberId, @PathVariable Long subscriptionId) {
+        subscriptionService.cancelSubscription(subscriptionId, memberId);
+    }
 }

@@ -48,7 +48,9 @@ public class SubscriptionService {
         if (memberId == null) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
+
         List<Subscription> subscriptions = subscriptionRepository.findByMemberIdOrderByStartDateDesc(memberId);
+
         return subscriptions.stream()
                 .map(subscription -> new SubscriptionResponse(
                         subscription.getId(),
@@ -59,6 +61,21 @@ public class SubscriptionService {
                         subscription.getEndDate()
                 ))
                 .toList();
+    }
+
+    public void cancelSubscription(Long subscriptionId, Long memberId) {
+        if (memberId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Subscription subscription = subscriptionRepository.findById(subscriptionId).orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        if(!subscription.getMemberId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        subscription.cancel();
+        subscriptionRepository.save(subscription);
     }
 
     private LocalDate calculateEndDate(LocalDate startDate, PlanType planType) {
