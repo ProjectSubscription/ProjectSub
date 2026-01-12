@@ -96,12 +96,12 @@ public class CreatorApplicationController {
     public ResponseEntity<CreatorApplicationDetailResponseDTO> getAppDetail(@AuthenticationPrincipal Principal principal,
                                                                             @PathVariable Long applicationId) {
 
-        Member member = null;
-        // Member member = (CustomUserDetails) principal;
+        Long memberId = null;
+        // Long memberId = ((CustomUserDetails) principal).getId();
 
         log.info("크리에이터 신청 상세조회 - applicationId={}", applicationId);
 
-        CreatorApplicationDetailResponseDTO appDetail = creatorApplicationService.getAppDetail(member, applicationId);
+        CreatorApplicationDetailResponseDTO appDetail = creatorApplicationService.getAppDetail(memberId, applicationId);
 
         log.info("크리에이터 신청 상세조회 - appDetail={}", appDetail);
 

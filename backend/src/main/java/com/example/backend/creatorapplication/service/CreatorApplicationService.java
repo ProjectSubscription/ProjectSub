@@ -79,14 +79,21 @@ public class CreatorApplicationService {
 
     // 신청 상세 조회
     @Transactional(readOnly = true)
-    public CreatorApplicationDetailResponseDTO getAppDetail(Member member, Long applicationId) {
+    public CreatorApplicationDetailResponseDTO getAppDetail(Long memberId, Long applicationId) {
 
         log.info("크리에이터 신청 상세 조회 start - applicationId={}", applicationId);
 
+        // 조회하는 사람(본인 혹은 관리자)
+        Member memberByMemberId = memberService.findMemberById(memberId);
+
+        // 신청한 사람
+        Member memberByAppId = creatorApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND)).getMember();
+
         // 관리자가 아니면서 로그인사용자와 신청자가 다른경우
-        if (!member.getId().equals(member.getId()) &&
-                !member.getRoles().contains(Role.ROLE_ADMIN)) {
-            log.error("신청 상세조회 접근 권한 없음. memberId={}", member.getId());
+        if (!memberByMemberId.getId().equals(memberByAppId.getId()) &&
+                !memberByMemberId.getRoles().contains(Role.ROLE_ADMIN)) {
+            log.error("신청 상세조회 접근 권한 없음. memberById={}", memberByMemberId.getId());
             throw new BusinessException(ErrorCode.APPLICATION_FORBIDDEN);
         }
 
