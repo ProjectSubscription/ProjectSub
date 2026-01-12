@@ -78,6 +78,12 @@ public class SubscriptionService {
         subscriptionRepository.save(subscription);
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasActiveSubscription(Long memberId, Long channelId) {
+        return subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
+                memberId, channelId, SubscriptionStatus.ACTIVE);
+    }
+
     private LocalDate calculateEndDate(LocalDate startDate, PlanType planType) {
         return switch (planType) {
             case MONTHLY -> startDate.plusMonths(1);
