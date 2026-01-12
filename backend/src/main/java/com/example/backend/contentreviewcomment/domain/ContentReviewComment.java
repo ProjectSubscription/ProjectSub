@@ -57,7 +57,7 @@ public class ContentReviewComment extends AuditableEntity {
 
     public void update(String newComment) {
         if (newComment == null || newComment.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
         this.comment = newComment;
     }
