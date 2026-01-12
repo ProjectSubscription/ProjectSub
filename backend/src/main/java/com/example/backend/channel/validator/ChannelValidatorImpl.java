@@ -2,6 +2,8 @@ package com.example.backend.channel.validator;
 
 import com.example.backend.channel.entity.Channel;
 import com.example.backend.channel.repository.ChannelRepository;
+import com.example.backend.global.exception.BusinessException;
+import com.example.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +17,7 @@ public class ChannelValidatorImpl implements ChannelValidator {
     public void validateChannel(Long channelId) {
         channelRepository.findById(channelId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 채널입니다.")
+                        new BusinessException(ErrorCode.CHANNEL_NOT_FOUND)
                 );
     }
 
@@ -23,11 +25,11 @@ public class ChannelValidatorImpl implements ChannelValidator {
     public void validateActive(Long channelId) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 채널입니다.")
+                        new BusinessException(ErrorCode.CHANNEL_NOT_FOUND)
                 );
 
         if (!channel.isActive()) {
-            throw new IllegalStateException("비활성화된 채널입니다.");
+            throw new BusinessException(ErrorCode.CHANNEL_INACTIVE);
         }
     }
 
@@ -35,11 +37,11 @@ public class ChannelValidatorImpl implements ChannelValidator {
     public void validateOwner(Long creatorId, Long channelId) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 채널입니다.")
+                        new BusinessException(ErrorCode.CHANNEL_NOT_FOUND)
                 );
 
         if (!channel.getCreatorId().equals(creatorId)) {
-            throw new IllegalStateException("채널 소유자가 아닙니다.");
+            throw new BusinessException(ErrorCode.CHANNEL_OWNER_MISMATCH);
         }
     }
 }
