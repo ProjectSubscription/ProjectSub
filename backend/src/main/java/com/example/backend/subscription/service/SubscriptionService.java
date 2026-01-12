@@ -1,5 +1,6 @@
 package com.example.backend.subscription.service;
 
+import com.example.backend.channel.repository.ChannelRepository;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.subscription.dto.response.SubscriptionResponse;
@@ -22,6 +23,7 @@ import java.util.List;
 public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
+    private final ChannelRepository channelRepository;
 
     public Long subscribe(Long memberId, Long channelId, Long planId) {
         if(subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(memberId, channelId, SubscriptionStatus.ACTIVE)) {
