@@ -127,6 +127,12 @@ public class CreatorApplicationService {
         return MyCreatorApplicationResponseDTO.create(application);
     }
 
+    // 특정 회원의 검토 대기중인 요청 조회
+    public CreatorApplication getAppByMemberId(Long memberId) {
+        return creatorApplicationRepository.findByMemberIdAndStatus(memberId, ApprovalStatus.REQUESTED)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
+    }
+
     // appId로 app조회 - 메서드로 분리
     private CreatorApplication getCreatorApplication(Long applicationId) {
         CreatorApplication application = creatorApplicationRepository.findById(applicationId)
