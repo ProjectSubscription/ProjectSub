@@ -70,6 +70,11 @@ public class Subscription {
         if (this.status != SubscriptionStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
+
+        if (this.endDate.isAfter(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
+        }
+
         this.status = SubscriptionStatus.EXPIRED;
     }
 }
