@@ -16,8 +16,8 @@ public class SubscriptionBatchScheduler {
     private final JobLauncher jobLauncher;
     private final Job expireSubscriptionsJob;
 
-    // 매일 새벽 1시에 실행 (프로덕션용)
-    @Scheduled(cron = "0 0 1 * * *")
+    // 10분마다 실행 (프로덕션용)
+    @Scheduled(cron = "0 0/10 * * * *")
     // 테스트용: 10초마다 실행 (필요시 주석 해제)
     // @Scheduled(fixedRate = 10000)
     public void runExpireSubscriptionsJob() {

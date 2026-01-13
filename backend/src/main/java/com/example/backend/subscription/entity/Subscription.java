@@ -66,12 +66,12 @@ public class Subscription {
         this.status = SubscriptionStatus.CANCELED;
     }
 
-    public void expire() {
+    public void expire(LocalDateTime now) {
         if (this.status != SubscriptionStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
 
-        if (this.expiredAt.isAfter(LocalDateTime.now())) {
+        if (this.expiredAt.isAfter(now)) {
             throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
 
