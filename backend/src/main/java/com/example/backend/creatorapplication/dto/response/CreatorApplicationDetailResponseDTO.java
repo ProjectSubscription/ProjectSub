@@ -1,5 +1,6 @@
 package com.example.backend.creatorapplication.dto.response;
 
+import com.example.backend.channel.entity.ChannelCategory;
 import com.example.backend.creatorapplication.entity.ApprovalStatus;
 import com.example.backend.creatorapplication.entity.CreatorApplication;
 import lombok.AccessLevel;
@@ -18,6 +19,7 @@ public class CreatorApplicationDetailResponseDTO {
     private String email;
     private String channelName;
     private String channelDescription;
+    private ChannelCategory channelCategory;
     private LocalDateTime createdAt;
     private ApprovalStatus status;
     private String rejectReason;
@@ -29,6 +31,7 @@ public class CreatorApplicationDetailResponseDTO {
                 .email(creatorApplication.getMember().getEmail())
                 .channelName(creatorApplication.getChannelName())
                 .channelDescription(creatorApplication.getChannelDescription())
+                .channelCategory(creatorApplication.getChannelCategory())
                 .createdAt(creatorApplication.getCreatedAt())
                 .status(creatorApplication.getStatus())
                 .rejectReason(creatorApplication.getRejectReason())
