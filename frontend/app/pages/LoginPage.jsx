@@ -128,9 +128,10 @@ export function LoginPage({ onLogin, onNavigate }) {
                   <input type="checkbox" className="rounded border-gray-300" />
                   <span className="text-gray-600">로그인 상태 유지</span>
                 </label>
-                <a href="#" className="text-blue-600 hover:text-blue-700">
+                <button type="button" onClick={() => onNavigate('password-reset-request')} 
+                  className="text-blue-600 hover:text-blue-700">
                   비밀번호 찾기
-                </a>
+                </button>
               </div>
               <button
                 type="submit"
