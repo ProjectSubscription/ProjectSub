@@ -36,9 +36,9 @@ public class SubscriptionService {
             throw new BusinessException(ErrorCode.INACTIVE_SUBSCRIPTION_PLAN);
         }
 
-        LocalDateTime startDate = LocalDateTime.now();
-        LocalDateTime endDate = calculateEndDate(startDate, plan.getPlanType());
-        Subscription subscription = Subscription.active(memberId, channelId, planId, startDate, endDate);
+        LocalDateTime startedAt = LocalDateTime.now();
+        LocalDateTime expiredAt = calculateExpiredAt(startedAt, plan.getPlanType());
+        Subscription subscription = Subscription.active(memberId, channelId, planId, startedAt, expiredAt);
 
         return subscriptionRepository.save(subscription).getId();
     }
@@ -49,7 +49,7 @@ public class SubscriptionService {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
 
-        List<Subscription> subscriptions = subscriptionRepository.findByMemberIdOrderByStartDateDesc(memberId);
+        List<Subscription> subscriptions = subscriptionRepository.findByMemberIdOrderByStartedAtDesc(memberId);
 
         return subscriptions.stream()
                 .map(subscription -> new SubscriptionResponse(
@@ -57,8 +57,8 @@ public class SubscriptionService {
                         subscription.getChannelId(),
                         subscription.getPlanId(),
                         subscription.getStatus(),
-                        subscription.getStartDate(),
-                        subscription.getEndDate()
+                        subscription.getStartedAt(),
+                        subscription.getExpiredAt()
                 ))
                 .toList();
     }
@@ -84,10 +84,10 @@ public class SubscriptionService {
                 memberId, channelId, SubscriptionStatus.ACTIVE);
     }
 
-    private LocalDateTime calculateEndDate(LocalDateTime startDate, PlanType planType) {
+    private LocalDateTime calculateExpiredAt(LocalDateTime startedAt, PlanType planType) {
         return switch (planType) {
-            case MONTHLY -> startDate.plusMonths(1);
-            case YEARLY -> startDate.plusYears(1);
+            case MONTHLY -> startedAt.plusMonths(1);
+            case YEARLY -> startedAt.plusYears(1);
         };
     }
 }

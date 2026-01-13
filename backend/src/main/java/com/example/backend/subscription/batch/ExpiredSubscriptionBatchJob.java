@@ -49,9 +49,9 @@ public class ExpiredSubscriptionBatchJob {
 
             LocalDateTime now = LocalDateTime.now();
 
-            // 만료된 구독 조회 (end_date가 현재 시간 이하인 경우)
+            // 만료된 구독 조회 (expired_at이 현재 시간 이하인 경우)
             List<Subscription> expiredSubscriptions = subscriptionRepository
-                    .findByStatusAndEndDateLessThanOrEqual(SubscriptionStatus.ACTIVE, now);
+                    .findByStatusAndExpiredAtLessThanOrEqual(SubscriptionStatus.ACTIVE, now);
 
             log.info("만료된 구독 수: {}", expiredSubscriptions.size());
 
@@ -62,8 +62,8 @@ public class ExpiredSubscriptionBatchJob {
                     subscription.expire();
                     subscriptionRepository.save(subscription);
                     count++;
-                    log.debug("구독 ID {} 만료 처리 완료 (end_date: {})", 
-                            subscription.getId(), subscription.getEndDate());
+                    log.debug("구독 ID {} 만료 처리 완료 (expired_at: {})", 
+                            subscription.getId(), subscription.getExpiredAt());
                 } catch (Exception e) {
                     log.error("구독 ID {} 만료 처리 실패: {}", subscription.getId(), e.getMessage());
                 }

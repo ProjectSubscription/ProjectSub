@@ -9,6 +9,6 @@ public record SubscriptionResponse(
         Long channelId,
         Long planId,
         SubscriptionStatus status,
-        LocalDateTime startDate,
-        LocalDateTime endDate
+        LocalDateTime startedAt,
+        LocalDateTime expiredAt
 ) {}

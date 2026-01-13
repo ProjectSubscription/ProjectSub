@@ -33,29 +33,29 @@ public class Subscription {
     private SubscriptionStatus status;
 
     @Column(nullable = false)
-    private LocalDateTime startDate;
+    private LocalDateTime startedAt;
 
     @Column(nullable = false)
-    private LocalDateTime endDate;
+    private LocalDateTime expiredAt;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private Subscription(Long memberId, Long channelId, Long planId, SubscriptionStatus status, LocalDateTime startDate, LocalDateTime endDate) {
+    private Subscription(Long memberId, Long channelId, Long planId, SubscriptionStatus status, LocalDateTime startedAt, LocalDateTime expiredAt) {
         this.memberId = memberId;
         this.channelId = channelId;
         this.planId = planId;
         this.status = status;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        this.startedAt = startedAt;
+        this.expiredAt = expiredAt;
     }
 
-    public static Subscription active(Long memberId, Long channelId, Long planId, LocalDateTime startDate, LocalDateTime endDate) {
+    public static Subscription active(Long memberId, Long channelId, Long planId, LocalDateTime startedAt, LocalDateTime expiredAt) {
         return Subscription.builder()
                 .memberId(memberId)
                 .channelId(channelId)
                 .planId(planId)
                 .status(SubscriptionStatus.ACTIVE)
-                .startDate(startDate)
-                .endDate(endDate)
+                .startedAt(startedAt)
+                .expiredAt(expiredAt)
                 .build();
     }
 
@@ -71,7 +71,7 @@ public class Subscription {
             throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
 
-        if (this.endDate.isAfter(LocalDateTime.now())) {
+        if (this.expiredAt.isAfter(LocalDateTime.now())) {
             throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
 
