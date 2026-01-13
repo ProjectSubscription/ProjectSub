@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -36,8 +36,8 @@ public class SubscriptionService {
             throw new BusinessException(ErrorCode.INACTIVE_SUBSCRIPTION_PLAN);
         }
 
-        LocalDate startDate = LocalDate.now();
-        LocalDate endDate = calculateEndDate(startDate, plan.getPlanType());
+        LocalDateTime startDate = LocalDateTime.now();
+        LocalDateTime endDate = calculateEndDate(startDate, plan.getPlanType());
         Subscription subscription = Subscription.active(memberId, channelId, planId, startDate, endDate);
 
         return subscriptionRepository.save(subscription).getId();
@@ -84,7 +84,7 @@ public class SubscriptionService {
                 memberId, channelId, SubscriptionStatus.ACTIVE);
     }
 
-    private LocalDate calculateEndDate(LocalDate startDate, PlanType planType) {
+    private LocalDateTime calculateEndDate(LocalDateTime startDate, PlanType planType) {
         return switch (planType) {
             case MONTHLY -> startDate.plusMonths(1);
             case YEARLY -> startDate.plusYears(1);
