@@ -1,5 +1,8 @@
 package com.example.backend.member.service;
 
+import com.example.backend.global.exception.BusinessException;
+import com.example.backend.global.exception.ErrorCode;
+import com.example.backend.member.dto.request.CompleteOAuthProfileRequest;
 import com.example.backend.member.repository.MemberRepository;
 import com.example.backend.member.dto.request.MemberRequest;
 import com.example.backend.member.entity.Member;
@@ -19,7 +22,10 @@ import java.util.Set;
 @Slf4j
 public class MemberService {
 
-    //todo: 일반 -> 소셜로그인이 되게 할 것인가.(내생각엔 필요함, 해당 이메일 쓰다가 소셜쪽으로 넘기게하는 방법이 없음 탈퇴하고 소셜로그인해야함)
+    //todo: 일반 -> 소셜로그인이 되게 할 것인가.
+    //todo: 소셜 유저 재가입시 ->
+    //todo: 상수 env 파일로 옮기기
+    private final PasswordResetService passwordResetService;
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -28,10 +34,25 @@ public class MemberService {
         return signupWithRoles(dto, Set.of(Role.ROLE_USER));
     }
 
-    //생산자 회원가입 -- case1
-    //TODO: 유저 -> 크리에이터 승격 요청 -> 관리자 승인 구조라면 이 메소드 필요없음, 승격 메소드만 존재해야함.
-    public Member registerCreator(MemberRequest dto) {
-        return signupWithRoles(dto, Set.of(Role.ROLE_USER, Role.ROLE_CREATOR));
+    //크리에이터 승인
+    public Member approveCreator(Long id) {
+        log.info("크리에이터 승인 신청 id = {}", id);
+        Member member = findRegisteredMemberById(id);
+
+        // 이미 크리에이터인지 확인
+        if (member.hasRole(Role.ROLE_CREATOR)) {
+            log.warn("이미 크리에이터입니다: id={}", id);
+            throw new BusinessException(ErrorCode.ALREADY_CREATOR);
+        }
+
+        // 일반 유저인지 확인
+        if (!member.hasRole(Role.ROLE_USER)) {
+            throw new BusinessException(ErrorCode.NOT_REGULAR_MEMBER);
+        }
+
+        member.addRole(Role.ROLE_CREATOR);
+        log.info("크리에이터 승인 완료: id={}", id);
+        return member;
     }
 
     //관리자 계정 생성
@@ -39,89 +60,108 @@ public class MemberService {
         return signupWithRoles(dto, Set.of(Role.ROLE_USER, Role.ROLE_ADMIN));
     }
 
-    @Transactional(readOnly = true)
-    public Member findMemberById(Long id) {
-        Member member = memberRepository.findById(id).orElseThrow(() -> new RuntimeException("Member with id " + id + " not found!"));
+    //oauth 유저 임시 가입
+    public Member registerOAuthMember(String provider, String providerUserId, String email) {
+        log.info("oauth 가입 요청. 추가 정보 입력해야함.");
+        Member member = Member.createFromOAuth(provider, providerUserId, email, Set.of());
+        memberRepository.save(member);
+        log.info("oauth 가입 유저 임시 가입 완료");
+        return member;
+    }
+
+    public Member completeOAuthMemberProfile(Long memberId, CompleteOAuthProfileRequest dto) {
+        Member member = findRegisteredMemberById(memberId);
+
+
+        // 4. 닉네임 중복 체크
+        if (memberRepository.existsByNickname(dto.getNickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        // 5. email 중복 체크 (새로 입력하는 경우만)
+        if (dto.getEmail() != null && memberRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+
+        member.completeProfile(dto.getEmail(), dto.getNickname(), dto.getBirthYear(), dto.getGender());
         return member;
     }
 
     @Transactional(readOnly = true)
-    public List<Member> findAllMembers() {
+    public Member findRegisteredMemberById(Long id) {
+        Member member = memberRepository.findById(id).orElseThrow(() -> {
+            log.warn("해당 id값을 가진 멤버를 찾지 못 했습니다. id = {}", id);
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+        });
+        return member;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Member> findAllRegisteredMembers() {
         List<Member> members = memberRepository.findAll();
         return members;
     }
 
     @Transactional(readOnly = true)
-    public Member findMemberByEmail(String email) {
-        Member member = memberRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Member with email " + email + " not found!"));
+    public Member findRegisteredMemberByEmail(String email) {
+        Member member = memberRepository.findByEmail(email).orElseThrow(() -> {
+            log.warn("해당 이메일을 가진 멤버를 찾지 못 했습니다. email = {}", email);
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+        });
         return member;
     }
 
-    public Member changePassword(Long memberId, String newPassword) {
+    @Transactional(readOnly = true)
+    public Member findRegisteredMemberByOAuth(String provider, String providerUserId) {
+        Member member = memberRepository.findByOauthProviderAndOauthProviderId(provider, providerUserId).
+                orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        return member;
+    }
+
+    public Member changePassword(Long memberId, String currentPassword, String newPassword) {
         log.info("비밀번호 변경 시도 memberId = {}", memberId);
-        Member member = findMemberById(memberId);
-        if (member.isOAuthMember()){
-            throw new RuntimeException("OAuth 유저는 비밀번호가 존재하지 않습니다.");
-        }
-        /**
-         *     // 1. 기존 비밀번호 확인
-         *     if (!passwordEncoder.matches(currentPassword, member.getPassword())) {
-         *         throw new InvalidPasswordException("기존 비밀번호가 일치하지 않습니다");
-         *     }
-         *
-         *     // 2. 동일 비밀번호 체크
-         *     if (currentPassword.equals(newPassword)) {
-         *         throw new SamePasswordException("기존 비밀번호와 동일합니다");
-         *     }
-         */
-        String encodedNewPassword = encodingPassword(newPassword);
-        member.changePassword(encodedNewPassword);
+        Member member = findRegisteredMemberById(memberId);
+
+        member.changePassword(currentPassword,newPassword,passwordEncoder);
         log.info("비밀번호 변경 성공 memberId = {}", memberId);
         return member;
     }
 
     public Member changeNickname(Long memberId, String newNickname) {
-        log.info("닉네임 변경 시도 memberId = {},newNickname ={}", memberId,  newNickname);
-        Member member = findMemberById(memberId);
-        //1. 기존 닉네임 체크
-        if (member.getNickname().equals(newNickname)){
-            log.warn("닉네임 중복: {}",newNickname);
-            throw new RuntimeException("기존 닉네임과 일치합니다.");
-        }
+        log.info("닉네임 변경 시도 memberId = {},newNickname ={}", memberId, newNickname);
+        Member member = findRegisteredMemberById(memberId);
 
-        //2. 닉네임 사용 체크
-        if (memberRepository.existsByNickname(newNickname)){
+        //1. 닉네임 중복 체크
+        if (memberRepository.existsByNickname(newNickname)) {
             log.warn("해당 닉네임 존재: {} ", newNickname);
-            throw new RuntimeException("이미 사용 중인 닉네임입니다");
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
         member.changeNickname(newNickname);
         log.info("닉네임 변경 성공: {}", member.getNickname());
         return member;
     }
-    
+
     //생년월일 최초 1회 입력 가능, 생년월일 입력 안한 유저만 사용
     public Member changeBirthYear(Long memberId, Integer newBirthYear) {
         log.info("생년 변경 시도 memberId = {}", memberId);
-        Member member = findMemberById(memberId);
+        Member member = findRegisteredMemberById(memberId);
 
-        // 1. 이미 입력했으면 변경 불가
-        if (member.getBirthYear() != null) {
-            throw new RuntimeException("생년은 수정할 수 없습니다."); //todo: 관리자 문의 요청으로 해결 할 수 있도록 처리 개선 여지있음
-        }
-
-        // 2. 생년 월일 입력
+        //todo: 관리자 문의 요청으로 해결 할 수 있도록 처리 개선 여지있음
         member.changeBirthYear(newBirthYear);
         log.info("생년 입력 완료 memberId = {}", memberId);
         return member;
     }
 
+    //회원 탈퇴
     public void withdrawMember(Long memberId) {
         log.info("회원 탈퇴 시도 memberId = {}", memberId);
-        Member member = findMemberById(memberId);
+        Member member = findRegisteredMemberById(memberId);
 
         // 이미 탈퇴한 회원인지 체크
         if (member.isDeleted()) {
-            throw new RuntimeException("이미 탈퇴한 회원입니다");
+            log.warn("중복 탈퇴 시도 memberId = {}", memberId);
+            throw new BusinessException(ErrorCode.MEMBER_ALREADY_DELETED);
         }
 
         memberRepository.delete(member);  // 소프트 삭제 실행
@@ -129,15 +169,33 @@ public class MemberService {
         log.info("회원 탈퇴 완료 memberId = {}, deleted = {}", memberId, member.isDeleted());
     }
 
+    //비밀번호 찾기 -> 이메일 요청
+    public void requestPasswordReset(String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElse(null);
+
+        if (member != null) {
+            passwordResetService.sendPasswordResetEmail(member);
+        }
+
+        // 해당 이메일이 있어도 없어도 같은 응답메세지를 반환해야한다. (보안)
+        log.info("비밀번호 재설정 요청 처리: {}", email);
+    }
+
+    //비밀번호 찾기 -> 재설정
+    public void passwordReset(String token, String newPassword) {
+        log.info("새 비밀번호로 변경 중");
+        passwordResetService.resetPassword(token,newPassword,passwordEncoder);
+    }
+
     //회원 가입 로직
     private Member signupWithRoles(MemberRequest dto, Set<Role> roles) {
         log.info("회원가입 시도: roles={} email={}", roles, dto.getEmail());
 
         //1. 중복 체크
-        validateAuthentication(dto.getPassword(), dto.getOauthProvider());
         validateDuplication(dto.getEmail(), dto.getNickname());
 
-        //2.일반 가입 유저 암호 인코딩, OAuth 는 스킵
+        //2.일반 가입 유저 암호 인코딩
         String encodedPassword = encodingPassword(dto.getPassword());
 
         //3. 엔티티 생성
@@ -145,23 +203,30 @@ public class MemberService {
                 dto.getEmail(),
                 encodedPassword,
                 dto.getNickname(),
-                roles, dto.getOauthProvider(),
-                dto.getBirthYear());
+                roles,
+                dto.getBirthYear(),
+                dto.getGender());
 
         Member savedMember = memberRepository.save(member);
+        savedMember.finishSignup();
         log.info("회원가입 완료: email={}, nickname={}, provider={}",
                 savedMember.getEmail(),
                 savedMember.getNickname(),
-                savedMember.isOAuthMember()  ? savedMember.getOauthProvider() : "Oauth 이용 안함.");
+                savedMember.isOAuthMember() ? savedMember.getOauthProvider() : "Oauth 이용 안함.");
         return savedMember;
+    }
+
+    //입력 비밀번호 검증
+    public boolean matchesPassword(String rawPassword, String encodedPassword) {
+        if (encodedPassword == null) return false; //oauth 유저
+        return passwordEncoder.matches(rawPassword, encodedPassword);
     }
 
     //비밀번호 인코딩
     private String encodingPassword(String password) {
         String encodedPassword = null;
         if (password != null) {
-            //todo: passwordEncoder 추가후 변경
-            encodedPassword = password;
+            encodedPassword = passwordEncoder.encode(password);
         }
         return encodedPassword;
     }
@@ -170,26 +235,12 @@ public class MemberService {
     private void validateDuplication(String email, String nickname) {
         if (memberRepository.existsByEmail(email)) {
             log.warn("중복된 이메일로 가입 시도: {}", email);
-            throw new RuntimeException("이메일 중복");
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
         if (memberRepository.existsByNickname(nickname)) {
             log.warn("중복된 닉네임으로 가입 시도: {}", nickname);
-            throw new RuntimeException("닉네임 중복");
-        }
-    }
-
-    //인증 방식 검증
-    private void validateAuthentication(String password, String oauthProvider) {
-        boolean hasProvider = (oauthProvider != null);
-        boolean hasPassword = (password != null);
-
-        if (hasProvider && hasPassword) {
-            throw new RuntimeException("비밀번호와 OAuth는 동시에 사용할 수 없습니다");
-        }
-
-        if (!hasProvider && !hasPassword) {
-            throw new RuntimeException("비밀번호 또는 OAuth 제공자가 필요합니다");
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
     }
 
