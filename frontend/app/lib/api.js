@@ -130,6 +130,27 @@ export async function getMyApplication() {
 }
 
 /**
+ * 모든 신청 이력 조회 (관리자)
+ */
+export async function getAllApplications(params = {}) {
+  return apiGet('/api/admin/creators/applications', params);
+}
+
+/**
+ * 신청 상세 조회
+ */
+export async function getApplicationDetail(applicationId) {
+  return apiGet(`/api/creators/applications/${applicationId}`);
+}
+
+/**
+ * 신청 승인/반려 (관리자)
+ */
+export async function approveApplication(applicationId, data) {
+  return apiPost(`/api/admin/creators/applications/${applicationId}`, data);
+}
+
+/**
  * 판매자 정보 조회
  */
 export async function getCreator(id) {

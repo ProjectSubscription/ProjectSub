@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation';
 export default function MyPageRoute() {
   const router = useRouter();
 
-  const handleNavigate = (page) => {
+  const handleNavigate = (page, params) => {
     const routeMap = {
       'my-subscriptions': '/my-subscriptions',
       'my-purchases': '/my-purchases',
       'my-reviews': '/my-reviews',
       'my-coupons': '/my-coupons',
+      'my-applications': '/my-applications',
+      'creator-apply': '/creator/apply',
     };
 
     const route = routeMap[page];
