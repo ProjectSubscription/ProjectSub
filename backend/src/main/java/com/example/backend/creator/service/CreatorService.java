@@ -9,8 +9,7 @@ import com.example.backend.creator.dto.response.CreatorMyPageResponseDTO;
 import com.example.backend.creator.dto.response.CreatorResponseDTO;
 import com.example.backend.creator.entity.Creator;
 import com.example.backend.creator.repository.CreatorRepository;
-import com.example.backend.creatorapplication.entity.CreatorApplication;
-import com.example.backend.creatorapplication.service.CreatorApplicationService;
+import com.example.backend.creatorapplication.dto.CreatorApplicationDTO;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.member.entity.Member;
@@ -18,7 +17,6 @@ import com.example.backend.member.service.MemberService;
 import com.example.backend.subscription.dto.response.SubscriberStatisticsResponse;
 import com.example.backend.subscription.entity.SubscriptionStatus;
 import com.example.backend.subscription.repository.SubscriptionRepository;
-import com.example.backend.subscription.service.SubscriptionService;
 import com.example.backend.subscription.service.SubscriptionStatisticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,17 +36,14 @@ public class CreatorService {
     private final SubscriptionStatisticsService subscriptionStatisticsService;
     private final ContentService contentService;
     private final ChannelServiceImpl channelService;
-    private final CreatorApplicationService creatorApplicationService;
-    private final SubscriptionService subscriptionService;
     private final SubscriptionRepository subscriptionRepository;
 
     // 관리자가 승인했을 때 호출
-    public void createCreator(Long memberId) {
+    public void createCreator(Long memberId, CreatorApplicationDTO dto) {
 
         log.info("크리에이터 생성 start - memberId={}", memberId);
 
-        Member member = null;
-        // Member member =  memberService.memberToCreator(memberId);
+        Member member = memberService.approveCreator(memberId);
 
         Creator creator = Creator.create(member);
 
@@ -57,11 +52,9 @@ public class CreatorService {
 
         log.info("크리에이터 생성 완료 - creatorId={}, memberId={}", saveCreator.getId(), memberId);
 
-        CreatorApplication creatorApplication = creatorApplicationService.getAppByMemberId(memberId);
-
         ChannelCreateRequest channelCreateRequest =
-                ChannelCreateRequest.create(creatorApplication.getChannelName(), creatorApplication.getChannelDescription(),
-                creatorApplication.getChannelCategory());
+                ChannelCreateRequest.create(dto.getChannelName(), dto.getChannelDescription(),
+                dto.getCategory());
 
         // 채널도 같이 생성
         channelService.createChannel(saveCreator.getId(), channelCreateRequest);
