@@ -65,6 +65,7 @@ public enum ErrorCode {
     NOT_OAUTH_MEMBER(HttpStatus.BAD_REQUEST, "OAuth 회원이 아닙니다."),
     EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 입력이 필요합니다."),
     NICKNAME_REQUIRED(HttpStatus.BAD_REQUEST, "닉네임 입력이 필요합니다"),
+    OAUTH_EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT, "이미 가입된 계정입니다."),
     //토큰
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
     TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다.");
