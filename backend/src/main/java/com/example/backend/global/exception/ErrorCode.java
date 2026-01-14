@@ -16,6 +16,7 @@ public enum ErrorCode {
     CHANNEL_NOT_FOUND(HttpStatus.NOT_FOUND, "채널을 찾을 수 없습니다."),
     CHANNEL_INACTIVE(HttpStatus.BAD_REQUEST, "비활성화된 채널입니다."),
     CHANNEL_OWNER_MISMATCH(HttpStatus.FORBIDDEN, "채널 소유자가 아닙니다."),
+    CHANNEL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "이미 채널이 존재합니다."),
 
     /* ===== Subscription ===== */
     DUPLICATE_SUBSCRIPTION_PLAN(HttpStatus.CONFLICT, "이미 존재하는 구독 상품입니다."),
