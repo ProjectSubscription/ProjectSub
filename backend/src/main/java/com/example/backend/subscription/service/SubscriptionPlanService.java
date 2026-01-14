@@ -1,8 +1,13 @@
 package com.example.backend.subscription.service;
 
 import com.example.backend.channel.validator.ChannelValidator;
+import com.example.backend.creator.entity.Creator;
+import com.example.backend.creator.repository.CreatorRepository;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
+import com.example.backend.member.entity.Member;
+import com.example.backend.member.entity.Role;
+import com.example.backend.member.repository.MemberRepository;
 import com.example.backend.subscription.dto.response.SubscriptionPlanResponse;
 import com.example.backend.subscription.entity.PlanType;
 import com.example.backend.subscription.entity.SubscriptionPlan;
@@ -19,8 +24,8 @@ import java.util.List;
 public class SubscriptionPlanService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final ChannelValidator channelValidator;
-
-    // TODO: 구독 상품을 만들떄, channelId 뿐만 아니라 크리에이터 id도 확인? -> 채널 소유자 확인(ChannelValidator)
+    private final MemberRepository memberRepository;
+    private final CreatorRepository creatorRepository;
 
     @Transactional
     public Long createPlan(Long creatorId ,Long channelId, PlanType planType, int price) {
@@ -42,5 +47,40 @@ public class SubscriptionPlanService {
                 .stream()
                 .map(p -> new SubscriptionPlanResponse(p.getId(), p.getPlanType(), p.getPrice()))
                 .toList();
+    }
+
+    @Transactional
+    public void updatePlan(Long memberId, Long channelId, Long planId, Integer price, Boolean isActive) {
+        SubscriptionPlan plan = subscriptionPlanRepository.findById(planId).orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_PLAN_NOT_FOUND));
+
+        channelValidator.validateChannel(channelId);
+
+        if (!plan.getChannelId().equals(channelId)) {
+            throw new BusinessException(ErrorCode.SUBSCRIPTION_PLAN_CHANNEL_MISMATCH);
+        }
+
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        if (!member.hasRole(Role.ROLE_ADMIN)) {
+            if (!member.hasRole(Role.ROLE_CREATOR)) {
+                throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            }
+
+            Creator creator = creatorRepository.findByMemberId(memberId).orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
+
+            channelValidator.validateOwner(creator.getId(), channelId);
+        }
+
+        if (price != null) {
+            plan.changePrice(price);
+        }
+
+        if (isActive != null) {
+            if (isActive) {
+                plan.activate();
+            } else {
+                plan.deactivate();
+            }
+        }
     }
 }

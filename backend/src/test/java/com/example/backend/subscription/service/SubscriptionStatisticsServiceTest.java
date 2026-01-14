@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -107,9 +108,9 @@ class SubscriptionStatisticsServiceTest {
         Long memberId3 = 102L;
 
         // 구독 생성
-        Subscription subscription1 = Subscription.active(memberId1, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1));
-        Subscription subscription2 = Subscription.active(memberId2, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1));
-        Subscription subscription3 = Subscription.active(memberId3, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1));
+        Subscription subscription1 = Subscription.active(memberId1, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
+        Subscription subscription2 = Subscription.active(memberId2, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
+        Subscription subscription3 = Subscription.active(memberId3, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
         List<Subscription> subscriptions = Arrays.asList(subscription1, subscription2, subscription3);
 
         // 회원 생성 (나이대별: 20대 2명, 30대 1명)
@@ -145,8 +146,8 @@ class SubscriptionStatisticsServiceTest {
         Long memberId1 = 100L;
         Long memberId2 = 101L;
 
-        Subscription subscription1 = Subscription.active(memberId1, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1));
-        Subscription subscription2 = Subscription.active(memberId2, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1));
+        Subscription subscription1 = Subscription.active(memberId1, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
+        Subscription subscription2 = Subscription.active(memberId2, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
         List<Subscription> subscriptions = Arrays.asList(subscription1, subscription2);
 
         int currentYear = LocalDate.now().getYear();
@@ -184,7 +185,7 @@ class SubscriptionStatisticsServiceTest {
             Long memberId = 100L + i;
             memberIds.add(memberId);
             members.add(createMember(memberId, currentYear - ages[i]));
-            subscriptions.add(Subscription.active(memberId, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1)));
+            subscriptions.add(Subscription.active(memberId, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1)));
         }
 
         when(channelRepository.findOneByCreatorId(creatorId)).thenReturn(Optional.of(channel));
@@ -214,9 +215,9 @@ class SubscriptionStatisticsServiceTest {
         Long memberId2 = 101L;
 
         // 같은 회원이 여러 구독을 가지고 있는 경우 (테스트용)
-        Subscription subscription1 = Subscription.active(memberId1, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1));
-        Subscription subscription2 = Subscription.active(memberId1, channelId, 2L, LocalDate.now(), LocalDate.now().plusMonths(1));
-        Subscription subscription3 = Subscription.active(memberId2, channelId, 1L, LocalDate.now(), LocalDate.now().plusMonths(1));
+        Subscription subscription1 = Subscription.active(memberId1, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
+        Subscription subscription2 = Subscription.active(memberId1, channelId, 2L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
+        Subscription subscription3 = Subscription.active(memberId2, channelId, 1L, LocalDateTime.now(), LocalDateTime.now().plusMonths(1));
         List<Subscription> subscriptions = Arrays.asList(subscription1, subscription2, subscription3);
 
         int currentYear = LocalDate.now().getYear();

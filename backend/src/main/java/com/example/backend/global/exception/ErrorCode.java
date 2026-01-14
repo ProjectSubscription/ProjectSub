@@ -28,6 +28,7 @@ public enum ErrorCode {
     SUBSCRIPTION_PLAN_NOT_FOUND(HttpStatus.NOT_FOUND,"구독 상품을 찾을 수 없습니다."),
     INACTIVE_SUBSCRIPTION_PLAN(HttpStatus.BAD_REQUEST, "비활성화된 구독 상품입니다."),
     INVALID_SUBSCRIPTION_STATUS(HttpStatus.BAD_REQUEST,"현재 상태에서는 해당 작업을 수행할 수 없습니다."),
+    SUBSCRIPTION_PLAN_CHANNEL_MISMATCH(HttpStatus.BAD_REQUEST, "구독 상품이 해당 채널에 속하지 않습니다."),
 
     /* ===== CreatorApplication ===== */
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 크리에이터 신청 내역을 찾을 수 없습니다."),

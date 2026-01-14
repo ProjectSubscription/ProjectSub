@@ -1,6 +1,7 @@
 package com.example.backend.subscription.controller;
 
 import com.example.backend.subscription.dto.request.SubscriptionPlanCreateRequest;
+import com.example.backend.subscription.dto.request.SubscriptionPlanUpdateRequest;
 import com.example.backend.subscription.dto.response.SubscriptionPlanResponse;
 import com.example.backend.subscription.service.SubscriptionPlanService;
 import jakarta.validation.Valid;
@@ -31,5 +32,18 @@ public class SubscriptionPlanController {
     @GetMapping
     public List<SubscriptionPlanResponse> getPlans(@PathVariable Long channelId) {
         return subscriptionPlanService.getPlansByChannelId(channelId);
+    }
+
+    @PutMapping("/{planId}")
+    // TODO: 테스트용 임시 수정 - 인증 구현 후 @AuthenticationPrincipal로 변경 예정
+    // public void updatePlan(@AuthenticationPrincipal Long memberId, @PathVariable Long channelId, @PathVariable Long planId, @Valid @RequestBody SubscriptionPlanUpdateRequest request) {
+    public void updatePlan(@RequestParam(required = false) Long memberId, @PathVariable Long channelId, @PathVariable Long planId, @Valid @RequestBody SubscriptionPlanUpdateRequest request) {
+        subscriptionPlanService.updatePlan(
+                memberId,
+                channelId,
+                planId,
+                request.price(),
+                request.isActive()
+        );
     }
 }

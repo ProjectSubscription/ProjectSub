@@ -59,6 +59,10 @@ public class SubscriptionPlan {
         this.isActive = false;
     }
 
+    public void activate() {
+        this.isActive = true;
+    }
+
     public void changePrice(int price) {
         this.price = price;
     }
