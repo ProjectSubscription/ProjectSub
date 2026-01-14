@@ -33,7 +33,7 @@ public class ContentReviewService {
             throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
 
-        Member member = memberService.findRegisteredMemberById(request.getMemberId());
+        Member member = memberService.findMemberIncludingDeleted(request.getMemberId());
 
         // ContentService는 DTO만 반환하므로 엔티티 참조를 위해 Repository 직접 사용
         Content content = contentRepository.findById(contentId)
