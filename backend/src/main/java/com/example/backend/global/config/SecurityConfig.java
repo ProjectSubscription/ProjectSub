@@ -7,6 +7,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -16,6 +19,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+                // ✅ 1. CORS 설정을 적용하겠다고 명시 (이게 빠져있었습니다!)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
                 // ✅ 모든 요청 허용
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll()
@@ -37,6 +43,25 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable());
 
         return http.build();
+    }
+
+    // 3. CORS 상세 설정 Bean
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // 허용할 프론트엔드 주소 (Next.js)
+        configuration.addAllowedOrigin("http://localhost:3000");
+        // 허용할 HTTP 메서드
+        configuration.addAllowedMethod("*");
+        // 허용할 헤더
+        configuration.addAllowedHeader("*");
+        // 자격 증명(쿠키 등) 허용 여부
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
