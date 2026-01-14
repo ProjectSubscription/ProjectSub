@@ -23,7 +23,6 @@ import java.util.Set;
 public class MemberService {
 
     //todo: 일반 -> 소셜로그인이 되게 할 것인가.
-    //todo: 소셜 유저 재가입시 ->
     //todo: 상수 env 파일로 옮기기
     private final PasswordResetService passwordResetService;
     private final MemberRepository memberRepository;
@@ -65,33 +64,34 @@ public class MemberService {
         log.info("oauth 가입 요청. 추가 정보 입력해야함.");
         Member member = Member.createFromOAuth(provider, providerUserId, email, Set.of());
         memberRepository.save(member);
-        log.info("oauth 가입 유저 임시 가입 완료");
+        log.info("oauth 회원 임시 가입 완료");
         return member;
     }
 
     public Member completeOAuthMemberProfile(Long memberId, CompleteOAuthProfileRequest dto) {
+        log.info("oauth 회원 추가 정보 입력 시도 memberId={}", memberId);
         Member member = findRegisteredMemberById(memberId);
 
-
-        // 4. 닉네임 중복 체크
+        // 1. 닉네임 중복 체크
         if (memberRepository.existsByNickname(dto.getNickname())) {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
 
-        // 5. email 중복 체크 (새로 입력하는 경우만)
+        // 2. email 중복 체크 (새로 입력하는 경우만)
         if (dto.getEmail() != null && memberRepository.existsByEmail(dto.getEmail())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
 
         member.completeProfile(dto.getEmail(), dto.getNickname(), dto.getBirthYear(), dto.getGender());
+        log.info("oauth 회원 추가 정보 입력 성공 memberId={}", memberId);
         return member;
     }
 
     @Transactional(readOnly = true)
     public Member findRegisteredMemberById(Long id) {
         Member member = memberRepository.findById(id).orElseThrow(() -> {
-            log.warn("해당 id값을 가진 멤버를 찾지 못 했습니다. id = {}", id);
+            log.warn("해당 id값을 가진 회원을 찾지 못 했습니다. id = {}", id);
             throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
         });
         return member;
@@ -119,11 +119,31 @@ public class MemberService {
         return member;
     }
 
+    //탈퇴 유저 포함 조회
+    @Transactional(readOnly = true)
+    public Member findMemberIncludingDeleted(Long id) {
+        //탈퇴한 회원 id, nickname(value = 탈퇴유저_id값) 제외 필드는 null 값.
+        log.info("탈퇴 회원 포함 조회 시도 id= {}", id);
+        Member member = memberRepository.findByIdIncludingDeleted(id).orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        log.info("탈퇴 회원 포함 조회 성공 id= {}", id);
+        return member;
+    }
+
+    //탈퇴 유저 포함 전체 조회
+    @Transactional(readOnly = true)
+    public List<Member> findAllIncludingDeletedMembers() {
+        log.info("탈퇴 회원 포함 전체 조회");
+        //탈퇴한 회원 id, nickname(value = 탈퇴유저_id값) 제외 필드는 null 값.
+        List<Member> members = memberRepository.findAllIncludingDeleted();
+        log.info("탈퇴 회원 포함 전체 조회 성공");
+        return members;
+    }
+
     public Member changePassword(Long memberId, String currentPassword, String newPassword) {
         log.info("비밀번호 변경 시도 memberId = {}", memberId);
         Member member = findRegisteredMemberById(memberId);
 
-        member.changePassword(currentPassword,newPassword,passwordEncoder);
+        member.changePassword(currentPassword, newPassword, passwordEncoder);
         log.info("비밀번호 변경 성공 memberId = {}", memberId);
         return member;
     }
@@ -138,7 +158,7 @@ public class MemberService {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
         member.changeNickname(newNickname);
-        log.info("닉네임 변경 성공: {}", member.getNickname());
+        log.info("닉네임 변경 성공: memberNickname = {}", member.getNickname());
         return member;
     }
 
@@ -158,15 +178,8 @@ public class MemberService {
         log.info("회원 탈퇴 시도 memberId = {}", memberId);
         Member member = findRegisteredMemberById(memberId);
 
-        // 이미 탈퇴한 회원인지 체크
-        if (member.isDeleted()) {
-            log.warn("중복 탈퇴 시도 memberId = {}", memberId);
-            throw new BusinessException(ErrorCode.MEMBER_ALREADY_DELETED);
-        }
-
-        memberRepository.delete(member);  // 소프트 삭제 실행
-
-        log.info("회원 탈퇴 완료 memberId = {}, deleted = {}", memberId, member.isDeleted());
+        member.withdraw();
+        log.info("회원 탈퇴 완료 memberId = {},email = {}, deleted = {}", memberId, member.getEmail(), member.isDeleted());
     }
 
     //비밀번호 찾기 -> 이메일 요청
@@ -185,7 +198,7 @@ public class MemberService {
     //비밀번호 찾기 -> 재설정
     public void passwordReset(String token, String newPassword) {
         log.info("새 비밀번호로 변경 중");
-        passwordResetService.resetPassword(token,newPassword,passwordEncoder);
+        passwordResetService.resetPassword(token, newPassword, passwordEncoder);
     }
 
     //회원 가입 로직
@@ -218,8 +231,11 @@ public class MemberService {
 
     //입력 비밀번호 검증
     public boolean matchesPassword(String rawPassword, String encodedPassword) {
+        log.info("입력 비밀번호 검증 시도");
         if (encodedPassword == null) return false; //oauth 유저
-        return passwordEncoder.matches(rawPassword, encodedPassword);
+        boolean result = passwordEncoder.matches(rawPassword, encodedPassword);
+        log.info("입력 비밀번호 검증 완료 result = {}", result);
+        return result;
     }
 
     //비밀번호 인코딩
