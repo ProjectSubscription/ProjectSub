@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
-export function PaymentSummary({ baseAmount, discount, finalAmount, onPayment }) {
+export function PaymentSummary({ baseAmount, discount, finalAmount, onPayment, processing = false }) {
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm sticky top-24">
       <h2 className="text-lg font-bold text-gray-900 mb-4">결제 금액</h2>
@@ -25,9 +25,10 @@ export function PaymentSummary({ baseAmount, discount, finalAmount, onPayment })
       </div>
       <button
         onClick={onPayment}
-        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-colors mb-3"
+        disabled={processing}
+        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-colors mb-3 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        결제하기
+        {processing ? '처리 중...' : '결제하기'}
       </button>
       <div className="text-xs text-gray-500 space-y-1">
         <div className="flex items-start gap-2">

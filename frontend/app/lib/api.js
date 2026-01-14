@@ -18,26 +18,56 @@ async function apiRequest(endpoint, options = {}) {
     },
   };
 
-  const response = await fetch(url, {
-    ...defaultOptions,
-    ...options,
-    headers: {
-      ...defaultOptions.headers,
-      ...options.headers,
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      ...defaultOptions,
+      ...options,
+      headers: {
+        ...defaultOptions.headers,
+        ...options.headers,
+      },
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      // 401 Unauthorized는 특별 처리 (인증되지 않은 사용자)
+      if (response.status === 401) {
+        const error = await response.json().catch(() => ({ message: 'Unauthorized' }));
+        const err = new Error(error.message || 'Unauthorized');
+        err.status = 401;
+        throw err;
+      }
+      
+      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const err = new Error(error.message || `HTTP error! status: ${response.status}`);
+      err.status = response.status;
+      throw err;
+    }
+
+    // 204 No Content 등의 경우 빈 응답 처리
+    if (response.status === 204) {
+      return null;
+    }
+
+    return response.json();
+  } catch (error) {
+    // 네트워크 오류 또는 CORS 오류 처리
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      console.error('API 요청 실패:', {
+        url,
+        error: error.message,
+        message: '백엔드 서버가 실행 중인지 확인하세요. (http://localhost:8080)'
+      });
+      throw new Error(
+        `서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인하세요.\n` +
+        `URL: ${url}\n` +
+        `가능한 원인:\n` +
+        `1. 백엔드 서버가 실행되지 않음 (http://localhost:8080)\n` +
+        `2. CORS 설정 문제\n` +
+        `3. 네트워크 연결 문제`
+      );
+    }
+    throw error;
   }
-
-  // 204 No Content 등의 경우 빈 응답 처리
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
 }
 
 /**
@@ -94,9 +124,18 @@ export async function logout() {
 
 /**
  * 내 정보 조회
+ * TODO: 인증 구현 후 사용
  */
 export async function getMyInfo() {
-  return apiGet('/api/members/me');
+  try {
+    return await apiGet('/api/members/me');
+  } catch (error) {
+    // 401 Unauthorized는 정상적인 경우 (로그인하지 않은 사용자)
+    if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -191,23 +230,43 @@ export async function getSubscriptionPlans(channelId) {
 
 /**
  * 구독 신청
+ * @param {number} channelId - 채널 ID
+ * @param {number} planId - 구독 상품 ID
+ * @param {number} [memberId] - 회원 ID (테스트용, 인증 구현 후 제거 예정)
  */
-export async function createSubscription(data) {
-  return apiPost('/api/subscriptions', data);
+export async function createSubscription(channelId, planId, memberId = null) {
+  const params = { planId };
+  if (memberId) {
+    params.memberId = memberId;
+  }
+  const queryString = new URLSearchParams(params).toString();
+  return apiPost(`/api/channels/${channelId}/subscriptions?${queryString}`);
 }
 
 /**
  * 내 구독 목록
+ * @param {number} [memberId] - 회원 ID (테스트용, 인증 구현 후 제거 예정)
  */
-export async function getMySubscriptions() {
-  return apiGet('/api/subscriptions/me');
+export async function getMySubscriptions(memberId = null) {
+  const params = {};
+  if (memberId) {
+    params.memberId = memberId;
+  }
+  return apiGet('/api/subscriptions/me', params);
 }
 
 /**
  * 구독 취소
+ * @param {number} subscriptionId - 구독 ID
+ * @param {number} [memberId] - 회원 ID (테스트용, 인증 구현 후 제거 예정)
  */
-export async function cancelSubscription(id) {
-  return apiPost(`/api/subscriptions/${id}/cancel`);
+export async function cancelSubscription(subscriptionId, memberId = null) {
+  const params = {};
+  if (memberId) {
+    params.memberId = memberId;
+  }
+  const queryString = new URLSearchParams(params).toString();
+  return apiDelete(`/api/subscriptions/${subscriptionId}${queryString ? `?${queryString}` : ''}`);
 }
 
 // ==================== 콘텐츠 (CONTENT) ====================

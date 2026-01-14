@@ -48,10 +48,17 @@ public class MemberController {
 
     /**
      * 내 정보 조회
+     * TODO: 인증 구현 후 @AuthenticationPrincipal로 변경 예정
      */
     @GetMapping("/me")
     public ResponseEntity<MyInfoResponse> getMyInfo(
             @AuthenticationPrincipal UserDetails userDetails) {
+        
+        // TODO: 테스트용 임시 처리 - 인증 구현 후 제거
+        if (userDetails == null) {
+            // 인증이 없을 때는 401 Unauthorized 반환
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
         // UserDetails에서 email(username) 추출
         String email = userDetails.getUsername();

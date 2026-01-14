@@ -1,10 +1,104 @@
 import React from 'react';
 import { CreditCard, Calendar, CheckCircle, Clock, X } from 'lucide-react';
 import { PageRoute } from '@/app/types';
-import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
+import { getMySubscriptions, cancelSubscription, getChannel, getSubscriptionPlans } from '@/app/lib/api';
 
 export function MySubscriptionsPage({ userId, onNavigate }) {
-  const userSubs = mockUserSubscriptions.filter(s => s.userId === userId);
+  const [subscriptions, setSubscriptions] = React.useState([]);
+  const [channels, setChannels] = React.useState({});
+  const [plans, setPlans] = React.useState({});
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+
+  // 구독 목록 조회
+  React.useEffect(() => {
+    const fetchSubscriptions = async () => {
+      try {
+        setLoading(true);
+        
+        // memberId가 없으면 에러 표시
+        if (!userId) {
+          setError('사용자 정보가 필요합니다. 로그인해주세요.');
+          setLoading(false);
+          return;
+        }
+        
+        const memberId = typeof userId === 'number' ? userId : Number(userId);
+        const subs = await getMySubscriptions(memberId);
+        setSubscriptions(subs || []);
+
+        // 채널 및 구독 상품 정보 조회
+        const channelMap = {};
+        const planMap = {};
+        
+        for (const sub of subs || []) {
+          if (!channelMap[sub.channelId]) {
+            try {
+              const channel = await getChannel(sub.channelId);
+              channelMap[sub.channelId] = channel;
+            } catch (err) {
+              console.error(`채널 ${sub.channelId} 조회 실패:`, err);
+            }
+          }
+          
+          if (!planMap[sub.planId]) {
+            try {
+              const channelPlans = await getSubscriptionPlans(sub.channelId);
+              const plan = channelPlans?.find(p => p.planId === sub.planId);
+              if (plan) {
+                planMap[sub.planId] = plan;
+              }
+            } catch (err) {
+              console.error(`구독 상품 ${sub.planId} 조회 실패:`, err);
+            }
+          }
+        }
+
+        setChannels(channelMap);
+        setPlans(planMap);
+      } catch (err) {
+        console.error('구독 목록 조회 실패:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubscriptions();
+  }, [userId]);
+
+  const handleCancelSubscription = async (subscriptionId) => {
+    if (!confirm('정말 구독을 취소하시겠습니까?')) {
+      return;
+    }
+
+    if (!userId) {
+      alert('사용자 정보가 필요합니다.');
+      return;
+    }
+
+    try {
+      const memberId = typeof userId === 'number' ? userId : Number(userId);
+      await cancelSubscription(subscriptionId, memberId);
+      // 구독 목록 다시 조회
+      const subs = await getMySubscriptions(memberId);
+      setSubscriptions(subs || []);
+      alert('구독이 취소되었습니다.');
+    } catch (err) {
+      console.error('구독 취소 실패:', err);
+      alert('구독 취소에 실패했습니다: ' + (err.message || '알 수 없는 오류'));
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-12">로딩 중...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-12 text-red-600">오류: {error}</div>;
+  }
+
+  const userSubs = subscriptions || [];
 
   return (
     <div className="space-y-6 pb-12">
@@ -43,9 +137,12 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
             <p className="text-sm text-gray-600">만료 예정</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">
-            {userSubs.filter(s => s.status === 'ACTIVE' && 
-              new Date(s.endDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            ).length}
+            {userSubs.filter(s => {
+              if (s.status !== 'ACTIVE' || !s.expiredAt) return false;
+              const expiredDate = new Date(s.expiredAt);
+              const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+              return expiredDate < weekLater;
+            }).length}
           </p>
         </div>
       </div>
@@ -55,30 +152,42 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
         <h2 className="text-xl font-bold text-gray-900 mb-4">활성 구독</h2>
         <div className="space-y-4">
           {userSubs.filter(s => s.status === 'ACTIVE').map(sub => {
-            const channel = mockChannels.find(c => c.id === sub.channelId);
-            const plan = mockSubscriptionPlans.find(p => p.id === sub.planId);
+            const channel = channels[sub.channelId];
+            const plan = plans[sub.planId];
             if (!channel || !plan) return null;
 
+            const formatDate = (dateString) => {
+              if (!dateString) return '-';
+              const date = new Date(dateString);
+              return date.toLocaleDateString('ko-KR');
+            };
+
+            const getPlanTypeName = (planType) => {
+              return planType === 'MONTHLY' ? '월간 구독' : '연간 구독';
+            };
+
             return (
-              <div key={sub.id} className="bg-white rounded-xl p-6 shadow-sm">
+              <div key={sub.subscriptionId} className="bg-white rounded-xl p-6 shadow-sm">
                 <div className="flex items-start justify-between">
                   <div className="flex gap-4 flex-1">
-                    <img
-                      src={channel.thumbnailUrl}
-                      alt={channel.name}
-                      className="w-24 h-24 rounded-lg object-cover"
-                    />
+                    {channel.thumbnailUrl && (
+                      <img
+                        src={channel.thumbnailUrl}
+                        alt={channel.title || channel.name}
+                        className="w-24 h-24 rounded-lg object-cover"
+                      />
+                    )}
                     <div className="flex-1">
-                      <h3 className="font-bold text-gray-900 mb-1">{channel.name}</h3>
-                      <p className="text-sm text-gray-600 mb-3">{channel.creatorName}</p>
+                      <h3 className="font-bold text-gray-900 mb-1">{channel.title || channel.name}</h3>
+                      <p className="text-sm text-gray-600 mb-3">{channel.description || ''}</p>
                       <div className="flex flex-wrap gap-4 text-sm">
                         <div className="flex items-center gap-1 text-gray-600">
                           <Calendar className="w-4 h-4" />
-                          <span>시작: {sub.startDate}</span>
+                          <span>시작: {formatDate(sub.startedAt)}</span>
                         </div>
                         <div className="flex items-center gap-1 text-gray-600">
                           <Clock className="w-4 h-4" />
-                          <span>만료: {sub.endDate}</span>
+                          <span>만료: {formatDate(sub.expiredAt)}</span>
                         </div>
                       </div>
                     </div>
@@ -87,18 +196,21 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
                     <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-3">
                       활성
                     </span>
-                    <p className="text-sm text-gray-600 mb-1">{plan.name}</p>
+                    <p className="text-sm text-gray-600 mb-1">{getPlanTypeName(plan.planType)}</p>
                     <p className="font-bold text-gray-900">{plan.price.toLocaleString()}원</p>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-200 flex gap-3">
                   <button
-                    onClick={() => onNavigate('channel-detail', { channelId: channel.id })}
+                    onClick={() => onNavigate('channel-detail', { channelId: channel.id || sub.channelId })}
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                   >
                     채널 보기
                   </button>
-                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                  <button 
+                    onClick={() => handleCancelSubscription(sub.subscriptionId)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                  >
                     구독 취소
                   </button>
                 </div>
@@ -114,24 +226,32 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
           <h2 className="text-xl font-bold text-gray-900 mb-4">만료된 구독</h2>
           <div className="space-y-4">
             {userSubs.filter(s => s.status === 'EXPIRED').map(sub => {
-              const channel = mockChannels.find(c => c.id === sub.channelId);
-              const plan = mockSubscriptionPlans.find(p => p.id === sub.planId);
+              const channel = channels[sub.channelId];
+              const plan = plans[sub.planId];
               if (!channel || !plan) return null;
 
+              const formatDate = (dateString) => {
+                if (!dateString) return '-';
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ko-KR');
+              };
+
               return (
-                <div key={sub.id} className="bg-white rounded-xl p-6 shadow-sm opacity-75">
+                <div key={sub.subscriptionId} className="bg-white rounded-xl p-6 shadow-sm opacity-75">
                   <div className="flex items-start justify-between">
                     <div className="flex gap-4 flex-1">
-                      <img
-                        src={channel.thumbnailUrl}
-                        alt={channel.name}
-                        className="w-24 h-24 rounded-lg object-cover grayscale"
-                      />
+                      {channel.thumbnailUrl && (
+                        <img
+                          src={channel.thumbnailUrl}
+                          alt={channel.title || channel.name}
+                          className="w-24 h-24 rounded-lg object-cover grayscale"
+                        />
+                      )}
                       <div className="flex-1">
-                        <h3 className="font-bold text-gray-900 mb-1">{channel.name}</h3>
-                        <p className="text-sm text-gray-600 mb-3">{channel.creatorName}</p>
+                        <h3 className="font-bold text-gray-900 mb-1">{channel.title || channel.name}</h3>
+                        <p className="text-sm text-gray-600 mb-3">{channel.description || ''}</p>
                         <div className="text-sm text-gray-500">
-                          만료일: {sub.endDate}
+                          만료일: {formatDate(sub.expiredAt)}
                         </div>
                       </div>
                     </div>
@@ -141,7 +261,7 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
                   </div>
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <button
-                      onClick={() => onNavigate('channel-detail', { channelId: channel.id })}
+                      onClick={() => onNavigate('channel-detail', { channelId: channel.id || sub.channelId })}
                       className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
                       다시 구독하기
