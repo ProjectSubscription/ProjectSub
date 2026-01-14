@@ -1,6 +1,7 @@
 package com.example.backend.creator.dto.response;
 
 import com.example.backend.creator.entity.Creator;
+import com.example.backend.creator.entity.CreatorStatus;
 import com.example.backend.subscription.dto.response.SubscriberStatisticsResponse;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -29,6 +30,9 @@ public class CreatorResponseDTO {
     // 활동 지표 ( 최근 5일간 발행 콘텐츠 수 )
     private long recentContentCount;
 
+    // 크리에이터 상태 (정지/삭제 상태라면 프론트에서 정지되었거나 탈퇴한 크리에이터입니다. 문구)
+    private CreatorStatus status;
+
     public static CreatorResponseDTO create(Creator creator,
                                             SubscriberStatisticsResponse subscriberStatisticsResponse,
                                             long recentContentCount,
@@ -47,6 +51,8 @@ public class CreatorResponseDTO {
                 .subscriberStatisticsResponse(subscriberStatisticsResponse)
                 // 활동 지표
                 .recentContentCount(recentContentCount)
+                // 상태
+                .status(creator.getStatus())
                 .build();
     }
 }
