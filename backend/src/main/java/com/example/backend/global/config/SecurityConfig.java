@@ -1,5 +1,8 @@
 package com.example.backend.global.config;
 
+import com.example.backend.auth.oauth.CustomOAuth2UserService;
+import com.example.backend.auth.oauth.OAuthLoginSuccessHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,15 +13,33 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            CustomOAuth2UserService customOAuth2UserService,
+            OAuthLoginSuccessHandler oAuthLoginSuccessHandler
+    ) throws Exception {
 
         http
-                // ✅ 모든 요청 허용
+                // 권한 설정 (임시 회원 고려)
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
+                        .requestMatchers(
+                                "/oauth2/**",
+                                "/login/**",
+                                "/members/oauth/complete-profile"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+
+                // OAuth 로그인 설정
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuthLoginSuccessHandler)
                 )
 
                 // ✅ CSRF 비활성화 (H2 Console 사용 시 필수)
