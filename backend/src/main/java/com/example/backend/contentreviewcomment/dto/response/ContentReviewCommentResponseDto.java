@@ -13,6 +13,7 @@ public class ContentReviewCommentResponseDto {
     private Long id;
     private Long reviewId;
     private Long memberId;
+    private String nickname;
     private Long parentId;
     private String comment;
     private LocalDateTime createdAt;
@@ -23,6 +24,7 @@ public class ContentReviewCommentResponseDto {
         this.id = comment.getId();
         this.reviewId = comment.getContentReview().getId();
         this.memberId = comment.getMember().getId();
+        this.nickname = comment.getMember().getNickname();
         this.parentId = comment.getParent() != null ? comment.getParent().getId() : null;
         this.comment = comment.getComment();
         this.createdAt = comment.getCreatedAt();
