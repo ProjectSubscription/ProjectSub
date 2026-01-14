@@ -63,7 +63,15 @@ public enum ErrorCode {
     EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 입력이 필요합니다."),
     //토큰
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
-    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다.");
+    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다."),
+
+    /* ===== Content Review ===== */
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 콘텐츠에 대한 리뷰를 작성했습니다."),
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
+    CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다."),
+
+    /* ===== Content Review Comment ===== */
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
