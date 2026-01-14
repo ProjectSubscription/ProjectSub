@@ -14,6 +14,8 @@ import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
 import { CreatorDashboard } from './pages/CreatorDashboard';
 import { AdminApplicationsPage } from './pages/AdminApplicationsPage';
 import { MySubscriptionsPage, MyPage } from './pages/UserPages';
+import { PasswordResetRequestPage } from './pages/PasswordResetRequestPage';
+import { PasswordResetPage } from './pages/PasswordResetPage';
 import { PageRoute } from './types';
 import { mockUsers } from './mockData';
 
@@ -24,6 +26,22 @@ export default function App() {
   });
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    // 이미 다른 페이지로 이동한 경우는 무시
+    if (navigationState.page !== 'landing') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (token) {
+      setNavigationState({
+        page: 'password-reset',
+        params: { token },
+      });
+    }
+  }, [navigationState.page]);
+
+  
   const handleLogin = (email, password) => {
     // Simple login simulation
     const user = mockUsers.find(u => u.email === email);
@@ -55,6 +73,12 @@ export default function App() {
       case 'login':
         return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
       
+      case 'password-reset-request':
+        return <PasswordResetRequestPage onNavigate={handleNavigate}/>;
+
+      case 'password-reset':
+        return <PasswordResetPage token={navigationState.params?.token} onNavigate={handleNavigate}/>;
+
       case 'home':
         return <HomePage onNavigate={handleNavigate} />;
       
@@ -273,7 +297,7 @@ export default function App() {
   };
 
   // Public pages (no header/sidebar/footer)
-  const isPublicPage = navigationState.page === 'landing' || navigationState.page === 'login';
+  const isPublicPage = navigationState.page === 'landing' || navigationState.page === 'login' || navigationState.page === 'password-reset-request';
 
   if (isPublicPage) {
     return (
