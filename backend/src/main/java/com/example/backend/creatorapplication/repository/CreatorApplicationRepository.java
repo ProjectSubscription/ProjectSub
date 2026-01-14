@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 public interface CreatorApplicationRepository extends JpaRepository<CreatorApplication, Long> {
 
     /**
@@ -27,5 +29,10 @@ public interface CreatorApplicationRepository extends JpaRepository<CreatorAppli
      * 승인 대기중인 신청여부 체크
      * */
     boolean existsByMemberIdAndStatus(Long memberId, ApprovalStatus status);
+
+    /**
+     * 특정 회원의 검토 대기중인 요청 조회
+     * */
+    Optional<CreatorApplication> findByMemberIdAndStatus(Long memberId, ApprovalStatus status);
 
 }

@@ -35,4 +35,8 @@ public class Creator extends CreatedAtEntity {
                 .member(member)
                 .build();
     }
+
+    public void changeStatus(CreatorStatus status) {
+        this.status = status;
+    }
 }
