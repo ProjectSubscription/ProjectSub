@@ -135,11 +135,10 @@ public class CreatorApplicationService {
 
     // appId로 app조회 - 메서드로 분리
     private CreatorApplication getCreatorApplication(Long applicationId) {
-        CreatorApplication application = creatorApplicationRepository.findById(applicationId)
+        return creatorApplicationRepository.findById(applicationId)
                 .orElseThrow(()->{
                     log.error("크리에이터 신청 이력을 찾을 수 없습니다. applicationId={}", applicationId);
-                    throw new BusinessException(ErrorCode.APPLICATION_NOT_FOUND);
-                }); // todo: 나중에 커스텀 예외로 교체
-        return application;
+                    return new BusinessException(ErrorCode.APPLICATION_NOT_FOUND);
+                });
     }
 }

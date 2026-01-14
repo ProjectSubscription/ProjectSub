@@ -79,7 +79,7 @@ public class CreatorService {
         Creator creator = creatorRepository.findById(creatorId)
                 .orElseThrow(()->{
                     log.error("크리에이터를 찾을 수 없습니다. creatorId={}", creatorId);
-                    throw new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
+                    return new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
                 });
         // 채널 관련
         Channel channel = channelService.getChannelByCreatorId(creatorId);
@@ -107,7 +107,7 @@ public class CreatorService {
         Creator creator = creatorRepository.findByMemberId(memberId)
                 .orElseThrow(()->{
                     log.error("크리에이터를 찾을 수 없습니다. memberId={}", memberId);
-                    throw new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
+                    return new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
                 });
 
         // 총 구독자 추가 예정
