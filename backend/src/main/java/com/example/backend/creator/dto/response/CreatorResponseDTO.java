@@ -1,6 +1,8 @@
 package com.example.backend.creator.dto.response;
 
 import com.example.backend.creator.entity.Creator;
+import com.example.backend.creator.entity.CreatorStatus;
+import com.example.backend.subscription.dto.response.SubscriberStatisticsResponse;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,27 +25,34 @@ public class CreatorResponseDTO {
     private boolean isSubscribed; // 채널관련
 
     // 구독자 통계 ( 나이대별 구독자 비율, 남녀 비율 )
-    // private SubscriberStatusDTO subscriberStatus;
+    private SubscriberStatisticsResponse subscriberStatisticsResponse;
 
     // 활동 지표 ( 최근 5일간 발행 콘텐츠 수 )
-    private int contentCount;
+    private long recentContentCount;
 
-    public static CreatorResponseDTO create(Creator creator) {
+    // 크리에이터 상태 (정지/삭제 상태라면 프론트에서 정지되었거나 탈퇴한 크리에이터입니다. 문구)
+    private CreatorStatus status;
+
+    public static CreatorResponseDTO create(Creator creator,
+                                            SubscriberStatisticsResponse subscriberStatisticsResponse,
+                                            long recentContentCount,
+                                            String channelName,
+                                            String channelDescription,
+                                            boolean isSubscribed) {
         return CreatorResponseDTO.builder()
                 .creatorId(creator.getId())
                 .introduction(creator.getIntroduction())
-                .nickname(creator.getMember().getNickname()) /// 1 + 1 쿼리
-                // 추가 예정
-
+                .nickname(creator.getMember().getNickname())
                 // 채널 관련
-
+                .channelName(channelName)
+                .channelDescription(channelDescription)
+                .isSubscribed(isSubscribed)
                 // 구독자 통계
-
+                .subscriberStatisticsResponse(subscriberStatisticsResponse)
                 // 활동 지표
-
+                .recentContentCount(recentContentCount)
+                // 상태
+                .status(creator.getStatus())
                 .build();
     }
-
-
-
 }

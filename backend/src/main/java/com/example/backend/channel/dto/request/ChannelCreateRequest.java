@@ -1,17 +1,27 @@
 package com.example.backend.channel.dto.request;
 
 import com.example.backend.channel.entity.ChannelCategory;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder(access = AccessLevel.PRIVATE)
 public class ChannelCreateRequest {
-    @NotBlank
     private String title;
 
     private String description;
 
-    @NotNull
     private ChannelCategory category;
+
+    public static ChannelCreateRequest create(String title, String description,
+                                              ChannelCategory category) {
+        return ChannelCreateRequest.builder()
+                .title(title)
+                .description(description)
+                .category(category)
+                .build();
+    }
 }

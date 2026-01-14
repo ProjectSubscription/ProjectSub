@@ -1,5 +1,6 @@
 package com.example.backend.creatorapplication.dto.response;
 
+import com.example.backend.channel.entity.ChannelCategory;
 import com.example.backend.creatorapplication.entity.ApprovalStatus;
 import com.example.backend.creatorapplication.entity.CreatorApplication;
 import lombok.AccessLevel;
@@ -16,6 +17,7 @@ public class AllCreatorApplicationResponseDTO {
     private Long applicationId;
     private String nickname;
     private String channelName;
+    private ChannelCategory channelCategory;
     private ApprovalStatus status;
     private LocalDateTime createdAt;
 
@@ -24,6 +26,7 @@ public class AllCreatorApplicationResponseDTO {
                 .applicationId(application.getId())
                 .nickname(application.getMember().getNickname()) /// n+1 : fetch join 필요
                 .channelName(application.getChannelName())
+                .channelCategory(application.getChannelCategory())
                 .status(application.getStatus())
                 .createdAt(application.getCreatedAt())
                 .build();
