@@ -104,6 +104,13 @@ public class CreatorService {
                     return new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
                 });
 
+        // 정지되었거나 탈퇴한 크리에이터라면
+        if (creator.getStatus() == CreatorStatus.STOPPED) {
+            throw new BusinessException(ErrorCode.CREATOR_STATUS_STOPPED);
+        } else if (creator.getStatus() == CreatorStatus.DELETED) {
+            throw new BusinessException(ErrorCode.CREATOR_ALREADY_DELETED);
+        }
+
         // 총 구독자 추가 예정
         Channel channel = channelService.getChannelByCreatorId(creator.getId());
         int totalSubscribers = channel.getSubscriberCount();
