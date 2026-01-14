@@ -1,5 +1,6 @@
 package com.example.backend.member.dto.response;
 
+import com.example.backend.member.entity.Gender;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.entity.Role;
 import lombok.*;
@@ -16,6 +17,7 @@ public class MyInfoResponse {
     private String nickname;
     private Set<Role> roles;
     private Integer birthYear;
+    private Gender gender;
 
     public static MyInfoResponse fromEntity(Member entity) {
         return MyInfoResponse.builder()
@@ -24,6 +26,7 @@ public class MyInfoResponse {
                 .nickname(entity.getNickname())
                 .roles(entity.getRoles())
                 .birthYear(entity.getBirthYear())
+                .gender(entity.getGender())
                 .build();
     }
 }
