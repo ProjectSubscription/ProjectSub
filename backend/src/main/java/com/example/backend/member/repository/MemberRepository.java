@@ -3,6 +3,7 @@ package com.example.backend.member.repository;
 import com.example.backend.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -23,5 +24,12 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query("select m from Member m join fetch m.roles where m.email = :email")
     Optional<Member> findByEmail(String email);
 
-    Optional<Member> findByOauthProviderAndOauthProviderId(String provider, String providerId);
+    @Query("select m from Member m join fetch m.roles where m.oauthProvider = :provider and m.oauthProviderId = :providerId")
+    Optional<Member> findByOauthProviderAndOauthProviderId(@Param("provider") String provider, @Param("providerId") String providerId);
+
+    @Query(value = "select * from members where id = :id", nativeQuery = true)
+    Optional<Member> findByIdIncludingDeleted(@Param("id") Long id);
+
+    @Query(value = "select * from members",nativeQuery = true)
+    List<Member> findAllIncludingDeleted();
 }
