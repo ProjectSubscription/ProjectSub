@@ -1,5 +1,7 @@
 package com.example.backend.member.service;
 
+import com.example.backend.creator.entity.CreatorStatus;
+import com.example.backend.creator.service.CreatorService;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.member.dto.request.CompleteOAuthProfileRequest;
@@ -7,8 +9,8 @@ import com.example.backend.member.repository.MemberRepository;
 import com.example.backend.member.dto.request.MemberRequest;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.entity.Role;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,16 +19,28 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 @Slf4j
 public class MemberService {
 
-    //todo: 일반 -> 소셜로그인이 되게 할 것인가.
     //todo: 상수 env 파일로 옮기기
     private final PasswordResetService passwordResetService;
     private final MemberRepository memberRepository;
+    
+
+    private final CreatorService creatorService;
     private final PasswordEncoder passwordEncoder;
+
+
+    public MemberService(@Lazy CreatorService creatorService,
+                         MemberRepository memberRepository,
+                         PasswordEncoder passwordEncoder,
+                          PasswordResetService passwordResetService) { //todo : 개선 여지 있음
+        this.creatorService = creatorService;
+        this.memberRepository = memberRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.passwordResetService = passwordResetService;
+    }
 
     //유저 회원가입
     public Member registerMember(MemberRequest dto) {
@@ -68,6 +82,7 @@ public class MemberService {
         return member;
     }
 
+    //oauth 유저 추가 정보 입력
     public Member completeOAuthMemberProfile(Long memberId, CompleteOAuthProfileRequest dto) {
         log.info("oauth 회원 추가 정보 입력 시도 memberId={}", memberId);
         Member member = findRegisteredMemberById(memberId);
@@ -177,6 +192,10 @@ public class MemberService {
     public void withdrawMember(Long memberId) {
         log.info("회원 탈퇴 시도 memberId = {}", memberId);
         Member member = findRegisteredMemberById(memberId);
+
+        if (member.hasRole(Role.ROLE_CREATOR)){
+            creatorService.changeStatus(memberId, CreatorStatus.DELETED);
+        }
 
         member.withdraw();
         log.info("회원 탈퇴 완료 memberId = {},email = {}, deleted = {}", memberId, member.getEmail(), member.isDeleted());
