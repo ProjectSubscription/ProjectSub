@@ -1,14 +1,13 @@
 'use client';
 
-import { LandingPage } from '@/components/pages/LandingPage';
+import { HomePage } from '@/components/pages/HomePage';
 import { useRouter } from 'next/navigation';
 
-export default function Home() {
+export default function ChannelsPage() {
   const router = useRouter();
 
   const handleNavigate = (page, params) => {
     const routeMap = {
-      'login': '/login',
       'channel-detail': (params) => `/channels/${params?.channelId || ''}`,
       'content-detail': (params) => `/contents/${params?.contentId || ''}`,
     };
@@ -21,5 +20,5 @@ export default function Home() {
     }
   };
 
-  return <LandingPage onNavigate={handleNavigate} />;
+  return <HomePage onNavigate={handleNavigate} />;
 }

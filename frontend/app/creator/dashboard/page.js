@@ -1,15 +1,17 @@
 'use client';
 
-import { LandingPage } from '@/components/pages/LandingPage';
+import { CreatorDashboard } from '@/components/pages/CreatorDashboard';
 import { useRouter } from 'next/navigation';
 
-export default function Home() {
+export default function CreatorDashboardRoute() {
   const router = useRouter();
 
   const handleNavigate = (page, params) => {
     const routeMap = {
-      'login': '/login',
-      'channel-detail': (params) => `/channels/${params?.channelId || ''}`,
+      'creator-content': '/creator/content',
+      'creator-content-new': '/creator/content/new',
+      'creator-channel': '/creator/channel',
+      'creator-settlement': '/creator/settlement',
       'content-detail': (params) => `/contents/${params?.contentId || ''}`,
     };
 
@@ -21,5 +23,5 @@ export default function Home() {
     }
   };
 
-  return <LandingPage onNavigate={handleNavigate} />;
+  return <CreatorDashboard creatorId="creator-1" onNavigate={handleNavigate} />;
 }
