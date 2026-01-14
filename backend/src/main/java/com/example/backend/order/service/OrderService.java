@@ -35,7 +35,7 @@ public class OrderService {
      */
     public OrderCreateResponseDTO createOrder(OrderCreateRequestDTO request, Long userId) {
         // 회원 조회 (MemberService 사용)
-        Member member = memberService.findMemberById(userId);
+        Member member = memberService.findRegisteredMemberById(userId);
 
         // 주문 타입에 따라 대상 조회 및 금액 계산
         Long amount = 0L;
