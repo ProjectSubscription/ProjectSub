@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
  * - SecurityConfig 작성
  * - @PreAuthorize 활성화
  */
+//todo: /api/members/reset-password
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/members")
@@ -39,6 +40,7 @@ public class MemberController {
      */
     @PostMapping("/register")
     public ResponseEntity<MyInfoResponse> registerMember(@Valid @RequestBody MemberRequest request) {
+        log.info("회원 가입 요청 컨트롤러");
         Member member = memberService.registerMember(request);
         MyInfoResponse response = MyInfoResponse.fromEntity(member);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -55,7 +57,7 @@ public class MemberController {
         String email = userDetails.getUsername();
 
         // email로 Member 조회 (Service에 메서드 추가 필요)
-        Member member = memberService.findMemberByEmail(email);
+        Member member = memberService.findRegisteredMemberByEmail(email);
         MyInfoResponse response = MyInfoResponse.fromEntity(member);
 
         return ResponseEntity.ok(response);
@@ -66,7 +68,7 @@ public class MemberController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<PublicMemberInfoResponse> getMember(@PathVariable Long id) {
-        Member member = memberService.findMemberById(id);
+        Member member = memberService.findRegisteredMemberById(id);
         PublicMemberInfoResponse response = PublicMemberInfoResponse.fromEntity(member);
         return ResponseEntity.ok(response);
     }
@@ -77,7 +79,7 @@ public class MemberController {
      */
     @GetMapping
     public ResponseEntity<List<MyInfoResponse>> getAllMembers() {
-        List<Member> members = memberService.findAllMembers();
+        List<Member> members = memberService.findAllRegisteredMembers();
         List<MyInfoResponse> response = members.stream()
                 .map(MyInfoResponse::fromEntity)
                 .collect(Collectors.toList());
@@ -93,10 +95,10 @@ public class MemberController {
             @Valid @RequestBody PasswordChangeRequest request) {
 
         String email = userDetails.getUsername();
-        Member member = memberService.findMemberByEmail(email);
+        Member member = memberService.findRegisteredMemberByEmail(email);
 
         //비밀번호 변경
-        Member updatedMember = memberService.changePassword(member.getId(), request.getNewPassword());
+        Member updatedMember = memberService.changePassword(member.getId(), request.getCurrentPassword(), request.getNewPassword());
         MyInfoResponse response = MyInfoResponse.fromEntity(updatedMember);
 
         return ResponseEntity.ok(response);
@@ -111,7 +113,7 @@ public class MemberController {
             @Valid @RequestBody NicknameChangeRequest request) {
 
         String email = userDetails.getUsername();
-        Member member = memberService.findMemberByEmail(email);
+        Member member = memberService.findRegisteredMemberByEmail(email);
 
         Member updatedMember = memberService.changeNickname(member.getId(), request.getNewNickname());
         MyInfoResponse response = MyInfoResponse.fromEntity(updatedMember);
@@ -128,7 +130,7 @@ public class MemberController {
             @Valid @RequestBody BirthYearRequest request) {
 
         String email = userDetails.getUsername();
-        Member member = memberService.findMemberByEmail(email);
+        Member member = memberService.findRegisteredMemberByEmail(email);
 
         Member updatedMember = memberService.changeBirthYear(member.getId(), request.getBirthYear());
         MyInfoResponse response = MyInfoResponse.fromEntity(updatedMember);
@@ -144,7 +146,7 @@ public class MemberController {
             @AuthenticationPrincipal UserDetails userDetails) {
 
         String email = userDetails.getUsername();
-        Member member = memberService.findMemberByEmail(email);
+        Member member = memberService.findRegisteredMemberByEmail(email);
 
         memberService.withdrawMember(member.getId());
 

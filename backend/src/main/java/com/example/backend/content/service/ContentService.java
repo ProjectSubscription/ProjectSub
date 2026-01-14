@@ -272,9 +272,9 @@ public class ContentService {
     }
 
     /**
-     * 콘텐츠 조회 (내부 메서드)
+     * 콘텐츠 조회
      */
-    private Content findContent(Long contentId) {
+    public Content findContent(Long contentId) {
         return contentRepository.findByIdAndIsDeletedFalse(contentId)
                 .orElseThrow(() -> new IllegalArgumentException("콘텐츠가 존재하지 않습니다."));
     }

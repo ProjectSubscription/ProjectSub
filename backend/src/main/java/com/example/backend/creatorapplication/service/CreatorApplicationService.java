@@ -39,7 +39,7 @@ public class CreatorApplicationService {
 
         log.info("크리에이터 신청 생성 - channelName={}, channelDescription={}", dto.getChannelName(), dto.getChannelDescription());
 
-        Member member = memberService.findMemberById(memberId);
+        Member member = memberService.findRegisteredMemberById(memberId);
 
         // 이미 크리에이터인지 확인
         if (creatorService.isCreator(memberId)) {
@@ -84,7 +84,7 @@ public class CreatorApplicationService {
         log.info("크리에이터 신청 상세 조회 start - applicationId={}", applicationId);
 
         // 조회하는 사람(본인 혹은 관리자)
-        Member memberByMemberId = memberService.findMemberById(memberId);
+        Member memberByMemberId = memberService.findRegisteredMemberById(memberId);
 
         // 신청한 사람
         Member memberByAppId = creatorApplicationRepository.findById(applicationId)
