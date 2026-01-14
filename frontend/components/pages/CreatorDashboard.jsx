@@ -11,24 +11,64 @@ import {
   ArrowDown
 } from 'lucide-react';
 import { PageRoute } from '@/app/types';
-import { mockChannels, mockContents, mockSettlements } from '@/app/mockData';
+import { getMyCreatorInfo } from '@/app/lib/api';
 
 export function CreatorDashboard({ creatorId, onNavigate }) {
-  const myChannels = mockChannels.filter(c => c.creatorId === creatorId);
-  const myContents = mockContents.filter(c =>
-    myChannels.some(ch => ch.id === c.channelId)
-  );
-  const mySettlements = mockSettlements.filter(s => s.creatorId === creatorId);
-  const latestSettlement = mySettlements[0];
+  const [myPageData, setMyPageData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
 
-  const totalSubscribers = myChannels.reduce((sum, ch) => sum + ch.subscriberCount, 0);
-  const totalViews = myContents.reduce((sum, c) => sum + c.viewCount, 0);
-  const totalLikes = myContents.reduce((sum, c) => sum + c.likeCount, 0);
+  React.useEffect(() => {
+    async function loadCreatorMyPage() {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await getMyCreatorInfo();
+        setMyPageData(data);
+      } catch (err) {
+        setError(err.message || '크리에이터 마이페이지 정보를 불러오는 중 오류가 발생했습니다.');
+        console.error('크리에이터 마이페이지 조회 오류:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCreatorMyPage();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-8 pb-12">
+        <div className="bg-white rounded-xl p-12 shadow-sm text-center">
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 pb-12">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!myPageData) {
+    return (
+      <div className="space-y-8 pb-12">
+        <div className="bg-white rounded-xl p-12 shadow-sm text-center">
+          <p className="text-gray-600">데이터를 불러올 수 없습니다.</p>
+        </div>
+      </div>
+    );
+  }
 
   const stats = [
     {
       label: '총 구독자',
-      value: totalSubscribers.toLocaleString(),
+      value: (myPageData.totalSubscribers || 0).toLocaleString(),
       change: '+12.5%',
       trend: 'up',
       icon: Users,
@@ -36,7 +76,7 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
     },
     {
       label: '이번 달 예상 수익',
-      value: `${latestSettlement?.netAmount.toLocaleString()}원`,
+      value: `${(myPageData.expectedRevenue || 0).toLocaleString()}원`,
       change: '+8.3%',
       trend: 'up',
       icon: DollarSign,
@@ -44,7 +84,7 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
     },
     {
       label: '총 콘텐츠',
-      value: myContents.length.toString(),
+      value: (myPageData.totalContentCount || 0).toString(),
       change: '+3',
       trend: 'up',
       icon: Video,
@@ -52,7 +92,7 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
     },
     {
       label: '총 조회수',
-      value: totalViews.toLocaleString(),
+      value: (myPageData.totalViewCount || 0).toLocaleString(),
       change: '+15.2%',
       trend: 'up',
       icon: Eye,
@@ -60,9 +100,7 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
     }
   ];
 
-  const topContents = myContents
-    .sort((a, b) => b.viewCount - a.viewCount)
-    .slice(0, 5);
+  const featuredContents = myPageData.featuredContents || [];
 
   return (
     <div className="space-y-8 pb-12">
@@ -148,55 +186,75 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
             </select>
           </div>
           <div className="space-y-3">
-            {mySettlements.slice(0, 3).map((settlement) => (
-              <div key={settlement.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                <div>
-                  <p className="font-medium text-gray-900">{settlement.month}</p>
-                  <p className="text-sm text-gray-500">
-                    수수료: {settlement.commission.toLocaleString()}원 (10%)
-                  </p>
+            {myPageData.monthlyRevenues && myPageData.monthlyRevenues.length > 0 ? (
+              myPageData.monthlyRevenues.map((revenue, index) => (
+                <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                  <div>
+                    <p className="font-medium text-gray-900">{revenue.month || `${index + 1}월`}</p>
+                    {revenue.commission !== undefined && (
+                      <p className="text-sm text-gray-500">
+                        수수료: {revenue.commission.toLocaleString()}원
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {revenue.netAmount !== undefined && (
+                      <p className="font-bold text-gray-900">
+                        {revenue.netAmount.toLocaleString()}원
+                      </p>
+                    )}
+                    {revenue.status && (
+                      <p className="text-xs text-gray-500">
+                        {revenue.status === 'COMPLETED' ? '정산 완료' : '정산 예정'}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">
-                    {settlement.netAmount.toLocaleString()}원
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {settlement.status === 'COMPLETED' ? '정산 완료' : '정산 예정'}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-8">수익 내역이 없습니다.</p>
+            )}
           </div>
         </div>
 
         {/* Top Contents */}
         <div className="bg-white rounded-xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-gray-900 mb-6">인기 콘텐츠 TOP 5</h3>
-          <div className="space-y-3">
-            {topContents.map((content, index) => (
-              <div
-                key={content.id}
-                onClick={() => onNavigate('content-detail', { contentId: content.id })}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                  {index + 1}
-                </div>
-                <img
-                  src={content.thumbnailUrl}
-                  alt={content.title}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{content.title}</p>
-                  <div className="flex items-center gap-3 text-sm text-gray-500">
-                    <span>{content.viewCount.toLocaleString()} 조회</span>
-                    <span>{content.likeCount.toLocaleString()} 좋아요</span>
+          <h3 className="text-lg font-bold text-gray-900 mb-6">인기 콘텐츠 TOP 3</h3>
+          {featuredContents.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">인기 콘텐츠가 없습니다.</p>
+          ) : (
+            <div className="space-y-3">
+              {featuredContents.map((content, index) => (
+                <div
+                  key={content.contentId || content.id}
+                  onClick={() => onNavigate('content-detail', { contentId: content.contentId || content.id })}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                    {index + 1}
+                  </div>
+                  {content.thumbnailUrl && (
+                    <img
+                      src={content.thumbnailUrl}
+                      alt={content.title}
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{content.title}</p>
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      {content.viewCount !== undefined && (
+                        <span>{content.viewCount.toLocaleString()} 조회</span>
+                      )}
+                      {content.likeCount !== undefined && (
+                        <span>{content.likeCount.toLocaleString()} 좋아요</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
