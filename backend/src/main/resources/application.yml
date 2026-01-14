@@ -1,4 +1,25 @@
 spring:
   application:
     name: backend
-    
+  profiles:
+    active: local
+  # 메일 설정 (로컬 개발용)
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:temp@gmail.com}      # 여기에 실제 Gmail 입력
+    password: ${MAIL_PASSWORD:temppassword}         # 여기에 앱 비밀번호 입력
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
