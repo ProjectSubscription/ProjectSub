@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -36,9 +36,9 @@ public class SubscriptionService {
             throw new BusinessException(ErrorCode.INACTIVE_SUBSCRIPTION_PLAN);
         }
 
-        LocalDate startDate = LocalDate.now();
-        LocalDate endDate = calculateEndDate(startDate, plan.getPlanType());
-        Subscription subscription = Subscription.active(memberId, channelId, planId, startDate, endDate);
+        LocalDateTime startedAt = LocalDateTime.now();
+        LocalDateTime expiredAt = calculateExpiredAt(startedAt, plan.getPlanType());
+        Subscription subscription = Subscription.active(memberId, channelId, planId, startedAt, expiredAt);
 
         return subscriptionRepository.save(subscription).getId();
     }
@@ -48,23 +48,46 @@ public class SubscriptionService {
         if (memberId == null) {
             throw new BusinessException(ErrorCode.INVALID_REQUEST);
         }
-        List<Subscription> subscriptions = subscriptionRepository.findByMemberIdOrderByStartDateDesc(memberId);
+
+        List<Subscription> subscriptions = subscriptionRepository.findByMemberIdOrderByStartedAtDesc(memberId);
+
         return subscriptions.stream()
                 .map(subscription -> new SubscriptionResponse(
                         subscription.getId(),
                         subscription.getChannelId(),
                         subscription.getPlanId(),
                         subscription.getStatus(),
-                        subscription.getStartDate(),
-                        subscription.getEndDate()
+                        subscription.getStartedAt(),
+                        subscription.getExpiredAt()
                 ))
                 .toList();
     }
 
-    private LocalDate calculateEndDate(LocalDate startDate, PlanType planType) {
+    public void cancelSubscription(Long subscriptionId, Long memberId) {
+        if (memberId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Subscription subscription = subscriptionRepository.findById(subscriptionId).orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        if(!subscription.getMemberId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        subscription.cancel();
+        subscriptionRepository.save(subscription);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasActiveSubscription(Long memberId, Long channelId) {
+        return subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
+                memberId, channelId, SubscriptionStatus.ACTIVE);
+    }
+
+    private LocalDateTime calculateExpiredAt(LocalDateTime startedAt, PlanType planType) {
         return switch (planType) {
-            case MONTHLY -> startDate.plusMonths(1);
-            case YEARLY -> startDate.plusYears(1);
+            case MONTHLY -> startedAt.plusMonths(1);
+            case YEARLY -> startedAt.plusYears(1);
         };
     }
 }

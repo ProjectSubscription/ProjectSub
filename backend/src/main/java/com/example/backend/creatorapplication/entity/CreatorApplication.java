@@ -1,5 +1,6 @@
 package com.example.backend.creatorapplication.entity;
 
+import com.example.backend.channel.entity.ChannelCategory;
 import com.example.backend.creatorapplication.dto.request.CreatorApplicationRequestDTO;
 import com.example.backend.global.entity.CreatedAtEntity;
 import com.example.backend.member.entity.Member;
@@ -33,6 +34,9 @@ public class CreatorApplication extends CreatedAtEntity {
     @Column(nullable = false)
     private String channelDescription;
 
+    @Column(nullable = false)
+    private ChannelCategory channelCategory;
+
     private String rejectReason;
 
     public static CreatorApplication create(CreatorApplicationRequestDTO dto , Member member) {
@@ -40,6 +44,7 @@ public class CreatorApplication extends CreatedAtEntity {
                 .member(member)
                 .channelName(dto.getChannelName())
                 .channelDescription(dto.getChannelDescription())
+                .channelCategory(dto.getChannelCategory())
                 .build();
     }
 

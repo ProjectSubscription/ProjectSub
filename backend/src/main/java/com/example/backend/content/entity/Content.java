@@ -162,4 +162,22 @@ public class Content {
         }
         return publishedAt.isBefore(LocalDateTime.now()) || publishedAt.isEqual(LocalDateTime.now());
     }
+
+    /**
+     * 좋아요 증가
+     *
+     */
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
+
+    /**
+     * 좋아요 감소
+     *
+     */
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
 }

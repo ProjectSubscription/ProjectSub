@@ -157,4 +157,22 @@ public class TestMemberController {
         memberService.passwordReset(request.getToken(), request.getNewPassword());
         return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
     }
+
+    /**
+     * 탈퇴한 회원 포함 조회 (ID)
+     */
+    @GetMapping("/including-deleted/{id}")
+    public ResponseEntity<Member> findMemberIncludingDeleted(@PathVariable Long id) {
+        Member memberIncludingDeleted = memberService.findMemberIncludingDeleted(id);
+        return ResponseEntity.ok(memberIncludingDeleted);
+    }
+
+    /**
+     * 탈퇴한 회원 포함 전체 조회
+     */
+    @GetMapping("/including-deleted")
+    public ResponseEntity<List<Member>> findAllIncludingDeletedMembers() {
+        List<Member> allRegisteredMembers = memberService.findAllIncludingDeletedMembers();
+        return  ResponseEntity.ok(allRegisteredMembers);
+    }
 }

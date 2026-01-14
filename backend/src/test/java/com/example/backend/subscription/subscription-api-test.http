@@ -183,6 +183,55 @@ GET {{baseUrl}}/api/subscriptions/me?memberId=6
 GET {{baseUrl}}/api/subscriptions/me
 
 ### ============================================
+### ✅ 11. 구독 취소 (PROCESS) - 구현 완료
+### 엔드포인트: DELETE /api/subscriptions/{subscriptionId}?memberId={memberId}
+### ============================================
+
+### 멤버 1이 자신의 구독 취소 (정상 케이스)
+### 먼저 내 구독 목록을 조회하여 subscriptionId를 확인한 후 사용
+### 예: 멤버 1의 채널 1 구독 취소
+DELETE {{baseUrl}}/api/subscriptions/1?memberId=1
+
+### 멤버 1이 자신의 다른 구독 취소 (정상 케이스)
+### 예: 멤버 1의 채널 2 구독 취소
+DELETE {{baseUrl}}/api/subscriptions/2?memberId=1
+
+### 멤버 2가 자신의 구독 취소 (정상 케이스)
+### 예: 멤버 2의 채널 1 구독 취소
+DELETE {{baseUrl}}/api/subscriptions/3?memberId=2
+
+### ============================================
+### ✅ 12. 구독 취소 권한 검증 (POLICY) - 구현 완료
+### 다른 사용자의 구독 취소 시도 시 ACCESS_DENIED 예외 발생
+### ============================================
+
+### 멤버 1이 멤버 2의 구독 취소 시도 (실패 예상 - ACCESS_DENIED)
+DELETE {{baseUrl}}/api/subscriptions/3?memberId=1
+
+### 멤버 2가 멤버 1의 구독 취소 시도 (실패 예상 - ACCESS_DENIED)
+DELETE {{baseUrl}}/api/subscriptions/1?memberId=2
+
+### ============================================
+### ✅ 13. 구독 취소 상태 검증 (POLICY) - 구현 완료
+### 이미 취소된 구독 취소 시도 시 INVALID_SUBSCRIPTION_STATUS 예외 발생
+### ============================================
+
+### 이미 취소된 구독 취소 시도 (실패 예상 - INVALID_SUBSCRIPTION_STATUS)
+### 먼저 구독을 취소한 후, 같은 구독을 다시 취소 시도
+DELETE {{baseUrl}}/api/subscriptions/1?memberId=1
+
+### ============================================
+### ✅ 14. 구독 취소 존재 검증 (POLICY) - 구현 완료
+### 존재하지 않는 구독 취소 시도 시 SUBSCRIPTION_NOT_FOUND 예외 발생
+### ============================================
+
+### 존재하지 않는 구독 취소 시도 (실패 예상 - SUBSCRIPTION_NOT_FOUND)
+DELETE {{baseUrl}}/api/subscriptions/999?memberId=1
+
+### 구독 취소 테스트 (memberId 생략 - 기본값 1L 사용)
+DELETE {{baseUrl}}/api/subscriptions/1
+
+### ============================================
 ### 추가 테스트 시나리오
 ### ============================================
 

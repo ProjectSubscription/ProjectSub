@@ -1,6 +1,7 @@
 package com.example.backend.creatorapplication.service;
 
 import com.example.backend.creator.service.CreatorService;
+import com.example.backend.creatorapplication.dto.CreatorApplicationDTO;
 import com.example.backend.creatorapplication.dto.request.ApprovalRequestDTO;
 import com.example.backend.creatorapplication.dto.request.CreatorApplicationRequestDTO;
 import com.example.backend.creatorapplication.dto.response.AllCreatorApplicationResponseDTO;
@@ -118,7 +119,10 @@ public class CreatorApplicationService {
         ApprovalStatus status = dto.getStatus();
         if (status == ApprovalStatus.APPROVED) { // 승인
             application.approve();
-            creatorService.createCreator(application.getMember().getId());
+            CreatorApplicationDTO applicationDTO = CreatorApplicationDTO.create(application.getChannelName(),
+                    application.getChannelDescription(),
+                    application.getChannelCategory());
+            creatorService.createCreator(application.getMember().getId(), applicationDTO);
             log.info("크리에이터 신청 승인 - app status={}", application.getStatus());
         } else if (status == ApprovalStatus.REJECTED) { // 반려
             application.reject(dto.getRejectReason());
@@ -127,13 +131,18 @@ public class CreatorApplicationService {
         return MyCreatorApplicationResponseDTO.create(application);
     }
 
+    // 특정 회원의 검토 대기중인 요청 조회
+    public CreatorApplication getAppByMemberId(Long memberId) {
+        return creatorApplicationRepository.findByMemberIdAndStatus(memberId, ApprovalStatus.REQUESTED)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
+    }
+
     // appId로 app조회 - 메서드로 분리
     private CreatorApplication getCreatorApplication(Long applicationId) {
-        CreatorApplication application = creatorApplicationRepository.findById(applicationId)
+        return creatorApplicationRepository.findById(applicationId)
                 .orElseThrow(()->{
                     log.error("크리에이터 신청 이력을 찾을 수 없습니다. applicationId={}", applicationId);
-                    throw new BusinessException(ErrorCode.APPLICATION_NOT_FOUND);
-                }); // todo: 나중에 커스텀 예외로 교체
-        return application;
+                    return new BusinessException(ErrorCode.APPLICATION_NOT_FOUND);
+                });
     }
 }

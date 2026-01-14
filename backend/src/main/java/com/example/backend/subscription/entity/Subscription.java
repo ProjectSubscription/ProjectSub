@@ -8,7 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "subscriptions")
@@ -33,29 +33,29 @@ public class Subscription {
     private SubscriptionStatus status;
 
     @Column(nullable = false)
-    private LocalDate startDate;
+    private LocalDateTime startedAt;
 
     @Column(nullable = false)
-    private LocalDate endDate;
+    private LocalDateTime expiredAt;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private Subscription(Long memberId, Long channelId, Long planId, SubscriptionStatus status, LocalDate startDate, LocalDate endDate) {
+    private Subscription(Long memberId, Long channelId, Long planId, SubscriptionStatus status, LocalDateTime startedAt, LocalDateTime expiredAt) {
         this.memberId = memberId;
         this.channelId = channelId;
         this.planId = planId;
         this.status = status;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        this.startedAt = startedAt;
+        this.expiredAt = expiredAt;
     }
 
-    public static Subscription active(Long memberId, Long channelId, Long planId, LocalDate startDate, LocalDate endDate) {
+    public static Subscription active(Long memberId, Long channelId, Long planId, LocalDateTime startedAt, LocalDateTime expiredAt) {
         return Subscription.builder()
                 .memberId(memberId)
                 .channelId(channelId)
                 .planId(planId)
                 .status(SubscriptionStatus.ACTIVE)
-                .startDate(startDate)
-                .endDate(endDate)
+                .startedAt(startedAt)
+                .expiredAt(expiredAt)
                 .build();
     }
 
@@ -66,10 +66,15 @@ public class Subscription {
         this.status = SubscriptionStatus.CANCELED;
     }
 
-    public void expire() {
+    public void expire(LocalDateTime now) {
         if (this.status != SubscriptionStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
         }
+
+        if (this.expiredAt.isAfter(now)) {
+            throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
+        }
+
         this.status = SubscriptionStatus.EXPIRED;
     }
 }

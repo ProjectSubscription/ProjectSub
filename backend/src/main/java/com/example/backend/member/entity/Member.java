@@ -30,7 +30,7 @@ public class Member extends AuditableEntity {
     @Column(unique = true)
     private String email;
 
-    //entity 반환하는 실수했을 경우 방지
+    //컨트롤러에서 entity 반환하는 실수했을 경우 방지
     @JsonIgnore
     @Column()
     private String password;
@@ -197,5 +197,16 @@ public class Member extends AuditableEntity {
         this.profileCompleted = true;
     }
 
-
+    //회원 탈퇴 시 정보 초기화
+    public void withdraw() {
+        this.email = null;
+        this.nickname = "탈퇴유저_" + this.id;
+        this.password = null;
+        this.oauthProvider = null;
+        this.oauthProviderId = null;
+        this.birthYear = null;
+        this.gender = null;
+        this.roles.clear();
+        this.isDeleted = true;
+    }
 }
