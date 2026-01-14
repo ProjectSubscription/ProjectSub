@@ -8,6 +8,7 @@ import com.example.backend.content.service.ContentService;
 import com.example.backend.creator.dto.response.CreatorMyPageResponseDTO;
 import com.example.backend.creator.dto.response.CreatorResponseDTO;
 import com.example.backend.creator.entity.Creator;
+import com.example.backend.creator.entity.CreatorStatus;
 import com.example.backend.creator.repository.CreatorRepository;
 import com.example.backend.creatorapplication.dto.CreatorApplicationDTO;
 import com.example.backend.global.exception.BusinessException;
@@ -122,5 +123,12 @@ public class CreatorService {
     // 크리에이터 인지 검증
     public boolean isCreator(Long memberId) {
         return creatorRepository.existsByMemberId(memberId);
+    }
+
+    // 크리에이터 상태 변경 ( 정지 or 소프트 삭제 )
+    public void changeStatus(Long memberId, CreatorStatus status) {
+        Creator creator = creatorRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
+        creator.changeStatus(status);
     }
 }
