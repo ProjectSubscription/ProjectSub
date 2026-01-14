@@ -34,6 +34,7 @@ export default function Login() {
     
     const routeMap = {
       'landing': '/',
+      'password-reset-request': '/password-reset-request',
     };
     const route = routeMap[page];
     if (route) {
