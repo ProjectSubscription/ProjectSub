@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 
@@ -25,6 +26,8 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class OAuthLoginSuccessHandler implements AuthenticationSuccessHandler {
 
+    @Value("${app.frontend-base-url}")
+    private String frontendBaseUrl;
     private final MemberService memberService;
 
     @Override
@@ -65,7 +68,7 @@ public class OAuthLoginSuccessHandler implements AuthenticationSuccessHandler {
 
         //임시회원 분기
         if (!sessionUser.isProfileCompleted()) {
-            response.sendRedirect("/members/oauth/complete-profile");
+            response.sendRedirect(frontendBaseUrl + "/members/oauth/complete-profile");
             return;
         }
 
