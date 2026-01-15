@@ -7,7 +7,6 @@ import com.example.backend.creatorapplication.dto.response.CreatorAppSuccessResp
 import com.example.backend.creatorapplication.dto.response.CreatorApplicationDetailResponseDTO;
 import com.example.backend.creatorapplication.dto.response.MyCreatorApplicationResponseDTO;
 import com.example.backend.creatorapplication.service.CreatorApplicationService;
-import com.example.backend.member.entity.Member;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

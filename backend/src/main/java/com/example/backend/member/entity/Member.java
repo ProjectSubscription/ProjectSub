@@ -187,6 +187,7 @@ public class Member extends AuditableEntity {
         this.nickname = nickname;
         this.birthYear = birthYear;
         this.gender = gender;
+        this.roles.clear();
         this.roles.add(Role.ROLE_USER);
 
         this.profileCompleted = true;

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Lock, ArrowLeft, Check } from 'lucide-react';
+import { resetPassword } from '@/app/lib/api';
 
 export function PasswordResetPage({ token, onNavigate }) {
   const [newPassword, setNewPassword] = useState('');
@@ -34,29 +35,14 @@ export function PasswordResetPage({ token, onNavigate }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8080/api/test/members/reset-password/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          newPassword,
-        }),
-      });
-
-      if (response.ok) {
-        setSuccess(true);
-        setMessage('비밀번호가 성공적으로 변경되었습니다.');
-        setTimeout(() => {
-          onNavigate?.('login');
-        }, 2000);
-      } else {
-        const data = await response.json();
-        setError(data.message || '비밀번호 변경에 실패했습니다.');
-      }
+      await resetPassword(token, newPassword);
+      setSuccess(true);
+      setMessage('비밀번호가 성공적으로 변경되었습니다.');
+      setTimeout(() => {
+        onNavigate?.('login');
+      }, 2000);
     } catch (err) {
-      setError('서버 오류가 발생했습니다.');
+      setError(err.message || '비밀번호 변경에 실패했습니다.');
     } finally {
       setLoading(false);
     }

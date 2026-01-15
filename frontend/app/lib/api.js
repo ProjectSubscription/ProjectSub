@@ -18,55 +18,45 @@ async function apiRequest(endpoint, options = {}) {
     },
   };
 
+  const response = await fetch(url, {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    // 401 Unauthorized 에러에 대한 특별 처리
+    if (response.status === 401) {
+      const error = await response.json().catch(() => ({ message: '인증에 실패했습니다.' }));
+      throw new Error(error.message || '인증에 실패했습니다.');
+    }
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+  }
+
+  // 204 No Content는 빈 응답
+  if (response.status === 204) {
+    return null;
+  }
+
+  // 응답 본문을 텍스트로 먼저 읽어서 비어있는지 확인
+  const text = await response.text();
+  
+  // 빈 응답인 경우 null 반환
+  if (!text || text.trim() === '') {
+    return null;
+  }
+
+  // JSON 파싱 시도
   try {
-    const response = await fetch(url, {
-      ...defaultOptions,
-      ...options,
-      headers: {
-        ...defaultOptions.headers,
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      // 401 Unauthorized는 특별 처리 (인증되지 않은 사용자)
-      if (response.status === 401) {
-        const error = await response.json().catch(() => ({ message: 'Unauthorized' }));
-        const err = new Error(error.message || 'Unauthorized');
-        err.status = 401;
-        throw err;
-      }
-      
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-      const err = new Error(error.message || `HTTP error! status: ${response.status}`);
-      err.status = response.status;
-      throw err;
-    }
-
-    // 204 No Content 등의 경우 빈 응답 처리
-    if (response.status === 204) {
-      return null;
-    }
-
-    return response.json();
+    return JSON.parse(text);
   } catch (error) {
-    // 네트워크 오류 또는 CORS 오류 처리
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
-      console.error('API 요청 실패:', {
-        url,
-        error: error.message,
-        message: '백엔드 서버가 실행 중인지 확인하세요. (http://localhost:8080)'
-      });
-      throw new Error(
-        `서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인하세요.\n` +
-        `URL: ${url}\n` +
-        `가능한 원인:\n` +
-        `1. 백엔드 서버가 실행되지 않음 (http://localhost:8080)\n` +
-        `2. CORS 설정 문제\n` +
-        `3. 네트워크 연결 문제`
-      );
-    }
-    throw error;
+    // JSON 파싱 실패 시 null 반환 (빈 응답으로 처리)
+    console.warn('JSON 파싱 실패, 빈 응답으로 처리:', error);
+    return null;
   }
 }
 
@@ -100,6 +90,16 @@ export async function apiPut(endpoint, data = {}) {
 }
 
 /**
+ * PATCH 요청
+ */
+export async function apiPatch(endpoint, data = {}) {
+  return apiRequest(endpoint, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
  * DELETE 요청
  */
 export async function apiDelete(endpoint) {
@@ -107,6 +107,23 @@ export async function apiDelete(endpoint) {
 }
 
 // ==================== 인증 / 회원 ====================
+
+/**
+ * 일반 로그인 (이메일/비밀번호)
+ * 커스텀 로그인 API 사용 (JSON 요청/응답)
+ */
+export async function login(email, password) {
+  try {
+    const userInfo = await apiPost('/api/auth/login', { email, password });
+    return { success: true, user: userInfo };
+  } catch (error) {
+    // 401 에러에 대한 특별한 메시지 처리 (로그인 실패)
+    if (error.message && (error.message.includes('401') || error.message.includes('인증에 실패'))) {
+      throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
+    }
+    throw error;
+  }
+}
 
 /**
  * OAuth 로그인 (리다이렉트)
@@ -119,23 +136,21 @@ export function oauthLogin(provider) {
  * 로그아웃
  */
 export async function logout() {
-  return apiPost('/logout');
+  return apiPost('/api/auth/logout');
+}
+
+/**
+ * 회원가입
+ */
+export async function registerMember(data) {
+  return apiPost('/api/members/register', data);
 }
 
 /**
  * 내 정보 조회
- * TODO: 인증 구현 후 사용
  */
 export async function getMyInfo() {
-  try {
-    return await apiGet('/api/members/me');
-  } catch (error) {
-    // 401 Unauthorized는 정상적인 경우 (로그인하지 않은 사용자)
-    if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-      return null;
-    }
-    throw error;
-  }
+  return apiGet('/api/members/me');
 }
 
 /**
@@ -146,10 +161,55 @@ export async function updateMemberInfo(data) {
 }
 
 /**
+ * 비밀번호 변경
+ */
+export async function changePassword(currentPassword, newPassword) {
+  return apiPatch('/api/members/password', {
+    currentPassword,
+    newPassword,
+  });
+}
+
+/**
+ * 닉네임 변경
+ */
+export async function changeNickname(newNickname) {
+  return apiPatch('/api/members/nickname', {
+    newNickname,
+  });
+}
+
+/**
+ * 생년 변경
+ */
+export async function changeBirthYear(birthYear) {
+  return apiPatch('/api/members/birthyear', {
+    birthYear,
+  });
+}
+
+/**
  * 회원 탈퇴
  */
 export async function deleteMember() {
   return apiDelete('/api/members/me');
+}
+
+/**
+ * 비밀번호 재설정 요청 (이메일 발송)
+ */
+export async function requestPasswordReset(email) {
+  return apiPost('/api/members/reset-password/request', { email });
+}
+
+/**
+ * 비밀번호 재설정 (토큰 검증 후 변경)
+ */
+export async function resetPassword(token, newPassword) {
+  return apiPost('/api/members/reset-password', {
+    token,
+    newPassword,
+  });
 }
 
 // ==================== 판매자 (CREATOR) ====================
@@ -166,6 +226,27 @@ export async function createCreatorApplication(data) {
  */
 export async function getMyApplication() {
   return apiGet('/api/creators/applications/me');
+}
+
+/**
+ * 모든 신청 이력 조회 (관리자)
+ */
+export async function getAllApplications(params = {}) {
+  return apiGet('/api/admin/creators/applications', params);
+}
+
+/**
+ * 신청 상세 조회
+ */
+export async function getApplicationDetail(applicationId) {
+  return apiGet(`/api/creators/applications/${applicationId}`);
+}
+
+/**
+ * 신청 승인/반려 (관리자)
+ */
+export async function approveApplication(applicationId, data) {
+  return apiPost(`/api/admin/creators/applications/${applicationId}`, data);
 }
 
 /**
@@ -230,43 +311,23 @@ export async function getSubscriptionPlans(channelId) {
 
 /**
  * 구독 신청
- * @param {number} channelId - 채널 ID
- * @param {number} planId - 구독 상품 ID
- * @param {number} [memberId] - 회원 ID (테스트용, 인증 구현 후 제거 예정)
  */
-export async function createSubscription(channelId, planId, memberId = null) {
-  const params = { planId };
-  if (memberId) {
-    params.memberId = memberId;
-  }
-  const queryString = new URLSearchParams(params).toString();
-  return apiPost(`/api/channels/${channelId}/subscriptions?${queryString}`);
+export async function createSubscription(data) {
+  return apiPost('/api/subscriptions', data);
 }
 
 /**
  * 내 구독 목록
- * @param {number} [memberId] - 회원 ID (테스트용, 인증 구현 후 제거 예정)
  */
-export async function getMySubscriptions(memberId = null) {
-  const params = {};
-  if (memberId) {
-    params.memberId = memberId;
-  }
-  return apiGet('/api/subscriptions/me', params);
+export async function getMySubscriptions() {
+  return apiGet('/api/subscriptions/me');
 }
 
 /**
  * 구독 취소
- * @param {number} subscriptionId - 구독 ID
- * @param {number} [memberId] - 회원 ID (테스트용, 인증 구현 후 제거 예정)
  */
-export async function cancelSubscription(subscriptionId, memberId = null) {
-  const params = {};
-  if (memberId) {
-    params.memberId = memberId;
-  }
-  const queryString = new URLSearchParams(params).toString();
-  return apiDelete(`/api/subscriptions/${subscriptionId}${queryString ? `?${queryString}` : ''}`);
+export async function cancelSubscription(id) {
+  return apiPost(`/api/subscriptions/${id}/cancel`);
 }
 
 // ==================== 콘텐츠 (CONTENT) ====================
