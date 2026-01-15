@@ -3,8 +3,10 @@ package com.example.backend.contentreview.controller;
 import com.example.backend.contentreview.dto.request.ContentReviewRequestDto;
 import com.example.backend.contentreview.dto.response.ContentReviewResponseDto;
 import com.example.backend.contentreview.service.ContentReviewService;
+import com.example.backend.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,9 +21,10 @@ public class ContentReviewController {
     @PostMapping
     public ResponseEntity<ContentReviewResponseDto> createReview(
             @PathVariable Long contentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody ContentReviewRequestDto request) {
 
-        ContentReviewResponseDto response = contentReviewService.createReview(contentId, request);
+        ContentReviewResponseDto response = contentReviewService.createReview(contentId, userDetails.getMemberId(), request);
         return ResponseEntity.ok(response);
     }
 

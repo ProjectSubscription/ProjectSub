@@ -27,8 +27,8 @@ public class ContentReviewCommentService {
     private final MemberService memberService;
 
     @Transactional
-    public ContentReviewCommentResponseDto createComment(Long reviewId, ContentReviewCommentRequestDto request) {
-        Member member = memberService.findMemberIncludingDeleted(request.getMemberId());
+    public ContentReviewCommentResponseDto createComment(Long reviewId, Long memberId, ContentReviewCommentRequestDto request) {
+        Member member = memberService.findMemberIncludingDeleted(memberId);
 
         // URL에서 받은 reviewId를 사용
         ContentReview contentReview = contentReviewService.findContentReviewById(reviewId);

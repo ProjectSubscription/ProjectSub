@@ -27,13 +27,13 @@ public class ContentReviewService {
     private final ContentRepository contentRepository;
 
     @Transactional
-    public ContentReviewResponseDto createReview(Long contentId, ContentReviewRequestDto request) {
+    public ContentReviewResponseDto createReview(Long contentId, Long memberId, ContentReviewRequestDto request) {
 
-        if (contentReviewDupCheck(contentId, request.getMemberId())) {
+        if (contentReviewDupCheck(contentId, memberId)) {
             throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
 
-        Member member = memberService.findMemberIncludingDeleted(request.getMemberId());
+        Member member = memberService.findMemberIncludingDeleted(memberId);
 
         // ContentService는 DTO만 반환하므로 엔티티 참조를 위해 Repository 직접 사용
         Content content = contentRepository.findById(contentId)
