@@ -58,4 +58,8 @@ public class ContentLikeService {
 
         log.info("like decrease success - likeCount={}", content.getLikeCount());
     }
+
+    public boolean isLiked(Long contentId, Long memberId) {
+        return contentLikeRepository.existsContentLikeByContentIdAndMemberId(contentId, memberId);
+    }
 }

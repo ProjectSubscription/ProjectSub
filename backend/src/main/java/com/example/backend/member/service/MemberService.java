@@ -76,7 +76,7 @@ public class MemberService {
     //oauth 유저 임시 가입
     public Member registerOAuthMember(String provider, String providerUserId, String email) {
         log.info("oauth 가입 요청. 추가 정보 입력해야함.");
-        Member member = Member.createFromOAuth(provider, providerUserId, email, Set.of());
+        Member member = Member.createFromOAuth(provider, providerUserId, email, Set.of(Role.ROLE_GUEST));
         memberRepository.save(member);
         log.info("oauth 회원 임시 가입 완료");
         return member;
@@ -177,7 +177,7 @@ public class MemberService {
         return member;
     }
 
-    //생년월일 최초 1회 입력 가능, 생년월일 입력 안한 유저만 사용
+    //지금 사용 X 나중에 관리자로 될수도있을듯.
     public Member changeBirthYear(Long memberId, Integer newBirthYear) {
         log.info("생년 변경 시도 memberId = {}", memberId);
         Member member = findRegisteredMemberById(memberId);

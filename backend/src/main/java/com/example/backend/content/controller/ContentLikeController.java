@@ -1,6 +1,7 @@
 package com.example.backend.content.controller;
 
 import com.example.backend.content.service.ContentLikeService;
+import com.example.backend.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +20,11 @@ public class ContentLikeController {
 
     @PostMapping("/{contentId}/like")
     public ResponseEntity<Void> like(@PathVariable Long contentId,
-                                  @AuthenticationPrincipal Principal principal) {
+                                  @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
         log.info("like request start - contentId={}", contentId);
 
-        Long memberId = null;
-        // Long memberId = (CustomUserDetails) principal.getId();
+        Long memberId = customUserDetails.getMemberId();
 
         contentLikeService.like(contentId, memberId);
 
@@ -35,12 +35,11 @@ public class ContentLikeController {
 
     @DeleteMapping("/{contentId}/like")
     public ResponseEntity<Void> deleteLike(@PathVariable Long contentId,
-                                           @AuthenticationPrincipal Principal principal) {
+                                           @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
         log.info("like delete request start - contentId={}", contentId);
 
-        Long memberId = null;
-        // Long memberId = (CustomUserDetails) principal.getId();
+        Long memberId = customUserDetails.getMemberId();
 
         contentLikeService.deleteLike(contentId, memberId);
 
