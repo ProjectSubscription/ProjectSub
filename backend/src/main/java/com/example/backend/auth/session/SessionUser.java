@@ -40,6 +40,19 @@ public class SessionUser implements Serializable {
         );
     }
 
+    /**
+     * Member 엔티티 없이 세션 사용자 객체를 만들 때 사용 (일반 로그인 등)
+     */
+    public static SessionUser of(
+            Long id,
+            String email,
+            String nickname,
+            Set<Role> roles,
+            boolean profileCompleted
+    ) {
+        return new SessionUser(id, email, nickname, roles, profileCompleted);
+    }
+
     public boolean hasRole(Role role) {
         return roles.contains(role);
     }
