@@ -1,11 +1,15 @@
 'use client';
 
 import React from 'react';
+import axios from 'axios'; // axios 임포트 추가
 import { usePathname, useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { Footer } from '@/components/Footer';
 import { getMyInfo, logout } from '@/app/lib/api';
+
+// Axios 전역 설정: 모든 요청에 쿠키(세션 ID) 포함
+axios.defaults.withCredentials = true;
 
 export function ClientLayout({ children }) {
   const [currentUser, setCurrentUser] = React.useState(null);
