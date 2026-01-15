@@ -49,9 +49,12 @@ export function LoginPage({ onLogin, onNavigate }) {
           {/* Sign Up */}
           <p className="text-center text-sm text-gray-600 mt-6">
             계정이 없으신가요?{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
+            <button
+              onClick={() => onNavigate('register')}
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
               회원가입
-            </a>
+            </button>
           </p>
         </div>
 

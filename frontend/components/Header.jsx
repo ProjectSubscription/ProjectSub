@@ -23,6 +23,20 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  // 역할 체크 헬퍼 함수
+  const hasRole = (roles, role) => {
+    if (!roles || !Array.isArray(roles)) return false;
+    return roles.includes(role) || roles.includes(`ROLE_${role}`);
+  };
+
+  // 역할 표시용 (우선순위: ADMIN > CREATOR > USER)
+  const getDisplayRole = (roles) => {
+    if (!roles || !Array.isArray(roles)) return '일반 회원';
+    if (roles.includes('ROLE_ADMIN') || roles.includes('ADMIN')) return '관리자';
+    if (roles.includes('ROLE_CREATOR') || roles.includes('CREATOR')) return '크리에이터';
+    return '일반 회원';
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -91,7 +105,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                       <User className="w-5 h-5 text-white" />
                     </div>
                     <span className="hidden sm:inline text-sm font-medium text-gray-700">
-                      {currentUser.name}
+                      {currentUser.nickname || currentUser.name}
                     </span>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
@@ -104,15 +118,15 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                       />
                       <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                         <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{currentUser.name}</p>
+                          <p className="text-sm font-medium text-gray-900">{currentUser.nickname || currentUser.name}</p>
                           <p className="text-xs text-gray-500">{currentUser.email}</p>
                           <p className="text-xs text-blue-600 mt-1">
-                            {currentUser.role === 'ADMIN' ? '관리자' : 
-                             currentUser.role === 'CREATOR' ? '크리에이터' : '일반 회원'}
+                            {getDisplayRole(currentUser.roles)}
                           </p>
                         </div>
 
-                        {currentUser.role === 'USER' && (
+                        {/* 일반 유저 메뉴 (ROLE_USER가 있으면 표시, 크리에이터도 볼 수 있음) */}
+                        {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
                             <button
                               onClick={() => {
@@ -134,7 +148,8 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                               <CreditCard className="w-4 h-4" />
                               내 구독
                             </button>
-                            {currentUser.creatorStatus !== 'APPROVED' && (
+                            {/* 크리에이터가 아니고, 크리에이터 신청 상태가 APPROVED가 아니면 신청 버튼 표시 */}
+                            {!hasRole(currentUser.roles, 'ROLE_CREATOR') && currentUser.creatorStatus !== 'APPROVED' && (
                               <button
                                 onClick={() => {
                                   setShowUserMenu(false);
@@ -149,7 +164,8 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                           </>
                         )}
 
-                        {currentUser.role === 'CREATOR' && (
+                        {/* 크리에이터 메뉴 (ROLE_CREATOR가 있으면 표시) */}
+                        {hasRole(currentUser.roles, 'ROLE_CREATOR') && (
                           <>
                             <button
                               onClick={() => {
@@ -184,7 +200,8 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                           </>
                         )}
 
-                        {currentUser.role === 'ADMIN' && (
+                        {/* 관리자 메뉴 (ROLE_ADMIN이 있으면 표시) */}
+                        {hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
                             <button
                               onClick={() => {
