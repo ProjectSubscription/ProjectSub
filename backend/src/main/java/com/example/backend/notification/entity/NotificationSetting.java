@@ -1,5 +1,6 @@
 package com.example.backend.notification.entity;
 
+import com.example.backend.notification.dto.request.NotificationSettingUpdateDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,5 +33,17 @@ public class NotificationSetting {
     @Column(nullable = false)
     @Builder.Default
     private boolean eventNotify = true;
+
+    public static NotificationSetting create(Long memberId) {
+        return NotificationSetting.builder()
+                .memberId(memberId)
+                .build();
+    }
+
+    public void update(NotificationSettingUpdateDTO dto) {
+        this.contentNotify = dto.isContentNotify();
+        this.newsletterNotify = dto.isNewsletterNotify();
+        this.eventNotify = dto.isEventNotify();
+    }
 
 }

@@ -1,6 +1,7 @@
 package com.example.backend.notification.entity;
 
 import com.example.backend.global.entity.CreatedAtEntity;
+import com.example.backend.notification.dto.request.NotificationDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,7 +24,7 @@ public class Notification extends CreatedAtEntity {
     // 알림 타입(콘텐츠,뉴스레터,이벤트 등)
     @Enumerated(value = EnumType.STRING)
     @Column(nullable = false)
-    private NotificationType notificationType;
+    private NotificationType type;
 
     // 알림 제목
     @Column(nullable = false)
@@ -38,5 +39,28 @@ public class Notification extends CreatedAtEntity {
 
     // 읽음 여부
     private boolean isRead;
+
+    // 삭제 여부
+    private boolean isDeleted;
+
+    public static Notification create(NotificationDTO dto) {
+        return Notification.builder()
+                .memberId(dto.getMemberId())
+                .type(dto.getType())
+                .title(dto.getTitle())
+                .message(dto.getMessage()).
+                targetId(dto.getTargetId())
+                .build();
+    }
+
+    // 읽음 처리
+    public void read() {
+        this.isRead = true;
+    }
+
+    // 소프트 삭제
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 
 }
