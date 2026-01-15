@@ -43,11 +43,12 @@ public class SubscriptionStatisticsService {
         List<Long> memberIds = subscriptions.stream().map(Subscription::getMemberId).distinct().toList();
         List<Member> members = memberRepository.findAllById(memberIds);
         Map<String, Long> ageGroupDistribution = calculateAgeGroupDistribution(members);
+        Map<String, Long> genderDistribution = calculateGenderDistribution(members);
 
         return new SubscriberStatisticsResponse(
                 (long) subscriptions.size(),
                 ageGroupDistribution,
-                Map.of() // 성별은 현재 불가
+                genderDistribution
         );
     }
 
@@ -59,6 +60,15 @@ public class SubscriptionStatisticsService {
                     return getAgeGroup(age);
                 }, Collectors.counting()
         ));
+    }
+
+    private Map<String, Long> calculateGenderDistribution(List<Member> members) {
+        return members.stream()
+                .filter(member -> member.getGender() != null)
+                .collect(Collectors.groupingBy(
+                        member -> member.getGender().name(),
+                        Collectors.counting()
+                ));
     }
 
     private String getAgeGroup(int age) {
