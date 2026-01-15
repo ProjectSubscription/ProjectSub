@@ -52,7 +52,7 @@ export default function CreatorApply() {
       };
 
       await createCreatorApplication(data);
-      router.push('/creator/dashboard');
+      router.push('/my-applications');
     } catch (err) {
       setError(err.message || '신청 중 오류가 발생했습니다. 다시 시도해주세요.');
       console.error('크리에이터 신청 오류:', err);
