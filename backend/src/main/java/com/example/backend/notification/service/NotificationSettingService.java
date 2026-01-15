@@ -31,6 +31,11 @@ public class NotificationSettingService {
     // 알림 설정 생성(회원가입 시)
     public NotificationSettingResponseDTO createNotificationSetting(Long memberId) {
 
+        // 두 번 요청이 들어왔을 때 차단
+        if (notificationSettingRepository.existsByMemberId(memberId)) {
+            throw new RuntimeException("이미 알림 설정이 존재합니다."); // todo: 나중에 ErrorCode 추가
+        }
+
         NotificationSetting notificationSetting = NotificationSetting.create(memberId);
 
         log.info("알림 설정 성공 - memberId={}", memberId);

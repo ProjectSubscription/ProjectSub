@@ -60,11 +60,12 @@ public class NotificationController {
 
     // 알림 삭제 DELETE (soft delete)
     @DeleteMapping("/notifications/{notificationId}/delete")
-    public ResponseEntity<Void> deleteNotification(@PathVariable Long notificationId) {
+    public ResponseEntity<Void> deleteNotification(@PathVariable Long notificationId,
+                                                   @AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
         log.info("알림 soft delete start - notificationId={}", notificationId);
 
-        notificationService.deleteNotifications(notificationId);
+        notificationService.deleteNotifications(notificationId, customUserDetails.getMemberId());
 
         return ResponseEntity.noContent().build();
     }

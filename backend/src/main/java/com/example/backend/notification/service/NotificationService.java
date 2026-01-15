@@ -64,9 +64,15 @@ public class NotificationService {
     }
 
     // 알림 삭제 (소프트)
-    public void deleteNotifications(Long notificationId) {
+    public void deleteNotifications(Long notificationId, Long memberId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(); // todo: ErrorCode 추가 후 수정
+
+        // 회원id와 알림의회원id가 다르면 안됨
+        if (!notification.getMemberId().equals(memberId)) {
+            throw new RuntimeException("해당 회원이 가진 알림이 아닙니다."); // todo: ErrorCode 추가 후 수정
+        }
+
         notification.softDelete();
         log.info("알림 소프트 삭제 처리됨 - notificationId={}", notificationId);
     }
