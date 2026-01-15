@@ -14,7 +14,7 @@ export function ClientLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // 사용자 정보 로드
+  // 사용자 정보 로드 (경로 변경 시에도 다시 로드)
   React.useEffect(() => {
     async function loadUser() {
       try {
@@ -28,15 +28,37 @@ export function ClientLayout({ children }) {
       }
     }
     loadUser();
-  }, []);
+  }, [pathname]); // pathname 변경 시 사용자 정보 다시 로드
 
   const handleLogout = async () => {
     try {
+      console.log('로그아웃 시작...');
+      
+      // 로그아웃 API 호출
       await logout();
+      console.log('✅ 로그아웃 API 호출 성공 - 백엔드 세션 무효화 완료');
+      
+      // 사용자 정보 즉시 초기화
       setCurrentUser(null);
-      router.push('/');
+      console.log('✅ 사용자 정보 상태 초기화 완료');
+      
+      // 세션이 제대로 삭제되었는지 확인
+      try {
+        const userCheck = await getMyInfo();
+        console.warn('⚠️ 경고: 로그아웃 후에도 사용자 정보가 남아있음:', userCheck);
+        // 세션이 남아있다면 강제로 초기화
+        setCurrentUser(null);
+      } catch (error) {
+        // 예상된 에러: 인증되지 않은 사용자 (정상)
+        console.log('✅ 세션 삭제 확인됨: 인증되지 않은 사용자 (정상)');
+      }
+      
+      // 페이지 완전히 새로고침하여 UI 업데이트 및 세션 쿠키 확인
+      console.log('✅ 페이지 새로고침하여 UI 업데이트...');
+      window.location.href = '/';
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ Logout error:', error);
+      alert('로그아웃 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -85,6 +107,7 @@ export function ClientLayout({ children }) {
   // Public pages (no header/sidebar/footer)
   const isPublicPage = pathname === '/' || 
                        pathname === '/login' || 
+                       pathname === '/register' ||
                        pathname === '/password-reset-request' ||
                        pathname.startsWith('/password-reset');
 

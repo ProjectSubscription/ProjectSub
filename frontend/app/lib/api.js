@@ -28,16 +28,36 @@ async function apiRequest(endpoint, options = {}) {
   });
 
   if (!response.ok) {
+    // 401 Unauthorized 에러에 대한 특별 처리
+    if (response.status === 401) {
+      const error = await response.json().catch(() => ({ message: '인증에 실패했습니다.' }));
+      throw new Error(error.message || '인증에 실패했습니다.');
+    }
     const error = await response.json().catch(() => ({ message: 'Unknown error' }));
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
 
-  // 204 No Content 등의 경우 빈 응답 처리
+  // 204 No Content는 빈 응답
   if (response.status === 204) {
     return null;
   }
 
-  return response.json();
+  // 응답 본문을 텍스트로 먼저 읽어서 비어있는지 확인
+  const text = await response.text();
+  
+  // 빈 응답인 경우 null 반환
+  if (!text || text.trim() === '') {
+    return null;
+  }
+
+  // JSON 파싱 시도
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    // JSON 파싱 실패 시 null 반환 (빈 응답으로 처리)
+    console.warn('JSON 파싱 실패, 빈 응답으로 처리:', error);
+    return null;
+  }
 }
 
 /**
@@ -70,6 +90,16 @@ export async function apiPut(endpoint, data = {}) {
 }
 
 /**
+ * PATCH 요청
+ */
+export async function apiPatch(endpoint, data = {}) {
+  return apiRequest(endpoint, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
  * DELETE 요청
  */
 export async function apiDelete(endpoint) {
@@ -77,6 +107,23 @@ export async function apiDelete(endpoint) {
 }
 
 // ==================== 인증 / 회원 ====================
+
+/**
+ * 일반 로그인 (이메일/비밀번호)
+ * 커스텀 로그인 API 사용 (JSON 요청/응답)
+ */
+export async function login(email, password) {
+  try {
+    const userInfo = await apiPost('/api/auth/login', { email, password });
+    return { success: true, user: userInfo };
+  } catch (error) {
+    // 401 에러에 대한 특별한 메시지 처리 (로그인 실패)
+    if (error.message && (error.message.includes('401') || error.message.includes('인증에 실패'))) {
+      throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
+    }
+    throw error;
+  }
+}
 
 /**
  * OAuth 로그인 (리다이렉트)
@@ -89,7 +136,14 @@ export function oauthLogin(provider) {
  * 로그아웃
  */
 export async function logout() {
-  return apiPost('/logout');
+  return apiPost('/api/auth/logout');
+}
+
+/**
+ * 회원가입
+ */
+export async function registerMember(data) {
+  return apiPost('/api/members/register', data);
 }
 
 /**
@@ -107,10 +161,55 @@ export async function updateMemberInfo(data) {
 }
 
 /**
+ * 비밀번호 변경
+ */
+export async function changePassword(currentPassword, newPassword) {
+  return apiPatch('/api/members/password', {
+    currentPassword,
+    newPassword,
+  });
+}
+
+/**
+ * 닉네임 변경
+ */
+export async function changeNickname(newNickname) {
+  return apiPatch('/api/members/nickname', {
+    newNickname,
+  });
+}
+
+/**
+ * 생년 변경
+ */
+export async function changeBirthYear(birthYear) {
+  return apiPatch('/api/members/birthyear', {
+    birthYear,
+  });
+}
+
+/**
  * 회원 탈퇴
  */
 export async function deleteMember() {
   return apiDelete('/api/members/me');
+}
+
+/**
+ * 비밀번호 재설정 요청 (이메일 발송)
+ */
+export async function requestPasswordReset(email) {
+  return apiPost('/api/members/reset-password/request', { email });
+}
+
+/**
+ * 비밀번호 재설정 (토큰 검증 후 변경)
+ */
+export async function resetPassword(token, newPassword) {
+  return apiPost('/api/members/reset-password', {
+    token,
+    newPassword,
+  });
 }
 
 // ==================== 판매자 (CREATOR) ====================

@@ -38,6 +38,8 @@ public class PasswordResetService {
         try {
             //1. 기존 토큰 삭제
             tokenRepository.deleteByMember(member);
+            tokenRepository.flush();
+            log.info("기존 토큰 삭제: memberId={}", member.getId());
 
             //2. 새 토큰 생성 (UUID)
             String token = UUID.randomUUID().toString();
@@ -51,13 +53,15 @@ public class PasswordResetService {
 
             tokenRepository.save(resetToken);
 
-            // 4. 이메일 발송 todo: 프론트코드, 백엔드코드에서 요청 url 수정해야한다.
-            String resetLink = "http://localhost:3000/reset-password?token=" + token;
+            // 3. 이메일 발송
+            String resetLink = "http://localhost:3000/password-reset?token=" + token;
             sendEmail(member.getEmail(), resetLink);
 
             log.info("비밀번호 재설정 이메일 발송: {}", member.getEmail());
         } catch (DataIntegrityViolationException e) {
-            log.warn("중복 비밀번호 재설정 요청 무시: {}", member.getEmail());
+            // 중복 요청 시에도 정상 처리 (보안상 동일한 응답)
+            log.warn("중복 비밀번호 재설정 요청 감지: {}. 정상 응답으로 처리", member.getEmail());
+            // 예외를 던지지 않음 → 정상적으로 처리된 것으로 간주
         }
 
     }
