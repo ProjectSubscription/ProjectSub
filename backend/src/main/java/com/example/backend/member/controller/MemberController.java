@@ -3,6 +3,7 @@ package com.example.backend.member.controller;
 import com.example.backend.member.dto.request.*;
 import com.example.backend.member.dto.response.MyInfoResponse;
 import com.example.backend.member.entity.Member;
+import com.example.backend.global.security.CustomUserDetails;
 import com.example.backend.member.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 
 @RequiredArgsConstructor
@@ -43,15 +40,10 @@ public class MemberController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()") // 인증된 사용자만 접근 가능
     public ResponseEntity<MyInfoResponse> getMyInfo(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        // UserDetails에서 email(username) 추출
-        log.info("내 정보 조회 컨트롤러, email = {}", userDetails.getUsername());
-        String email = userDetails.getUsername();
-        log.info("내 정보 조회 컨트롤러2, email = {}", email);
-
-        // email로 Member 조회 (Service에 메서드 추가 필요)
-        Member member = memberService.findRegisteredMemberByEmail(email);
+        log.info("내 정보 조회 컨트롤러2, email = {}, id ={} ", userDetails.getEmail(), userDetails.getMemberId());
+        Member member = memberService.findRegisteredMemberById(userDetails.getMemberId());
         MyInfoResponse response = MyInfoResponse.fromEntity(member);
 
         return ResponseEntity.ok(response);
@@ -63,12 +55,9 @@ public class MemberController {
     @DeleteMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> withdrawMember(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        String email = userDetails.getUsername();
-        Member member = memberService.findRegisteredMemberByEmail(email);
-
-        memberService.withdrawMember(member.getId());
+        memberService.withdrawMember(userDetails.getMemberId());
 
         return ResponseEntity.noContent().build();
     }
@@ -79,14 +68,11 @@ public class MemberController {
     @PatchMapping("/password")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MyInfoResponse> changePassword(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody PasswordChangeRequest request) {
 
-        String email = userDetails.getUsername();
-        Member member = memberService.findRegisteredMemberByEmail(email);
-
         //비밀번호 변경
-        Member updatedMember = memberService.changePassword(member.getId(), request.getCurrentPassword(), request.getNewPassword());
+        Member updatedMember = memberService.changePassword(userDetails.getMemberId(), request.getCurrentPassword(), request.getNewPassword());
         MyInfoResponse response = MyInfoResponse.fromEntity(updatedMember);
 
         return ResponseEntity.ok(response);
@@ -98,13 +84,11 @@ public class MemberController {
     @PatchMapping("/nickname")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MyInfoResponse> changeNickname(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody NicknameChangeRequest request) {
 
-        String email = userDetails.getUsername();
-        Member member = memberService.findRegisteredMemberByEmail(email);
 
-        Member updatedMember = memberService.changeNickname(member.getId(), request.getNewNickname());
+        Member updatedMember = memberService.changeNickname(userDetails.getMemberId(), request.getNewNickname());
         MyInfoResponse response = MyInfoResponse.fromEntity(updatedMember);
 
         return ResponseEntity.ok(response);
