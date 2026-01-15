@@ -66,7 +66,12 @@ public enum ErrorCode {
     EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 입력이 필요합니다."),
     //토큰
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
-    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다.");
+    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다."),
+
+    /* ===== COUPON ===== */
+    COUPON_CODE_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 쿠폰 코드입니다."),
+    INVALID_COUPON_PERIOD(HttpStatus.BAD_REQUEST, "쿠폰 시작/종료 날짜가 올바르지 않습니다."),
+    INVALID_COUPON_DISCOUNT_VALUE(HttpStatus.BAD_REQUEST, "쿠폰 할인 값이 유효하지 않습니다.");
 
     private final HttpStatus status;
     private final String message;

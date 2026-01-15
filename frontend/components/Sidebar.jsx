@@ -15,11 +15,28 @@ import {
   Users,
   FileText,
   TrendingUp,
-  X
+  X,
+  Tag
 } from 'lucide-react';
 
 export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, onClose }) {
   const pathname = usePathname();
+
+  // 역할 체크 헬퍼 (Header와 동일한 방식)
+  const hasRole = (roles, role) => {
+    if (!roles || !Array.isArray(roles)) return false;
+    return roles.includes(role) || roles.includes(`ROLE_${role}`);
+  };
+
+  // 우선순위: ADMIN > CREATOR > USER
+  const getEffectiveRole = (user) => {
+    const roles = user?.roles;
+    if (hasRole(roles, 'ROLE_ADMIN') || hasRole(roles, 'ADMIN')) return 'ADMIN';
+    if (hasRole(roles, 'ROLE_CREATOR') || hasRole(roles, 'CREATOR')) return 'CREATOR';
+    return 'USER';
+  };
+
+  const effectiveRole = getEffectiveRole(currentUser);
 
   const handleNavigation = (page) => {
     onNavigate(page);
@@ -50,11 +67,12 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
     { icon: Users, label: '판매자 신청', page: 'admin-applications', path: '/admin/applications' },
     { icon: CreditCard, label: '결제 내역', page: 'admin-payments', path: '/admin/payments' },
     { icon: FileText, label: '정산 관리', page: 'admin-settlements', path: '/admin/settlements' },
+    { icon: Tag, label: '쿠폰 관리', page: 'admin-coupons', path: '/admin/coupons' },
   ];
 
   const navItems = 
-    currentUser.role === 'ADMIN' ? adminNavItems :
-    currentUser.role === 'CREATOR' ? creatorNavItems :
+    effectiveRole === 'ADMIN' ? adminNavItems :
+    effectiveRole === 'CREATOR' ? creatorNavItems :
     userNavItems;
 
   return (
@@ -166,8 +184,8 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
           <div className="p-4 border-t border-gray-200">
             <div className="text-xs text-gray-500 space-y-1">
               <p className="font-medium text-gray-700">
-                {currentUser.role === 'ADMIN' ? '관리자 모드' :
-                 currentUser.role === 'CREATOR' ? '크리에이터 모드' :
+                {effectiveRole === 'ADMIN' ? '관리자 모드' :
+                 effectiveRole === 'CREATOR' ? '크리에이터 모드' :
                  '일반 회원'}
               </p>
               <p>{currentUser.name}</p>

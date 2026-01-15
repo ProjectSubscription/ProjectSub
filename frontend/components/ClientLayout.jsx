@@ -87,6 +87,7 @@ export function ClientLayout({ children }) {
       'admin-applications': '/admin/applications',
       'admin-payments': '/admin/payments',
       'admin-settlements': '/admin/settlements',
+      'admin-coupons': '/admin/coupons',
       'password-reset-request': '/password-reset-request',
       'password-reset': (params) => `/password-reset?token=${params?.token || ''}`,
     };

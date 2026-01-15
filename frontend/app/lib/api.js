@@ -543,6 +543,24 @@ export async function getExpiredCoupons() {
   return apiGet('/api/coupons/me/expired');
 }
 
+// ==================== 관리자 쿠폰 관리 ====================
+
+/**
+ * 관리자 쿠폰 생성
+ * POST /api/admin/coupons
+ */
+export async function createAdminCoupon(data) {
+  return apiPost('/api/admin/coupons', data);
+}
+
+/**
+ * 관리자 쿠폰 목록 조회
+ * GET /api/admin/coupons
+ */
+export async function getAdminCoupons(params = {}) {
+  return apiGet('/api/admin/coupons', params);
+}
+
 // ==================== 마이페이지 ====================
 
 /**
