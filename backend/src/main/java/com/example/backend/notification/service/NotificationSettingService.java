@@ -29,13 +29,15 @@ public class NotificationSettingService {
     }
 
     // 알림 설정 생성(회원가입 시)
-    public void createNotificationSetting(Long memberId) {
+    public NotificationSettingResponseDTO createNotificationSetting(Long memberId) {
 
         NotificationSetting notificationSetting = NotificationSetting.create(memberId);
 
         log.info("알림 설정 성공 - memberId={}", memberId);
 
-        notificationSettingRepository.save(notificationSetting);
+        NotificationSetting save = notificationSettingRepository.save(notificationSetting);
+
+        return NotificationSettingResponseDTO.create(save);
     }
 
     // 알림 설정 변경

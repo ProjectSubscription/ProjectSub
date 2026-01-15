@@ -21,11 +21,13 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     // 알림 생성
-    public void createNotification(NotificationDTO dto) {
+    public NotificationResponseDTO createNotification(NotificationDTO dto) {
         Notification notification = Notification.create(dto);
         Notification save = notificationRepository.save(notification);
 
         log.info("알림 저장 성공 - message={}", save.getMessage());
+
+        return NotificationResponseDTO.create(save);
     }
 
     // 알림 조회

@@ -88,7 +88,7 @@ public class NotificationController {
     // 알림 설정 변경 PATCH
     @PatchMapping("/notification-settings")
     public ResponseEntity<?> updateNotificationSettings(@AuthenticationPrincipal CustomUserDetails customUserDetails,
-                                                        NotificationSettingUpdateDTO dto) {
+                                                        @RequestBody NotificationSettingUpdateDTO dto) {
         Long memberId = customUserDetails.getMemberId();
 
         log.info("알림 설정 변경 start - memberId={}, contentNotify={}, newsletterNotify={}, eventNotify={}",
