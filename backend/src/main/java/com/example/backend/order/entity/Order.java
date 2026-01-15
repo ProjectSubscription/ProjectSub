@@ -30,34 +30,68 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderType orderType;
 
+    // SUBSCRIPTION 타입일 때 사용: 구독 플랜 ID
+    private Long planId;
+
+    // SUBSCRIPTION 타입일 때: 결제 완료 후 생성된 구독 (결제 시점에는 null)
     @ManyToOne(fetch = FetchType.LAZY)
     private Subscription subscription;
 
+    // CONTENT 타입일 때 사용: 콘텐츠
     @ManyToOne(fetch = FetchType.LAZY)
     private Content content;
 
-    private Long amount;
+    private Long originalAmount;
+    private Long discountAmount;
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
     private LocalDateTime createdAt;
 
-    public static Order create(
+    /**
+     * SUBSCRIPTION 타입 주문 생성
+     */
+    public static Order createSubscriptionOrder(
             String orderCode,
             Member member,
-            OrderType orderType,
-            Subscription subscription,
-            Content content,
-            Long amount
+            Long planId,
+            Long originalAmount,
+            Long discountAmount
     ) {
         return Order.builder()
                 .orderCode(orderCode)
                 .member(member)
-                .orderType(orderType)
-                .subscription(subscription)
+                .orderType(OrderType.SUBSCRIPTION)
+                .planId(planId)
+                .subscription(null) // 결제 완료 후 생성
+                .content(null)
+                .originalAmount(originalAmount)
+                .discountAmount(discountAmount)
+                .status(OrderStatus.CREATED)
+                .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * CONTENT 타입 주문 생성
+     */
+    public static Order createContentOrder(
+            String orderCode,
+            Member member,
+            Content content,
+            Long originalAmount,
+            Long discountAmount
+    ) {
+        return Order.builder()
+                .orderCode(orderCode)
+                .member(member)
+                .orderType(OrderType.CONTENT)
+                .planId(null)
+                .subscription(null)
                 .content(content)
-                .amount(amount)
+                .originalAmount(originalAmount)
+                .discountAmount(discountAmount)
                 .status(OrderStatus.CREATED)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -65,6 +99,16 @@ public class Order {
 
     public void markPaid() {
         this.status = OrderStatus.PAID;
+    }
+
+    /**
+     * 결제 완료 후 생성된 구독 연결 (SUBSCRIPTION 타입일 때만 사용)
+     */
+    public void linkSubscription(Subscription subscription) {
+        if (this.orderType != OrderType.SUBSCRIPTION) {
+            throw new IllegalStateException("SUBSCRIPTION 타입 주문만 구독을 연결할 수 있습니다.");
+        }
+        this.subscription = subscription;
     }
 }
 

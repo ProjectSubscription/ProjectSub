@@ -14,6 +14,13 @@ export default function Payment() {
   const handleNavigate = (page, params) => {
     const routeMap = {
       'payment-success': (params) => `/payment/success?amount=${params?.amount || 0}`,
+      'checkout': (params) => {
+        const query = new URLSearchParams();
+        if (params?.orderCode) query.set('orderCode', params.orderCode);
+        if (params?.orderName) query.set('orderName', params.orderName);
+        if (params?.amount) query.set('amount', params.amount.toString());
+        return `/payment/checkout?${query.toString()}`;
+      },
     };
 
     const route = routeMap[page];
