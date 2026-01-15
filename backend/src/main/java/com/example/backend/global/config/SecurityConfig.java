@@ -2,6 +2,9 @@ package com.example.backend.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,6 +19,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true) // @PreAuthorize, @PostAuthorize 활성화
 public class SecurityConfig {
 
     @Bean
@@ -41,9 +45,14 @@ public class SecurityConfig {
                         .frameOptions(frame -> frame.sameOrigin())
                 )
 
-                // ✅ 기본 로그인, 로그아웃 전부 비활성
+                // ✅ formLogin 비활성화 (SPA는 커스텀 로그인 API 사용)
                 .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable());
+                .httpBasic(basic -> basic.disable())
+
+                // ✅ 세션 관리 설정 (세션 생성 및 유지)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.IF_REQUIRED)
+                );
 
         return http.build();
     }
@@ -54,19 +63,45 @@ public class SecurityConfig {
     }
 
     /**
-     * CORS 설정 (임시)
-     * TODO: 배포 시 수정 필요
+     * AuthenticationManager Bean 등록
+     * 커스텀 로그인 API에서 사용
+     */
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
+    /**
+     * CORS 설정
+     * 프론트엔드(localhost:3000)에서 백엔드(localhost:8080)로의 요청 허용
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001")); // 프론트엔드 주소
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true); // 인증 정보 허용
 
+        // 허용할 Origin (프론트엔드 주소)
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://127.0.0.1:3000"
+        ));
+
+        // 허용할 HTTP 메서드
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        // 허용할 헤더
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        // 인증 정보(쿠키) 포함 허용
+        configuration.setAllowCredentials(true);
+
+        // Preflight 요청 캐시 시간 (1시간)
+        configuration.setMaxAge(3600L);
+
+        // 모든 경로에 적용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }
