@@ -44,8 +44,11 @@ public class PaymentService {
         // 주문 조회
         Order order = orderService.findByOrderCode(request.getOrderId());
 
+        // 주문 금액 확인 (discountAmount가 있으면 사용, 없으면 originalAmount 사용)
+        Long orderAmount = order.getDiscountAmount() != null ? order.getDiscountAmount() : order.getOriginalAmount();
+
         // 주문 금액 검증
-        if (!order.getAmount().equals(request.getAmount())) {
+        if (!orderAmount.equals(request.getAmount())) {
             throw new IllegalArgumentException("주문 금액이 일치하지 않습니다.");
         }
 
@@ -71,12 +74,13 @@ public class PaymentService {
 
         // 결제 상태 확인
         if (!"DONE".equals(tossResponse.getStatus())) {
-            // 결제 실패 처리
+            // 결제 실패 처리 (order의 discountAmount 사용, 없으면 originalAmount 사용)
+            Long paymentAmount = order.getDiscountAmount() != null ? order.getDiscountAmount() : order.getOriginalAmount();
             Payment payment = Payment.create(
                     order,
                     PgProvider.TOSS,
                     tossResponse.getPaymentKey(),
-                    tossResponse.getTotalAmount()
+                    paymentAmount
             );
             payment.markFailed();
             paymentRepository.save(payment);
@@ -84,12 +88,13 @@ public class PaymentService {
             throw new RuntimeException("결제 승인에 실패했습니다. 상태: " + tossResponse.getStatus());
         }
 
-        // 결제 정보 저장
+        // 결제 정보 저장 (order의 discountAmount 사용, 없으면 originalAmount 사용)
+        Long paymentAmount = order.getDiscountAmount() != null ? order.getDiscountAmount() : order.getOriginalAmount();
         Payment payment = Payment.create(
                 order,
                 PgProvider.TOSS,
                 tossResponse.getPaymentKey(),
-                tossResponse.getTotalAmount()
+                paymentAmount
         );
         payment.markPaid();
         paymentRepository.save(payment);
@@ -158,7 +163,9 @@ public class PaymentService {
             return;
         }
 
-        Payment failedPayment = Payment.create(order, PgProvider.TOSS, paymentKey, amount);
+        // order의 discountAmount 사용, 없으면 originalAmount 사용
+        Long paymentAmount = order.getDiscountAmount() != null ? order.getDiscountAmount() : order.getOriginalAmount();
+        Payment failedPayment = Payment.create(order, PgProvider.TOSS, paymentKey, paymentAmount);
         failedPayment.markFailed();
         paymentRepository.save(failedPayment);
         log.info("결제 실패 저장 완료: paymentKey={}, orderCode={}", paymentKey, order.getOrderCode());

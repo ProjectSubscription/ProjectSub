@@ -1,10 +1,15 @@
 'use client';
 
-import { SuccessPage } from './Success';
-import { useRouter } from 'next/navigation';
+import { CheckoutPage } from './Checkout';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function PaymentSuccess() {
+export default function Checkout() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const orderCode = searchParams.get('orderCode');
+  const orderName = searchParams.get('orderName');
+  const amount = searchParams.get('amount');
 
   const handleNavigate = (page, params) => {
     const routeMap = {
@@ -16,11 +21,6 @@ export default function PaymentSuccess() {
         if (params?.error) query.set('error', params.error);
         return `/payment/fail?${query.toString()}`;
       },
-      'payment-success': (params) => {
-        const query = new URLSearchParams();
-        if (params?.amount) query.set('amount', params.amount);
-        return `/payment/success?${query.toString()}`;
-      },
     };
 
     const route = routeMap[page];
@@ -31,5 +31,12 @@ export default function PaymentSuccess() {
     }
   };
 
-  return <SuccessPage onNavigate={handleNavigate} />;
+  return (
+    <CheckoutPage
+      orderCode={orderCode}
+      orderName={orderName}
+      amount={amount ? parseInt(amount, 10) : undefined}
+      onNavigate={handleNavigate}
+    />
+  );
 }
