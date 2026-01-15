@@ -1,11 +1,7 @@
 package com.example.backend.member.controller;
 
-import com.example.backend.member.dto.request.BirthYearRequest;
-import com.example.backend.member.dto.request.MemberRequest;
-import com.example.backend.member.dto.request.NicknameChangeRequest;
-import com.example.backend.member.dto.request.PasswordChangeRequest;
+import com.example.backend.member.dto.request.*;
 import com.example.backend.member.dto.response.MyInfoResponse;
-import com.example.backend.member.dto.response.PublicMemberInfoResponse;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.service.MemberService;
 import jakarta.validation.Valid;
@@ -13,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -20,13 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * TODO: Spring Security 설정 필요
- * - UserDetailsService 구현
- * - SecurityConfig 작성
- * - @PreAuthorize 활성화
- */
-//todo: /api/members/reset-password
+
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/members")
@@ -50,11 +41,14 @@ public class MemberController {
      * 내 정보 조회
      */
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()") // 인증된 사용자만 접근 가능
     public ResponseEntity<MyInfoResponse> getMyInfo(
             @AuthenticationPrincipal UserDetails userDetails) {
 
         // UserDetails에서 email(username) 추출
+        log.info("내 정보 조회 컨트롤러, email = {}", userDetails.getUsername());
         String email = userDetails.getUsername();
+        log.info("내 정보 조회 컨트롤러2, email = {}", email);
 
         // email로 Member 조회 (Service에 메서드 추가 필요)
         Member member = memberService.findRegisteredMemberByEmail(email);
@@ -64,32 +58,26 @@ public class MemberController {
     }
 
     /**
-     * 다른 회원 조회 (공개 프로필)
+     * 회원 탈퇴 (본인만)
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<PublicMemberInfoResponse> getMember(@PathVariable Long id) {
-        Member member = memberService.findRegisteredMemberById(id);
-        PublicMemberInfoResponse response = PublicMemberInfoResponse.fromEntity(member);
-        return ResponseEntity.ok(response);
-    }
+    @DeleteMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> withdrawMember(
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-    /**
-     * 전체 회원 조회 (관리자용)
-     * TODO: @PreAuthorize("hasRole('ADMIN')") 추가 예정, 요구사항에 따라 페이징 고려할 것.
-     */
-    @GetMapping
-    public ResponseEntity<List<MyInfoResponse>> getAllMembers() {
-        List<Member> members = memberService.findAllRegisteredMembers();
-        List<MyInfoResponse> response = members.stream()
-                .map(MyInfoResponse::fromEntity)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        String email = userDetails.getUsername();
+        Member member = memberService.findRegisteredMemberByEmail(email);
+
+        memberService.withdrawMember(member.getId());
+
+        return ResponseEntity.noContent().build();
     }
 
     /**
      * 비밀번호 변경 (본인만)
      */
     @PatchMapping("/password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MyInfoResponse> changePassword(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody PasswordChangeRequest request) {
@@ -108,6 +96,7 @@ public class MemberController {
      * 닉네임 변경 (본인만)
      */
     @PatchMapping("/nickname")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MyInfoResponse> changeNickname(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody NicknameChangeRequest request) {
@@ -122,34 +111,23 @@ public class MemberController {
     }
 
     /**
-     * 생년 최초 입력 (본인만)
+     * 비밀번호 분실 시 재설정 요청 (이메일 발송)
      */
-    @PatchMapping("/birthyear")
-    public ResponseEntity<MyInfoResponse> changeBirthYear(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @Valid @RequestBody BirthYearRequest request) {
-
-        String email = userDetails.getUsername();
-        Member member = memberService.findRegisteredMemberByEmail(email);
-
-        Member updatedMember = memberService.changeBirthYear(member.getId(), request.getBirthYear());
-        MyInfoResponse response = MyInfoResponse.fromEntity(updatedMember);
-
-        return ResponseEntity.ok(response);
+    @PostMapping("/reset-password/request")
+    public ResponseEntity<String> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        log.info("비밀번호 재설정 요청 컨트롤러: email={}", request.getEmail());
+        memberService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok("비밀번호 재설정 이메일이 발송되었습니다.");
     }
 
     /**
-     * 회원 탈퇴 (본인만)
+     * 분실 비밀번호 재설정 (토큰 검증 후 변경)
      */
-    @DeleteMapping("/me")
-    public ResponseEntity<Void> withdrawMember(
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        String email = userDetails.getUsername();
-        Member member = memberService.findRegisteredMemberByEmail(email);
-
-        memberService.withdrawMember(member.getId());
-
-        return ResponseEntity.noContent().build();
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        log.info("비밀번호 재설정: token={}", request.getToken());
+        memberService.passwordReset(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
     }
+
 }
