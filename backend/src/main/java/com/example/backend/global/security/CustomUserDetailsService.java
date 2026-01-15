@@ -1,12 +1,11 @@
-package com.example.backend.member.service;
+package com.example.backend.global.security;
 
 import com.example.backend.member.entity.Member;
-import com.example.backend.member.entity.Role;
+import com.example.backend.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -44,15 +43,12 @@ public class CustomUserDetailsService implements UserDetailsService {
             log.info("사용자 인증 성공: email={}, roles={}", email, member.getRoles());
 
             // Spring Security User 객체 생성
-            return User.builder()
-                    .username(member.getEmail())
-                    .password(member.getPassword())
-                    .authorities(authorities)
-                    .accountExpired(false)
-                    .accountLocked(false)
-                    .credentialsExpired(false)
-                    .disabled(false)
-                    .build();
+            return new CustomUserDetails(
+                    member.getId(),
+                    member.getEmail(),
+                    member.getPassword(),
+                    member.getRoles()
+            );
 
         } catch (Exception e) {
             log.error("사용자 인증 실패: email={}, error={}", email, e.getMessage());
