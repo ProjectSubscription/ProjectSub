@@ -1,8 +1,8 @@
 import React from 'react';
-import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye } from 'lucide-react';
+import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle } from 'lucide-react';
 import { PageRoute } from '@/app/types';
 import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
-import { getMyApplication, getApplicationDetail } from '@/app/lib/api';
+import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember } from '@/app/lib/api';
 
 export function MySubscriptionsPage({ userId, onNavigate }) {
   const userSubs = mockUserSubscriptions.filter(s => s.userId === userId);
@@ -383,9 +383,236 @@ export function MyCreatorApplicationsPage({ userId, onNavigate }) {
 
 // Simple MyPage component
 export function MyPage({ userId, onNavigate }) {
+  const [userInfo, setUserInfo] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [editingField, setEditingField] = React.useState(null);
+  const [formData, setFormData] = React.useState({});
+  const [error, setError] = React.useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+
+  const loadUserInfo = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const info = await getMyInfo();
+      setUserInfo(info);
+    } catch (err) {
+      console.error('사용자 정보 조회 오류:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadUserInfo();
+  }, [loadUserInfo]);
+
+  const handleEdit = (field) => {
+    setEditingField(field);
+    setFormData({});
+    setError('');
+  };
+
+  const handleCancel = () => {
+    setEditingField(null);
+    setFormData({});
+    setError('');
+  };
+
+  const handleSubmit = async (field) => {
+    try {
+      setError('');
+      let result;
+      
+      if (field === 'password') {
+        if (!formData.currentPassword || !formData.newPassword) {
+          setError('현재 비밀번호와 새 비밀번호를 모두 입력해주세요.');
+          return;
+        }
+        if (formData.newPassword.length < 8) {
+          setError('새 비밀번호는 8자 이상이어야 합니다.');
+          return;
+        }
+        result = await changePassword(formData.currentPassword, formData.newPassword);
+      } else if (field === 'nickname') {
+        if (!formData.newNickname) {
+          setError('닉네임을 입력해주세요.');
+          return;
+        }
+        result = await changeNickname(formData.newNickname);
+      }
+
+      // 성공 시 사용자 정보 다시 로드
+      const updatedInfo = await getMyInfo();
+      setUserInfo(updatedInfo);
+      setEditingField(null);
+      setFormData({});
+      
+      // 닉네임 변경 시 페이지 새로고침하여 헤더의 닉네임도 업데이트
+      if (field === 'nickname') {
+        window.location.reload();
+      } else {
+        alert('정보가 변경되었습니다.');
+      }
+    } catch (err) {
+      setError(err.message || '정보 변경에 실패했습니다.');
+      console.error('정보 변경 오류:', err);
+    }
+  };
+
+  const handleDeleteMember = async () => {
+    if (!window.confirm('정말로 회원 탈퇴를 하시겠습니까?\n탈퇴한 계정은 복구할 수 없습니다.')) {
+      return;
+    }
+
+    try {
+      await deleteMember();
+      alert('회원 탈퇴가 완료되었습니다.');
+      // 로그아웃 처리 및 홈으로 이동
+      window.location.href = '/';
+    } catch (err) {
+      alert(err.message || '회원 탈퇴에 실패했습니다.');
+      console.error('회원 탈퇴 오류:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 pb-12">
+        <div className="bg-white rounded-xl p-12 shadow-sm text-center">
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12">
       <h1 className="text-3xl font-bold text-gray-900">마이페이지</h1>
+
+      {/* 정보 변경 섹션 */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Settings className="w-6 h-6 text-gray-600" />
+          <h2 className="text-xl font-bold text-gray-900">정보 변경</h2>
+        </div>
+
+        <div className="space-y-6">
+          {/* 닉네임 */}
+          <div className="border-b border-gray-200 pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <User className="w-4 h-4" />
+                닉네임
+              </label>
+              {editingField !== 'nickname' && (
+                <button
+                  onClick={() => handleEdit('nickname')}
+                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  수정
+                </button>
+              )}
+            </div>
+            {editingField === 'nickname' ? (
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={formData.newNickname || ''}
+                  onChange={(e) => setFormData({ ...formData, newNickname: e.target.value })}
+                  placeholder={userInfo?.nickname || '닉네임'}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSubmit('nickname')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  >
+                    저장
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-900">{userInfo?.nickname || '-'}</p>
+            )}
+          </div>
+
+          {/* 생년 */}
+          <div className="border-b border-gray-200 pb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Calendar className="w-4 h-4" />
+                출생년도
+              </label>
+            </div>
+            <p className="text-gray-900">{userInfo?.birthYear ? `${userInfo.birthYear}년` : '-'}</p>
+            <p className="text-xs text-gray-500 mt-1">출생년도는 변경할 수 없습니다.</p>
+          </div>
+
+          {/* 비밀번호 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Lock className="w-4 h-4" />
+                비밀번호
+              </label>
+              {editingField !== 'password' && (
+                <button
+                  onClick={() => handleEdit('password')}
+                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  변경
+                </button>
+              )}
+            </div>
+            {editingField === 'password' ? (
+              <div className="space-y-3">
+                <input
+                  type="password"
+                  value={formData.currentPassword || ''}
+                  onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                  placeholder="현재 비밀번호"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="password"
+                  value={formData.newPassword || ''}
+                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                  placeholder="새 비밀번호 (8자 이상)"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSubmit('password')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  >
+                    저장
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">••••••••</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 기타 메뉴 */}
       <div className="grid md:grid-cols-2 gap-6">
         <button
           onClick={() => onNavigate('my-subscriptions', {})}
@@ -410,6 +637,23 @@ export function MyPage({ userId, onNavigate }) {
           <FileText className="w-8 h-8 text-purple-600 mb-3" />
           <h3 className="text-xl font-bold text-gray-900 mb-2">크리에이터 신청 이력</h3>
           <p className="text-gray-600">신청 내역 및 승인 상태 확인</p>
+        </button>
+      </div>
+
+      {/* 회원 탈퇴 섹션 */}
+      <div className="bg-red-50 border border-red-200 rounded-xl shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <AlertTriangle className="w-6 h-6 text-red-600" />
+          <h2 className="text-xl font-bold text-red-900">회원 탈퇴</h2>
+        </div>
+        <p className="text-sm text-red-700 mb-4">
+          회원 탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.
+        </p>
+        <button
+          onClick={handleDeleteMember}
+          className="px-6 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+        >
+          회원 탈퇴
         </button>
       </div>
     </div>
