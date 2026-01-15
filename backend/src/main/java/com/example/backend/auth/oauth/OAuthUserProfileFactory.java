@@ -1,4 +1,4 @@
-package com.example.backend.auth.security;
+package com.example.backend.auth.oauth;
 
 import com.example.backend.auth.session.SessionUser;
 import com.example.backend.member.entity.Role;
@@ -10,11 +10,11 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 @Getter
-public class CustomUserPrincipal {
+public class OAuthUserProfileFactory {
 
     private final SessionUser sessionUser;
 
-    public CustomUserPrincipal(SessionUser sessionUser) {
+    public OAuthUserProfileFactory(SessionUser sessionUser) {
         this.sessionUser = sessionUser;
     }
 

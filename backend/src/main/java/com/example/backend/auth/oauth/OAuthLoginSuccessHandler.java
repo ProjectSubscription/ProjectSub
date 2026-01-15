@@ -1,5 +1,6 @@
 package com.example.backend.auth.oauth;
 
+import com.example.backend.auth.principal.MemberPrincipal;
 import com.example.backend.auth.oauth.attributes.OAuthAttributes;
 import com.example.backend.auth.oauth.attributes.OAuthAttributesFactory;
 import com.example.backend.auth.session.SessionKey;
@@ -11,7 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -26,7 +26,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class OAuthLoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    @Value("${app.frontend-base-url}")
+    @Value("${app.frontend-base-url:http://localhost:3000}")
     private String frontendBaseUrl;
     private final MemberService memberService;
 
@@ -49,14 +49,15 @@ public class OAuthLoginSuccessHandler implements AuthenticationSuccessHandler {
         //SessionUser 생성
         SessionUser sessionUser = SessionUser.from(member);
 
+        // Security Principal(일반 로그인과 동일하게 UserDetails) 생성
+        MemberPrincipal principal = MemberPrincipal.from(member);
+
         //Spring Security용 Authentication 생성
         Authentication newAuth =
                 new UsernamePasswordAuthenticationToken(
-                        sessionUser,
+                        principal,
                         null,
-                        member.getRoles().stream()
-                                .map(role -> new SimpleGrantedAuthority(role.name()))
-                                .toList()
+                        principal.getAuthorities()
                 );
 
         //SecurityContext에 저장
