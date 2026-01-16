@@ -26,6 +26,7 @@ public class ContentResponseDTO {
 
     private Long viewCount;
     private Long likeCount;
+    private Boolean isLiked; // 현재 사용자가 좋아요를 눌렀는지 여부
 
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
@@ -43,6 +44,26 @@ public class ContentResponseDTO {
                 .price(content.getPrice())
                 .viewCount(content.getViewCount())
                 .likeCount(content.getLikeCount())
+                .isLiked(false) // 기본값: 좋아요 안 함
+                .publishedAt(content.getPublishedAt())
+                .createdAt(content.getCreatedAt())
+                .build();
+    }
+
+    public static ContentResponseDTO from(Content content, Boolean isLiked) {
+        return ContentResponseDTO.builder()
+                .contentId(content.getId())
+                .channelId(content.getChannel().getId())
+                .title(content.getTitle())
+                .contentType(content.getContentType())
+                .accessType(content.getAccessType())
+                .body(content.getBody())
+                .mediaUrl(content.getMediaUrl())
+                .previewRatio(content.getPreviewRatio())
+                .price(content.getPrice())
+                .viewCount(content.getViewCount())
+                .likeCount(content.getLikeCount())
+                .isLiked(isLiked != null ? isLiked : false)
                 .publishedAt(content.getPublishedAt())
                 .createdAt(content.getCreatedAt())
                 .build();

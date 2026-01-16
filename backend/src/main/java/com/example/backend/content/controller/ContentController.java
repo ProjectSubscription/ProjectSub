@@ -7,6 +7,8 @@ import com.example.backend.content.dto.ContentUpdateRequestDTO;
 import com.example.backend.content.entity.AccessType;
 import com.example.backend.content.entity.ContentType;
 import com.example.backend.content.service.ContentService;
+import com.example.backend.global.security.CustomUserDetails;
+import com.example.backend.member.entity.Role;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +19,7 @@ import java.util.List;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,21 +30,59 @@ public class ContentController {
     private final ContentService contentService;
 
     /**
-     * 콘텐츠 등록
+     * 콘텐츠 등록 (임시저장)
      * POST /api/contents
      * 권한: 크리에이터 (CREATOR)
      */
     @PostMapping
     public ResponseEntity<ContentResponseDTO> createContent(
             @Valid @RequestBody ContentCreateRequestDTO request,
-            @RequestHeader(value = "User-Role", required = false) String userRole
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         // 크리에이터 권한 확인
-        if (userRole == null || (!userRole.equals("CREATOR") && !userRole.equals("ROLE_CREATOR"))) {
+        if (userDetails == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
             throw new IllegalArgumentException("크리에이터 권한이 필요합니다.");
         }
 
         ContentResponseDTO response = contentService.createContent(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 콘텐츠 즉시 발행
+     * POST /api/contents/publish
+     * 권한: 크리에이터 (CREATOR)
+     */
+    @PostMapping("/publish")
+    public ResponseEntity<ContentResponseDTO> publishContentImmediately(
+            @Valid @RequestBody ContentCreateRequestDTO request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        // 크리에이터 권한 확인
+        if (userDetails == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
+            throw new IllegalArgumentException("크리에이터 권한이 필요합니다.");
+        }
+
+        ContentResponseDTO response = contentService.publishContentImmediately(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 콘텐츠 예약 발행
+     * POST /api/contents/schedule
+     * 권한: 크리에이터 (CREATOR)
+     */
+    @PostMapping("/schedule")
+    public ResponseEntity<ContentResponseDTO> scheduleContentPublish(
+            @Valid @RequestBody ContentCreateRequestDTO request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        // 크리에이터 권한 확인
+        if (userDetails == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
+            throw new IllegalArgumentException("크리에이터 권한이 필요합니다.");
+        }
+
+        ContentResponseDTO response = contentService.scheduleContentPublish(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -54,10 +95,10 @@ public class ContentController {
     public ResponseEntity<ContentResponseDTO> updateContent(
             @PathVariable Long id,
             @RequestBody ContentUpdateRequestDTO request,
-            @RequestHeader(value = "User-Role", required = false) String userRole
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         // 크리에이터 권한 확인
-        if (userRole == null || (!userRole.equals("CREATOR") && !userRole.equals("ROLE_CREATOR"))) {
+        if (userDetails == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
             throw new IllegalArgumentException("크리에이터 권한이 필요합니다.");
         }
 
@@ -73,10 +114,10 @@ public class ContentController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteContent(
             @PathVariable Long id,
-            @RequestHeader(value = "User-Role", required = false) String userRole
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         // 크리에이터 권한 확인
-        if (userRole == null || (!userRole.equals("CREATOR") && !userRole.equals("ROLE_CREATOR"))) {
+        if (userDetails == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
             throw new IllegalArgumentException("크리에이터 권한이 필요합니다.");
         }
 
@@ -92,9 +133,23 @@ public class ContentController {
     @GetMapping("/{id}")
     public ResponseEntity<ContentResponseDTO> getContent(
             @PathVariable Long id,
-            @RequestHeader(value = "User-Role", required = false) String userRole,
-            @RequestHeader(value = "User-Id", required = false) Long userId
+            @AuthenticationPrincipal(required = false) CustomUserDetails userDetails
     ) {
+        String userRole = null;
+        Long userId = null;
+        
+        if (userDetails != null) {
+            // Role을 String으로 변환 (기존 로직과 호환성을 위해)
+            if (userDetails.getRoles().contains(Role.ROLE_ADMIN)) {
+                userRole = "ADMIN";
+            } else if (userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
+                userRole = "CREATOR";
+            } else if (userDetails.getRoles().contains(Role.ROLE_USER)) {
+                userRole = "USER";
+            }
+            userId = userDetails.getMemberId();
+        }
+        
         ContentResponseDTO response = contentService.getContentById(id, userRole, userId);
         return ResponseEntity.ok(response);
     }

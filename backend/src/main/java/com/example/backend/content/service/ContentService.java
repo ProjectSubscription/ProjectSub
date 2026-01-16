@@ -9,6 +9,7 @@ import com.example.backend.content.dto.ContentUpdateRequestDTO;
 import com.example.backend.content.entity.AccessType;
 import com.example.backend.content.entity.Content;
 import com.example.backend.content.entity.ContentType;
+import com.example.backend.content.repository.ContentLikeRepository;
 import com.example.backend.content.repository.ContentRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +28,10 @@ public class ContentService {
 
     private final ContentRepository contentRepository;
     private final ChannelRepository channelRepository;
+    private final ContentLikeRepository contentLikeRepository;
 
     /**
-     * 콘텐츠 등록 (임시저장 가능 - publishedAt이 null이면 임시저장)
+     * 콘텐츠 등록 (임시저장 - publishedAt이 null)
      */
     public ContentResponseDTO createContent(ContentCreateRequestDTO request) {
         Channel channel = channelRepository.findById(request.getChannelId())
@@ -39,11 +41,68 @@ public class ContentService {
                 request.getBody(), request.getMediaUrl(),
                 request.getPreviewRatio(), request.getPrice());
 
-        // publishedAt이 null이면 임시저장, null이 아니면 예약 발행 또는 즉시 발행
+        // 임시저장만 처리 (publishedAt은 null)
+        Content content = Content.create(
+                channel,
+                request.getTitle(),
+                request.getContentType(),
+                request.getAccessType(),
+                request.getPreviewRatio(),
+                request.getBody(),
+                request.getMediaUrl(),
+                request.getPrice(),
+                null); // 임시저장이므로 null
+
+        return ContentResponseDTO.from(contentRepository.save(content));
+    }
+
+    /**
+     * 콘텐츠 즉시 발행 (publishedAt을 현재 시점으로 설정)
+     */
+    public ContentResponseDTO publishContentImmediately(ContentCreateRequestDTO request) {
+        Channel channel = channelRepository.findById(request.getChannelId())
+                .orElseThrow(() -> new IllegalArgumentException("채널이 존재하지 않습니다."));
+
+        validateContent(request.getContentType(), request.getAccessType(),
+                request.getBody(), request.getMediaUrl(),
+                request.getPreviewRatio(), request.getPrice());
+
+        // 즉시 발행 (현재 시점으로 설정)
+        LocalDateTime now = LocalDateTime.now();
+        Content content = Content.create(
+                channel,
+                request.getTitle(),
+                request.getContentType(),
+                request.getAccessType(),
+                request.getPreviewRatio(),
+                request.getBody(),
+                request.getMediaUrl(),
+                request.getPrice(),
+                now);
+
+        return ContentResponseDTO.from(contentRepository.save(content));
+    }
+
+    /**
+     * 콘텐츠 예약 발행 (publishedAt을 미래 시점으로 설정)
+     */
+    public ContentResponseDTO scheduleContentPublish(ContentCreateRequestDTO request) {
+        Channel channel = channelRepository.findById(request.getChannelId())
+                .orElseThrow(() -> new IllegalArgumentException("채널이 존재하지 않습니다."));
+
+        validateContent(request.getContentType(), request.getAccessType(),
+                request.getBody(), request.getMediaUrl(),
+                request.getPreviewRatio(), request.getPrice());
+
+        // 예약 발행 시점 검증
         LocalDateTime publishedAt = request.getPublishedAt();
-        // 예약 발행의 경우 미래 시점이어야 함
-        if (publishedAt != null && publishedAt.isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("예약 발행 시점은 현재 시점 이후여야 합니다.");
+        if (publishedAt == null) {
+            throw new IllegalArgumentException("예약 발행 시점(publishedAt)이 필요합니다.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (publishedAt.isBefore(now) || publishedAt.isEqual(now)) {
+            throw new IllegalArgumentException("예약 발행 시점은 현재 시점 이후여야 합니다. 즉시 발행을 원하시면 publishContentImmediately를 사용하세요.");
         }
 
         Content content = Content.create(
@@ -131,7 +190,12 @@ public class ContentService {
         content.increaseViewCount();
         contentRepository.save(content);
 
-        return ContentResponseDTO.from(content);
+        // 좋아요 여부 확인 (userId가 null이면 false)
+        Boolean isLiked = userId != null 
+                ? contentLikeRepository.existsContentLikeByContentIdAndMemberId(contentId, userId)
+                : false;
+
+        return ContentResponseDTO.from(content, isLiked);
     }
 
     /**
