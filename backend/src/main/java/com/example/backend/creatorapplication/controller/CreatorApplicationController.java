@@ -7,6 +7,7 @@ import com.example.backend.creatorapplication.dto.response.CreatorAppSuccessResp
 import com.example.backend.creatorapplication.dto.response.CreatorApplicationDetailResponseDTO;
 import com.example.backend.creatorapplication.dto.response.MyCreatorApplicationResponseDTO;
 import com.example.backend.creatorapplication.service.CreatorApplicationService;
+import com.example.backend.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,10 +32,10 @@ public class CreatorApplicationController {
 
     // 크리에이터 신청
     @PostMapping("/creators/applications")
-    public ResponseEntity<CreatorAppSuccessResponseDTO> createApp(@AuthenticationPrincipal Principal principal,
+    public ResponseEntity<CreatorAppSuccessResponseDTO> createApp(@AuthenticationPrincipal CustomUserDetails customUserDetails,
                                         @Valid @RequestBody CreatorApplicationRequestDTO dto) {
-        Long memberId = null;
-        // Long memberId = ((CustomUserDetails) principal).getId();
+
+        Long memberId = customUserDetails.getMemberId();
 
         log.info("크리에이터 신청 생성 요청 - memberId={}",memberId);
 
@@ -47,12 +48,11 @@ public class CreatorApplicationController {
 
     // 내 신청 이력 조회
     @GetMapping("/creators/applications/me")
-    public ResponseEntity<Page<MyCreatorApplicationResponseDTO>> getMyApps(@AuthenticationPrincipal Principal principal,
+    public ResponseEntity<Page<MyCreatorApplicationResponseDTO>> getMyApps(@AuthenticationPrincipal CustomUserDetails customUserDetails,
                                                                            @PageableDefault(
                                                                                    sort = "createdAt",
                                                                                    direction = Sort.Direction.DESC) Pageable pageable) {
-        Long memberId = null;
-        // Long memberId = ((CustomUserDetails) principal).getId();
+        Long memberId = customUserDetails.getMemberId();
 
         log.info("크리에이터 신청이력 조회 요청 - memberId={}", memberId);
 
@@ -92,11 +92,10 @@ public class CreatorApplicationController {
 
     // 신청 상세보기 - 회원, 관리자
     @GetMapping("/creators/applications/{applicationId}")
-    public ResponseEntity<CreatorApplicationDetailResponseDTO> getAppDetail(@AuthenticationPrincipal Principal principal,
+    public ResponseEntity<CreatorApplicationDetailResponseDTO> getAppDetail(@AuthenticationPrincipal CustomUserDetails customUserDetails,
                                                                             @PathVariable Long applicationId) {
 
-        Long memberId = null;
-        // Long memberId = ((CustomUserDetails) principal).getId();
+        Long memberId = customUserDetails.getMemberId();
 
         log.info("크리에이터 신청 상세조회 - applicationId={}", applicationId);
 

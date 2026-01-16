@@ -19,5 +19,8 @@ export default function MySubscriptions() {
     }
   };
 
-  return <MySubscriptionsPage userId="user-1" onNavigate={handleNavigate} />;
+  // TODO: 인증 구현 후 실제 사용자 ID로 변경
+  // 현재는 테스트용으로 memberId=1 사용
+  // 실제로는 세션에서 사용자 정보를 가져와야 함
+  return <MySubscriptionsPage userId={1} onNavigate={handleNavigate} />;
 }

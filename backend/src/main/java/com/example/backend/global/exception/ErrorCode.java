@@ -59,11 +59,12 @@ public enum ErrorCode {
     //권한
     ALREADY_CREATOR(HttpStatus.CONFLICT, "이미 크리에이터입니다."),
     NOT_REGULAR_MEMBER(HttpStatus.BAD_REQUEST, "일반 회원만 크리에이터로 승인 가능합니다."),
-    //OAuth 가입
+    //가입
     OAUTH_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "OAuth 인증 정보가 필요합니다."),
     PROFILE_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "이미 프로필 작성이 완료되었습니다."),
     NOT_OAUTH_MEMBER(HttpStatus.BAD_REQUEST, "OAuth 회원이 아닙니다."),
     EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "이메일 입력이 필요합니다."),
+    NICKNAME_REQUIRED(HttpStatus.BAD_REQUEST, "닉네임 입력이 필요합니다"),
     //토큰
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
     TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다."),
