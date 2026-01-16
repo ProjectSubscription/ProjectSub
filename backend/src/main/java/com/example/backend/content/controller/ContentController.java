@@ -133,7 +133,7 @@ public class ContentController {
     @GetMapping("/{id}")
     public ResponseEntity<ContentResponseDTO> getContent(
             @PathVariable Long id,
-            @AuthenticationPrincipal(required = false) CustomUserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         String userRole = null;
         Long userId = null;
