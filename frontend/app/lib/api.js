@@ -658,3 +658,70 @@ export async function unlikeContent(contentId) {
 export async function getSettlements(params = {}) {
   return apiGet('/api/settlements', params);
 }
+
+// ==================== 알림 (NOTIFICATION) ====================
+
+/**
+ * 알림 목록 조회
+ */
+export async function getNotifications() {
+  return apiGet('/api/notifications');
+}
+
+/**
+ * 안읽은 알림 개수 조회
+ */
+export async function getUnreadNotificationCount() {
+  return apiGet('/api/notifications/unread-count');
+}
+
+/**
+ * 알림 읽음 처리
+ */
+export async function readNotification(notificationId) {
+  return apiRequest(`/api/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 알림 전체 읽음 처리
+ */
+export async function readAllNotifications() {
+  return apiRequest('/api/notifications/read-all', {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 알림 삭제
+ */
+export async function deleteNotification(notificationId) {
+  return apiDelete(`/api/notifications/${notificationId}/delete`);
+}
+
+/**
+ * 알림 설정 조회
+ */
+export async function getNotificationSettings() {
+  return apiGet('/api/notification-settings');
+}
+
+/**
+ * 알림 설정 변경
+ */
+export async function updateNotificationSettings(data) {
+  return apiRequest('/api/notification-settings', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * SSE 알림 구독 연결
+ * Next.js API Route를 통해 프록시하여 쿠키 인증 문제 해결
+ */
+export function subscribeNotifications() {
+  // Next.js API Route를 통해 프록시 (쿠키 자동 포함)
+  return new EventSource('/api/notifications/subscribe');
+}
