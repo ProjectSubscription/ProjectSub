@@ -24,7 +24,7 @@ export const PageRoute = {
   PAYMENT_SUCCESS: 'payment-success',
   PAYMENT_FAILED: 'payment-failed',
   MYPAGE: 'mypage',
-  MY_SUBSCRIPTIONS: 'my-subscriptions',
+  MY_SUBSCRIPTIONS: 'subscriptions-me',
   MY_PURCHASES: 'my-purchases',
   MY_COUPONS: 'my-coupons',
   MY_REVIEWS: 'my-reviews',

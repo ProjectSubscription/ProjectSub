@@ -14,24 +14,49 @@ export function ClientLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  // 사용자 정보 로드 및 정규화 함수
+  const loadUser = React.useCallback(async () => {
+    try {
+      const user = await getMyInfo();
+      // 백엔드 응답을 일관된 구조로 정규화
+      // roles는 Set<Role>이므로 배열로 변환하고, role도 계산
+      const normalizedUser = {
+        ...user,
+        id: user.id,
+        email: user.email,
+        nickname: user.nickname || user.name,
+        name: user.nickname || user.name,
+        roles: user.roles ? (Array.isArray(user.roles) ? user.roles : Array.from(user.roles)) : [],
+        // roles에서 주요 role 추출 (우선순위: ADMIN > CREATOR > USER)
+        role: user.roles 
+          ? (Array.isArray(user.roles) ? user.roles : Array.from(user.roles)).find(r => 
+              r === 'ROLE_ADMIN' || r === 'ADMIN'
+            ) ? 'ADMIN'
+            : (Array.isArray(user.roles) ? user.roles : Array.from(user.roles)).find(r => 
+                r === 'ROLE_CREATOR' || r === 'CREATOR'
+              ) ? 'CREATOR'
+            : 'USER'
+          : 'USER',
+        birthYear: user.birthYear,
+        gender: user.gender,
+        creatorStatus: user.creatorStatus || 'NONE'
+      };
+      setCurrentUser(normalizedUser);
+      return normalizedUser;
+    } catch (error) {
+      // 인증되지 않은 사용자 또는 서버 오류
+      console.log('사용자 정보 로드 실패:', error.message);
+      setCurrentUser(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // 사용자 정보 로드 (경로 변경 시에도 다시 로드)
   React.useEffect(() => {
-    async function loadUser() {
-      try {
-        const user = await getMyInfo();
-        setCurrentUser(user);
-      } catch (error) {
-        // 인증되지 않은 사용자 또는 서버 오류
-        // TODO: 인증 구현 후 실제 사용자 정보 로드
-        // 현재는 테스트용으로 null 처리
-        console.log('사용자 정보 로드 실패 (인증 미구현):', error.message);
-        setCurrentUser(null);
-      } finally {
-        setLoading(false);
-      }
-    }
     loadUser();
-  }, [pathname]); // pathname 변경 시 사용자 정보 다시 로드
+  }, [pathname, loadUser]); // pathname 변경 시 사용자 정보 다시 로드
 
   const handleLogout = async () => {
     try {
@@ -41,8 +66,9 @@ export function ClientLayout({ children }) {
       await logout();
       console.log('✅ 로그아웃 API 호출 성공 - 백엔드 세션 무효화 완료');
       
-      // 사용자 정보 즉시 초기화
+      // 사용자 정보 즉시 초기화 (Header와 Sidebar 모두 동기화)
       setCurrentUser(null);
+      setLoading(false);
       console.log('✅ 사용자 정보 상태 초기화 완료');
       
       // 세션이 제대로 삭제되었는지 확인
@@ -65,6 +91,12 @@ export function ClientLayout({ children }) {
     }
   };
 
+  // 사용자 정보 새로고침 함수 (외부에서 호출 가능)
+  const refreshUser = React.useCallback(async () => {
+    setLoading(true);
+    await loadUser();
+  }, [loadUser]);
+
   // 페이지 경로 매핑 (기존 문자열 기반 라우팅을 Next.js 경로로 변환)
   const getPathFromPage = (page) => {
     const routeMap = {
@@ -77,7 +109,7 @@ export function ClientLayout({ children }) {
       'payment': '/payment',
       'payment-success': '/payment/success',
       'mypage': '/mypage',
-      'my-subscriptions': '/my-subscriptions',
+      'subscriptions-me': '/subscriptions/me',
       'my-purchases': '/my-purchases',
       'my-reviews': '/my-reviews',
       'my-coupons': '/my-coupons',

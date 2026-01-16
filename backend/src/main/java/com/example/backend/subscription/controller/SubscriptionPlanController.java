@@ -1,11 +1,14 @@
 package com.example.backend.subscription.controller;
 
+import com.example.backend.global.security.CustomUserDetails;
+import com.example.backend.member.entity.Role;
 import com.example.backend.subscription.dto.request.SubscriptionPlanCreateRequest;
 import com.example.backend.subscription.dto.request.SubscriptionPlanUpdateRequest;
 import com.example.backend.subscription.dto.response.SubscriptionPlanResponse;
 import com.example.backend.subscription.service.SubscriptionPlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,11 +21,18 @@ public class SubscriptionPlanController {
     private final SubscriptionPlanService subscriptionPlanService;
 
     @PostMapping
-    // TODO: 테스트용 임시 수정 - 인증 구현 후 @AuthenticationPrincipal로 변경 예정
-    // public Long createPlan(@AuthenticationPrincipal Long creatorId, @PathVariable Long channelId, @Valid @RequestBody SubscriptionPlanCreateRequest request) {
-    public Long createPlan(@RequestParam(required = false) Long creatorId, @PathVariable Long channelId, @Valid @RequestBody SubscriptionPlanCreateRequest request) {
+    @PreAuthorize("isAuthenticated()")
+    public Long createPlan(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long channelId,
+            @Valid @RequestBody SubscriptionPlanCreateRequest request) {
+        // 크리에이터 권한 확인
+        if (userDetails == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
+            throw new IllegalArgumentException("크리에이터 권한이 필요합니다.");
+        }
+        
         return subscriptionPlanService.createPlan(
-                creatorId,
+                userDetails.getMemberId(),
                 channelId,
                 request.planType(),
                 request.price()
@@ -35,11 +45,14 @@ public class SubscriptionPlanController {
     }
 
     @PutMapping("/{planId}")
-    // TODO: 테스트용 임시 수정 - 인증 구현 후 @AuthenticationPrincipal로 변경 예정
-    // public void updatePlan(@AuthenticationPrincipal Long memberId, @PathVariable Long channelId, @PathVariable Long planId, @Valid @RequestBody SubscriptionPlanUpdateRequest request) {
-    public void updatePlan(@RequestParam(required = false) Long memberId, @PathVariable Long channelId, @PathVariable Long planId, @Valid @RequestBody SubscriptionPlanUpdateRequest request) {
+    @PreAuthorize("isAuthenticated()")
+    public void updatePlan(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long channelId,
+            @PathVariable Long planId,
+            @Valid @RequestBody SubscriptionPlanUpdateRequest request) {
         subscriptionPlanService.updatePlan(
-                memberId,
+                userDetails.getMemberId(),
                 channelId,
                 planId,
                 request.price(),

@@ -32,7 +32,7 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
   const userNavItems = [
     { icon: Home, label: '홈', page: 'home', path: '/home' },
     { icon: Tv, label: '채널 둘러보기', page: 'channels', path: '/channels' },
-    { icon: CreditCard, label: '내 구독', page: 'my-subscriptions', path: '/my-subscriptions' },
+    { icon: CreditCard, label: '내 구독', page: 'subscriptions-me', path: '/subscriptions/me' },
     { icon: Heart, label: '구매한 콘텐츠', page: 'my-purchases', path: '/my-purchases' },
     { icon: MessageSquare, label: '내 리뷰', page: 'my-reviews', path: '/my-reviews' },
   ];
@@ -52,9 +52,16 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
     { icon: FileText, label: '정산 관리', page: 'admin-settlements', path: '/admin/settlements' },
   ];
 
+  // 역할 체크 헬퍼 함수 (Header와 동일한 로직)
+  const hasRole = (roles, role) => {
+    if (!roles || !Array.isArray(roles)) return false;
+    return roles.includes(role) || roles.includes(`ROLE_${role}`);
+  };
+
+  // 역할에 따라 네비게이션 아이템 결정
   const navItems = 
-    currentUser.role === 'ADMIN' ? adminNavItems :
-    currentUser.role === 'CREATOR' ? creatorNavItems :
+    hasRole(currentUser.roles, 'ROLE_ADMIN') ? adminNavItems :
+    hasRole(currentUser.roles, 'ROLE_CREATOR') ? creatorNavItems :
     userNavItems;
 
   return (
@@ -117,7 +124,7 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
             </div>
 
             {/* Separator for User role */}
-            {currentUser.role === 'USER' && currentUser.creatorStatus !== 'APPROVED' && (
+            {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && currentUser.creatorStatus !== 'APPROVED' && (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <button
                   onClick={() => handleNavigation('creator-apply')}
@@ -133,7 +140,7 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
             )}
 
             {/* Creator status indicator */}
-            {currentUser.role === 'USER' && currentUser.creatorStatus === 'PENDING' && (
+            {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && currentUser.creatorStatus === 'PENDING' && (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm font-medium text-yellow-800">신청 검토 중</p>
@@ -144,7 +151,7 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
               </div>
             )}
 
-            {currentUser.role === 'USER' && currentUser.creatorStatus === 'REJECTED' && (
+            {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && currentUser.creatorStatus === 'REJECTED' && (
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm font-medium text-red-800">신청 반려됨</p>
@@ -166,11 +173,11 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
           <div className="p-4 border-t border-gray-200">
             <div className="text-xs text-gray-500 space-y-1">
               <p className="font-medium text-gray-700">
-                {currentUser.role === 'ADMIN' ? '관리자 모드' :
-                 currentUser.role === 'CREATOR' ? '크리에이터 모드' :
+                {hasRole(currentUser.roles, 'ROLE_ADMIN') ? '관리자 모드' :
+                 hasRole(currentUser.roles, 'ROLE_CREATOR') ? '크리에이터 모드' :
                  '일반 회원'}
               </p>
-              <p>{currentUser.name}</p>
+              <p>{currentUser.nickname || currentUser.name}</p>
             </div>
           </div>
         </div>
