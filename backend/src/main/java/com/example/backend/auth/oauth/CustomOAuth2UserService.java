@@ -5,6 +5,7 @@ import com.example.backend.auth.oauth.attributes.OAuthAttributes;
 import com.example.backend.auth.oauth.attributes.OAuthAttributesFactory;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
+import com.example.backend.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -20,13 +21,12 @@ import org.springframework.stereotype.Service;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final AuthMemberFacade  authMemberFacade;
+    private final MemberRepository memberRepository;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException{
         //OAuth 제공자로부터 사용자 정보 조회
         OAuth2User oAuth2User = super.loadUser(userRequest);
-
-        log.info("[OAuth] raw attributes = {}", oAuth2User.getAttributes());
         //OAuth provider 식별
         String provider=userRequest.getClientRegistration().getRegistrationId();
 
@@ -36,30 +36,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String providerUserId= attributes.getProviderUserId();
         String email= attributes.getEmail();
 
+        //todo: 멤버 서비스에 요청할 것.
+        boolean isMember= memberRepository.existsByOauthProviderAndOauthProviderId(provider, providerUserId);
+        CustomOAuth2User customOAuth2User = new CustomOAuth2User(provider, providerUserId, email, isMember);
 
-        //OAuth 사용자에 대응되는 Member 보장
-        try {
-            // 이미 가입된 OAuth 회원인지 확인
-            authMemberFacade.findByOAuth(provider, providerUserId);
-        } catch (BusinessException e) {
-            if (e.getErrorCode() != ErrorCode.MEMBER_NOT_FOUND) {
-                throw toOAuth2AuthException(e);
-            }
-
-            // 최초 OAuth 로그인 → 임시 회원 생성
-            try {
-                authMemberFacade.registerOAuthUser(
-                        provider,
-                        providerUserId,
-                        email
-                );
-            } catch (BusinessException be) {
-                throw toOAuth2AuthException(be);
-            }
-        }
-
-        // OAuth2User는 그대로 반환
-        return oAuth2User;
+        return customOAuth2User;
     }
 
     private OAuth2AuthenticationException toOAuth2AuthException(BusinessException e) {

@@ -133,6 +133,17 @@ export function oauthLogin(provider) {
 }
 
 /**
+ * OAuth 프로필 완성
+ */
+export async function completeOAuthProfile(token, data) {
+  const endpoint = `/api/oauth/complete-profile?token=${encodeURIComponent(token)}`;
+  return apiRequest(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
  * 로그아웃
  */
 export async function logout() {

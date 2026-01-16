@@ -92,13 +92,12 @@ public class Member extends AuditableEntity {
     }
 
     //oauth 유저 회원가입
-    public static Member createFromOAuth(String oauthProvider, String oauthProviderId, String email) {
+    public static Member createFromOAuth(String oauthProvider, String oauthProviderId, String email, Set<Role> roles) {
 
         if (oauthProvider == null || oauthProviderId == null) {
             throw new BusinessException(ErrorCode.OAUTH_INFO_REQUIRED);
         }
-        HashSet<Role> roles = new HashSet<>();
-        roles.add(Role.ROLE_USER);
+
         return Member.builder()
                 .oauthProvider(oauthProvider)
                 .oauthProviderId(oauthProviderId)
@@ -164,7 +163,7 @@ public class Member extends AuditableEntity {
     }
 
     //oauth 가입 유저 추가 정보 입력 및 상태 플래그 변경
-    public void completeProfile(String nickname, Integer birthYear, Gender gender) {
+    public void completeProfile(String email, String nickname, Integer birthYear, Gender gender) {
 
         // 1. OAuth 회원인지 체크
         if (!this.isOAuthMember()) {
@@ -176,14 +175,19 @@ public class Member extends AuditableEntity {
             throw new BusinessException(ErrorCode.PROFILE_ALREADY_COMPLETED);
         }
 
-        // 3. 도메인 불변식 보장
-        if (this.email == null) {
+        // 3. email 검증 (DB에 없으면 반드시 입력해야 함)
+        if (this.getEmail() == null && email == null) {
             throw new BusinessException(ErrorCode.EMAIL_REQUIRED);
+        }
+
+        if (this.email == null && email != null) {
+            this.email = email;
         }
 
         this.nickname = nickname;
         this.birthYear = birthYear;
         this.gender = gender;
+        //this.roles.add(Role.ROLE_USER);
         this.profileCompleted = true;
     }
 

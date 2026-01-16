@@ -41,7 +41,6 @@ public class MemberController {
     @PreAuthorize("isAuthenticated()") // 인증된 사용자만 접근 가능
     public ResponseEntity<MyInfoResponse> getMyInfo(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-
         log.info("내 정보 조회 컨트롤러2, email = {}, id ={} ", userDetails.getEmail(), userDetails.getMemberId());
         Member member = memberService.findRegisteredMemberById(userDetails.getMemberId());
         MyInfoResponse response = MyInfoResponse.fromEntity(member);

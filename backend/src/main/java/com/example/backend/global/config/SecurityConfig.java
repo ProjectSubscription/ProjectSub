@@ -1,37 +1,86 @@
 package com.example.backend.global.config;
 
+import com.example.backend.auth.security.ApiAuthenticationEntryPoint;
+import com.example.backend.auth.oauth.CustomOAuth2UserService;
+import com.example.backend.auth.oauth.OAuthLoginFailureHandler;
+import com.example.backend.auth.oauth.OAuthLoginSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.List;
-
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true) // @PreAuthorize, @PostAuthorize 활성화
+
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            CustomOAuth2UserService customOAuth2UserService,
+            OAuthLoginSuccessHandler oAuthLoginSuccessHandler,
+            OAuthLoginFailureHandler oAuthLoginFailureHandler,
+            ApiAuthenticationEntryPoint apiAuthenticationEntryPoint
+    ) throws Exception {
 
         http
-                // ✅ CORS 설정
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // ✅ 모든 요청 허용
+                // 권한 설정 (임시 회원 고려)
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
+                        .requestMatchers(
+                                "/oauth2/**",
+                                "/error"
+                        ).permitAll()
+                        // 회원가입은 비로그인 허용
+                        .requestMatchers(HttpMethod.POST, "/api/members/register").permitAll()
+                        // OAuth 프로필 완성은 비로그인 허용 (회원가입 과정)
+                        .requestMatchers(HttpMethod.POST, "/api/oauth/complete-profile").permitAll()
+
+                        // 공개 조회는 허용 (나머지 /api/** 는 기본적으로 인증 필요)
+                        .requestMatchers(HttpMethod.GET, "/api/channels/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/contents/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/channels/*/plans").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/channels/*/plans/**").permitAll()
+
+                        // Role 기반 접근제어
+                        .requestMatchers(HttpMethod.POST, "/api/channels/**").hasAnyRole("CREATOR", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/channels/**").hasAnyRole("CREATOR", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/channels/**").hasAnyRole("CREATOR", "ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/contents/**").hasAnyRole("CREATOR", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/contents/**").hasAnyRole("CREATOR", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/contents/**").hasAnyRole("CREATOR", "ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/channels/*/plans").hasAnyRole("CREATOR", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/channels/*/plans/**").hasAnyRole("CREATOR", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/channels/*/plans/**").hasAnyRole("CREATOR", "ADMIN")
+
+                        .anyRequest().authenticated()
+                )
+
+                // OAuth 로그인 설정
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuthLoginSuccessHandler)
+                        .failureHandler(oAuthLoginFailureHandler)
+                )
+
+                .exceptionHandling(ex -> ex
+                        .defaultAuthenticationEntryPointFor(
+                                apiAuthenticationEntryPoint,
+                                apiRequestMatcher()
+                        )
                 )
 
                 // ✅ CSRF 비활성화 (H2 Console 사용 시 필수)
@@ -40,21 +89,25 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()
                 )
 
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
                 // ✅ H2 Console iframe 허용
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
                 )
 
-                // ✅ formLogin 비활성화 (SPA는 커스텀 로그인 API 사용)
+                // ✅ 기본 로그인, 로그아웃 전부 비활성
                 .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
-                
-                // ✅ 세션 관리 설정 (세션 생성 및 유지)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.IF_REQUIRED)
-                );
+                .httpBasic(basic -> basic.disable());
 
         return http.build();
+    }
+
+    private RequestMatcher apiRequestMatcher() {
+        return request -> {
+            String uri = request.getRequestURI();
+            return uri != null && uri.startsWith("/api/");
+        };
     }
 
     @Bean
@@ -62,46 +115,21 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * AuthenticationManager Bean 등록
-     * 커스텀 로그인 API에서 사용
-     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+        return config.getAuthenticationManager();}
 
-    /**
-     * CORS 설정
-     * 프론트엔드(localhost:3000)에서 백엔드(localhost:8080)로의 요청 허용
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        
-        // 허용할 Origin (프론트엔드 주소)
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://127.0.0.1:3000"
-        ));
-        
-        // 허용할 HTTP 메서드
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        
-        // 허용할 헤더
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // 인증 정보(쿠키) 포함 허용
-        configuration.setAllowCredentials(true);
-        
-        // Preflight 요청 캐시 시간 (1시간)
-        configuration.setMaxAge(3600L);
-        
-        // 모든 경로에 적용
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("http://localhost:3000");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }

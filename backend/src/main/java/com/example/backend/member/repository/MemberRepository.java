@@ -32,4 +32,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     @Query(value = "select * from members",nativeQuery = true)
     List<Member> findAllIncludingDeleted();
+
+    boolean existsByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
 }

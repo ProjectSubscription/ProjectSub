@@ -2,7 +2,7 @@
 ### ⚠️ 이 파일은 개발/테스트 전용입니다!
 ### 서버 설정
 @baseUrl = http://localhost:8080
-@testUrl = {{baseUrl}}/api/members
+@testUrl = {{baseUrl}}/api/test/members
 @contentType = application/json
 
 ###############################################

@@ -4,7 +4,7 @@ import com.example.backend.creator.entity.CreatorStatus;
 import com.example.backend.creator.service.CreatorService;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
-import com.example.backend.member.entity.Gender;
+import com.example.backend.member.dto.request.CompleteOAuthProfileRequest;
 import com.example.backend.member.repository.MemberRepository;
 import com.example.backend.member.dto.request.MemberRequest;
 import com.example.backend.member.entity.Member;
@@ -19,8 +19,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.springframework.util.StringUtils.hasText;
-
 @Service
 @Transactional
 @Slf4j
@@ -29,7 +27,7 @@ public class MemberService {
     //todo: 상수 env 파일로 옮기기
     private final PasswordResetService passwordResetService;
     private final MemberRepository memberRepository;
-
+    
 
     private final CreatorService creatorService;
     private final PasswordEncoder passwordEncoder;
@@ -38,7 +36,7 @@ public class MemberService {
     public MemberService(@Lazy CreatorService creatorService,
                          MemberRepository memberRepository,
                          PasswordEncoder passwordEncoder,
-                         PasswordResetService passwordResetService) { //todo : 개선 여지 있음
+                          PasswordResetService passwordResetService) { //todo : 개선 여지 있음
         this.creatorService = creatorService;
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
@@ -47,9 +45,7 @@ public class MemberService {
 
     //유저 회원가입
     public Member registerMember(MemberRequest dto) {
-        HashSet<Role> roles = new HashSet<>();
-        roles.add(Role.ROLE_USER);
-        return signupWithRoles(dto, roles);
+        return signupWithRoles(dto, Set.of(Role.ROLE_USER));
     }
 
     //크리에이터 승인
@@ -75,65 +71,43 @@ public class MemberService {
 
     //관리자 계정 생성
     public Member registerAdmin(MemberRequest dto) {
-        HashSet<Role> roles = new HashSet<>();
-        roles.add(Role.ROLE_USER);
-        roles.add(Role.ROLE_ADMIN);
-        return signupWithRoles(dto, roles);
+        return signupWithRoles(dto, Set.of(Role.ROLE_USER, Role.ROLE_ADMIN));
     }
 
-    //oauth 유저 가입
-    public Member registerOAuthMember(String provider, String providerUserId, String confirmedEmail,
-                                      String nickname, Integer birthYear, Gender gender) {
+    //oauth 유저 임시 가입
+    public Member registerOAuthMember(String provider, String providerUserId, String email) {
         log.info("oauth 가입 요청. 추가 정보 입력해야함.");
-        //oauth 유저 추가 정보 입력
-
-        //1.필수 값 검증====================
-        validateRequiredValue(confirmedEmail, nickname);
-
-        //1-2.중복체크====================
-        validateDuplication(confirmedEmail, nickname);
-
-        Member member = Member.createFromOAuth(provider, providerUserId, confirmedEmail);
-        log.info("oauth 회원 추가 정보 입력 시도 email={}", confirmedEmail);
-        member.completeProfile(nickname, birthYear, gender);
-
+        Set<Role> roles = new HashSet<Role>();
+        roles.add(Role.ROLE_USER);
+        // 2. email 중복 체크 (새로 입력하는 경우만)
+        if (email != null && memberRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+        Member member = Member.createFromOAuth(provider, providerUserId, email ,roles);
         memberRepository.save(member);
-        log.info("oauth 회원 추가 정보 입력 성공 nickname={}", nickname);
         log.info("oauth 회원 임시 가입 완료");
-
         return member;
     }
 
+    //oauth 유저 추가 정보 입력
+    public Member completeOAuthMemberProfile(Long memberId, CompleteOAuthProfileRequest dto) {
+        log.info("oauth 회원 추가 정보 입력 시도 memberId= {}", memberId);
+        Member member = findRegisteredMemberById(memberId);
 
-    //회원 가입 로직
-    private Member signupWithRoles(MemberRequest dto, Set<Role> roles) {
-        log.info("회원가입 시도: roles={} email={}", roles, dto.getEmail());
+        // 1. 닉네임 중복 체크
+        if (memberRepository.existsByNickname(dto.getNickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
+        }
 
-        //1. 필수값 검증
-        validateRequiredValue(dto.getEmail(), dto.getNickname());
+        // 2. email 중복 체크 (새로 입력하는 경우만)
+//        if (dto.getEmail() != null && memberRepository.existsByEmail(dto.getEmail())) {
+//            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+//        }
 
-        //1-2. 중복 체크
-        validateDuplication(dto.getEmail(), dto.getNickname());
-        
-        //2.일반 가입 유저 암호 인코딩
-        String encodedPassword = encodingPassword(dto.getPassword());
 
-        //3. 엔티티 생성
-        Member member = Member.create(
-                dto.getEmail(),
-                encodedPassword,
-                dto.getNickname(),
-                roles,
-                dto.getBirthYear(),
-                dto.getGender());
-
-        Member savedMember = memberRepository.save(member);
-        savedMember.finishSignup();
-        log.info("회원가입 완료: email={}, nickname={}, provider={}",
-                savedMember.getEmail(),
-                savedMember.getNickname(),
-                savedMember.isOAuthMember() ? savedMember.getOauthProvider() : "Oauth 이용 안함.");
-        return savedMember;
+        member.completeProfile(dto.getEmail(), dto.getNickname(), dto.getBirthYear(), dto.getGender());
+        log.info("oauth 회원 추가 정보 입력 성공 memberId={}", memberId);
+        return member;
     }
 
     @Transactional(readOnly = true)
@@ -226,7 +200,7 @@ public class MemberService {
         log.info("회원 탈퇴 시도 memberId = {}", memberId);
         Member member = findRegisteredMemberById(memberId);
 
-        if (member.hasRole(Role.ROLE_CREATOR)) {
+        if (member.hasRole(Role.ROLE_CREATOR)){
             creatorService.changeStatus(memberId, CreatorStatus.DELETED);
         }
 
@@ -251,6 +225,34 @@ public class MemberService {
     public void passwordReset(String token, String newPassword) {
         log.info("새 비밀번호로 변경 중");
         passwordResetService.resetPassword(token, newPassword, passwordEncoder);
+    }
+
+    //회원 가입 로직
+    private Member signupWithRoles(MemberRequest dto, Set<Role> roles) {
+        log.info("회원가입 시도: roles={} email={}", roles, dto.getEmail());
+
+        //1. 중복 체크
+        validateDuplication(dto.getEmail(), dto.getNickname());
+
+        //2.일반 가입 유저 암호 인코딩
+        String encodedPassword = encodingPassword(dto.getPassword());
+
+        //3. 엔티티 생성
+        Member member = Member.create(
+                dto.getEmail(),
+                encodedPassword,
+                dto.getNickname(),
+                roles,
+                dto.getBirthYear(),
+                dto.getGender());
+
+        Member savedMember = memberRepository.save(member);
+        savedMember.finishSignup();
+        log.info("회원가입 완료: email={}, nickname={}, provider={}",
+                savedMember.getEmail(),
+                savedMember.getNickname(),
+                savedMember.isOAuthMember() ? savedMember.getOauthProvider() : "Oauth 이용 안함.");
+        return savedMember;
     }
 
     //입력 비밀번호 검증
@@ -284,14 +286,5 @@ public class MemberService {
         }
     }
 
-    //필수 값 검증
-    private void validateRequiredValue(String confirmedEmail, String nickname) {
-        if (!hasText(confirmedEmail)) {
-            throw new BusinessException(ErrorCode.EMAIL_REQUIRED);
-        }
 
-        if (!hasText(nickname)) {
-            throw new BusinessException(ErrorCode.NICKNAME_REQUIRED);
-        }
-    }
 }
