@@ -129,7 +129,14 @@ export async function login(email, password) {
  * OAuth 로그인 (리다이렉트)
  */
 export function oauthLogin(provider) {
-  window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`;
+  try {
+    const oauthUrl = `${API_BASE_URL}/oauth2/authorization/${provider}`;
+    console.log('OAuth 로그인 시도:', oauthUrl);
+    window.location.href = oauthUrl;
+  } catch (error) {
+    console.error('OAuth 로그인 오류:', error);
+    alert('소셜 로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+  }
 }
 
 /**
@@ -137,6 +144,13 @@ export function oauthLogin(provider) {
  */
 export async function logout() {
   return apiPost('/api/auth/logout');
+}
+
+/**
+ * OAuth 프로필 완성 (추가 정보 입력)
+ */
+export async function completeOAuthProfile(token, data) {
+  return apiPost(`/api/oauth/complete-profile?token=${encodeURIComponent(token)}`, data);
 }
 
 /**
