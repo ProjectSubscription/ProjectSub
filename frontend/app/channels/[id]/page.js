@@ -11,7 +11,7 @@ export default function ChannelDetail() {
   const handleNavigate = (page, navParams) => {
     const routeMap = {
       'content-detail': (params) => `/contents/${params?.contentId || ''}`,
-      'payment': (params) => `/payment?type=subscription&planId=${params?.planId || ''}`,
+      'payment': (params) => `/payment?type=subscription&planId=${params?.planId || ''}&channelId=${channelId}`,
     };
 
     const route = routeMap[page];

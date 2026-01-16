@@ -8,8 +8,9 @@ export default function Payment() {
   const searchParams = useSearchParams();
   const type = searchParams.get('type') || 'subscription';
   const planId = searchParams.get('planId');
+  const channelId = searchParams.get('channelId');
   const contentId = searchParams.get('contentId');
-  const itemId = planId || contentId || 'plan-1';
+  const itemId = planId || contentId;
 
   const handleNavigate = (page, params) => {
     const routeMap = {
@@ -31,5 +32,10 @@ export default function Payment() {
     }
   };
 
-  return <PaymentPage type={type} itemId={itemId} onNavigate={handleNavigate} />;
+  return <PaymentPage 
+    type={type} 
+    itemId={itemId} 
+    channelId={channelId}
+    onNavigate={handleNavigate} 
+  />;
 }

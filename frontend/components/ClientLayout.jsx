@@ -21,7 +21,10 @@ export function ClientLayout({ children }) {
         const user = await getMyInfo();
         setCurrentUser(user);
       } catch (error) {
-        // 인증되지 않은 사용자
+        // 인증되지 않은 사용자 또는 서버 오류
+        // TODO: 인증 구현 후 실제 사용자 정보 로드
+        // 현재는 테스트용으로 null 처리
+        console.log('사용자 정보 로드 실패 (인증 미구현):', error.message);
         setCurrentUser(null);
       } finally {
         setLoading(false);

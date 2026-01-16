@@ -19,7 +19,6 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true) // @PreAuthorize, @PostAuthorize 활성화
 public class SecurityConfig {
 
     @Bean
@@ -48,7 +47,7 @@ public class SecurityConfig {
                 // ✅ formLogin 비활성화 (SPA는 커스텀 로그인 API 사용)
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
-                
+
                 // ✅ 세션 관리 설정 (세션 생성 및 유지)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.IF_REQUIRED)
@@ -78,30 +77,30 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
+
         // 허용할 Origin (프론트엔드 주소)
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://127.0.0.1:3000"
         ));
-        
+
         // 허용할 HTTP 메서드
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        
+
         // 허용할 헤더
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        
+
         // 인증 정보(쿠키) 포함 허용
         configuration.setAllowCredentials(true);
-        
+
         // Preflight 요청 캐시 시간 (1시간)
         configuration.setMaxAge(3600L);
-        
+
         // 모든 경로에 적용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-        
+
         return source;
     }
 }
