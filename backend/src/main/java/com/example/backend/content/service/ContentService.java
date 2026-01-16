@@ -416,20 +416,20 @@ public class ContentService {
 
     /**
      * 예약 발행 처리
-     * publishedAt이 현재 시점 이전인 예약 발행 대기 중인 콘텐츠를 처리
-     * 실제로는 publishedAt이 현재 시점 이전이면 자동으로 게시되지만,
-     * 명시적으로 처리하여 로그나 알림을 남길 수 있음
+     * publishedAt이 현재 시점 이전인 예약 발행 대기 중인 콘텐츠를 발행 처리
      */
     public void processScheduledPublications() {
         LocalDateTime now = LocalDateTime.now();
         List<Content> scheduledContents = contentRepository.findScheduledContentsToPublish(now);
 
-        // 예약 발행된 콘텐츠 처리 (현재는 로그만 남김, 추후 알림 기능 추가 가능)
+        // 예약 발행된 콘텐츠 처리
         for (Content content : scheduledContents) {
-            // publishedAt이 현재 시점 이전이면 이미 isPublished()가 true이므로
-            // 별도의 상태 변경 없이도 게시됨
-            // 여기서는 예약 발행이 완료되었음을 로그로 남기거나 알림을 보낼 수 있음
-            // TODO: 추후 알림 기능 추가 시 여기에 알림 로직 추가
+            // 아직 발행되지 않은 콘텐츠만 발행 처리
+            if (!content.isPublished()) {
+                content.publish();
+                contentRepository.save(content);
+                // TODO: 추후 알림 기능 추가 시 여기에 알림 로직 추가
+            }
         }
     }
 }
