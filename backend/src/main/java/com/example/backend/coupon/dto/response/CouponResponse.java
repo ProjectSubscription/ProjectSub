@@ -11,7 +11,8 @@ public record CouponResponse(Long id,
                              DiscountType discountType,
                              Integer discountValue,
                              RefundType refundType,
-                             LocalDateTime expiredAt
+                             LocalDateTime expiredAt,
+                             Long channelId
 ) {
     public static CouponResponse fromEntity(Coupon coupon) {
         return new CouponResponse(
@@ -20,7 +21,8 @@ public record CouponResponse(Long id,
                 coupon.getDiscountType(),
                 coupon.getDiscountValue(),
                 coupon.getRefundType(),
-                coupon.getExpiredAt()
+                coupon.getExpiredAt(),
+                coupon.getChannelId()
         );
     }
 }

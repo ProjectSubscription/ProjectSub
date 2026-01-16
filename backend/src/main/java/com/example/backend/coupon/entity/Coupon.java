@@ -35,12 +35,16 @@ public class Coupon extends CreatedAtEntity {
     @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
 
+    @Column(name = "channel_id")
+    private Long channelId;
+
     public static Coupon create(
             String code,
             DiscountType discountType,
             Integer discountValue,
             RefundType refundType,
-            LocalDateTime expiredAt
+            LocalDateTime expiredAt,
+            Long channelId
     ) {
         return Coupon.builder()
                 .code(code)
@@ -48,6 +52,7 @@ public class Coupon extends CreatedAtEntity {
                 .discountValue(discountValue)
                 .refundType(refundType != null ? refundType : RefundType.RESTORE_ON_REFUND)
                 .expiredAt(expiredAt)
+                .channelId(channelId)
                 .build();
     }
 

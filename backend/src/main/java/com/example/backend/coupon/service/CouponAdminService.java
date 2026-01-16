@@ -49,7 +49,8 @@ public class CouponAdminService {
                 request.discountType(),
                 request.discountValue(),
                 refundType,
-                request.expiredAt()
+                request.expiredAt(),
+                request.channelId()
         );
 
         Coupon savedCoupon = couponRepository.save(coupon);

@@ -23,6 +23,8 @@ public record CouponCreateRequest(
         @NotNull
         LocalDateTime expiredAt,
 
+        Long channelId,
+
         List<CouponTargetCreateRequest> targets
 ) {
     public record CouponTargetCreateRequest(@NotNull CouponTargetType targetType, Long targetId) {}
