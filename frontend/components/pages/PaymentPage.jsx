@@ -3,68 +3,26 @@ import { PaymentItemInfo } from '@/components/payment/PaymentItemInfo';
 import { CouponSection } from '@/components/payment/CouponSection';
 import { PaymentMethod } from '@/components/payment/PaymentMethod';
 import { PaymentSummary } from '@/components/payment/PaymentSummary';
-import { getSubscriptionPlans, createSubscription, getContent } from '@/app/lib/api';
-import { mockCoupons } from '@/app/mockData';
+import { mockSubscriptionPlans, mockContents, mockCoupons } from '@/app/mockData';
+import { useRouter } from 'next/navigation';
 
-export function PaymentPage({ type, itemId, channelId, onNavigate }) {
+export function PaymentPage({ type, itemId, onNavigate }) {
+  const router = useRouter();
   const [couponCode, setCouponCode] = React.useState('');
   const [appliedCoupon, setAppliedCoupon] = React.useState(null);
   const [paymentMethod, setPaymentMethod] = React.useState('card');
-  const [item, setItem] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
-  const [processing, setProcessing] = React.useState(false);
 
-  // 구독 상품 또는 콘텐츠 정보 조회
-  React.useEffect(() => {
-    const fetchItem = async () => {
-      try {
-        setLoading(true);
-        if (type === 'subscription' && channelId && itemId) {
-          const plans = await getSubscriptionPlans(channelId);
-          const plan = plans?.find(p => p.planId === Number(itemId));
-          if (plan) {
-            // PlanType을 한글로 변환
-            const planTypeName = plan.planType === 'MONTHLY' ? '월간 구독' : '연간 구독';
-            setItem({
-              ...plan,
-              name: planTypeName,
-              description: plan.planType === 'MONTHLY' 
-                ? '모든 강의 무제한 시청' 
-                : '모든 강의 무제한 시청 + 특별 보너스',
-              duration: plan.planType
-            });
-          }
-        } else if (type === 'content' && itemId) {
-          const content = await getContent(itemId);
-          setItem(content);
-        }
-      } catch (err) {
-        console.error('결제 정보 조회 실패:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (itemId) {
-      fetchItem();
-    }
-  }, [type, itemId, channelId]);
-
-  if (loading) {
-    return <div className="text-center py-12">로딩 중...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center py-12 text-red-600">오류: {error}</div>;
-  }
+  const item = type === 'subscription'
+    ? mockSubscriptionPlans.find(p => p.id === itemId)
+    : mockContents.find(c => c.id === itemId);
 
   if (!item) {
     return <div className="text-center py-12">결제 정보를 찾을 수 없습니다.</div>;
   }
 
-  const baseAmount = item.price || 0;
+  const baseAmount = 'price' in item ? item.price || 0 : item.price;
   const discount = appliedCoupon
     ? appliedCoupon.discountType === 'PERCENT'
       ? Math.min(baseAmount * (appliedCoupon.discountValue / 100), appliedCoupon.maxDiscount || Infinity)
@@ -91,34 +49,63 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   };
 
   const handlePayment = async () => {
-    if (processing) return;
+    setLoading(true);
+    setError(null);
     
     try {
-      setProcessing(true);
-      
-      if (type === 'subscription' && channelId && itemId) {
-        // 구독 신청
-        const subscriptionId = await createSubscription(
-          Number(channelId), 
-          Number(itemId)
-        );
-        
-        // TODO: 실제 결제 API 호출 (현재는 구독 신청만 처리)
-        // await paySubscription({ subscriptionId });
-        
-        alert('구독이 완료되었습니다!');
-        onNavigate('payment-success', { amount: finalAmount, subscriptionId });
-      } else if (type === 'content' && itemId) {
-        // 콘텐츠 단건 구매
-        // TODO: purchaseContent API 호출
-        alert('결제가 완료되었습니다!');
-        onNavigate('payment-success', { amount: finalAmount });
+      // itemId에서 숫자 부분만 추출 (예: "plan-1" -> 1, "content-2" -> 2)
+      // 또는 이미 숫자인 경우 그대로 사용
+      let targetId;
+      if (typeof itemId === 'string' && itemId.includes('-')) {
+        // 문자열에서 숫자 부분 추출 (예: "plan-1" -> 1)
+        const match = itemId.match(/\d+/);
+        targetId = match ? parseInt(match[0], 10) : null;
+      } else {
+        targetId = Number(itemId);
       }
+
+      if (!targetId || isNaN(targetId)) {
+        throw new Error('유효하지 않은 상품 ID입니다.');
+      }
+
+      // 주문 생성 API 호출
+      const requestBody = {
+        orderType: type.toUpperCase(), // "subscription" -> "SUBSCRIPTION", "content" -> "CONTENT"
+        targetId: targetId,
+        originalAmount: baseAmount,
+        discountAmount: appliedCoupon ? finalAmount : null, // 쿠폰 적용 시 할인된 가격, 미적용 시 null
+      };
+
+      const response = await fetch('http://localhost:8080/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Id': '1', // TODO: 실제 로그인한 사용자 ID로 교체 필요
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '주문 생성에 실패했습니다.');
+      }
+
+      const orderData = await response.json();
+      console.log('주문 생성 성공:', orderData);
+
+      // Checkout 페이지로 이동 (Next.js 라우팅 사용)
+      const query = new URLSearchParams({
+        orderCode: orderData.orderCode,
+        orderName: orderData.orderName,
+        amount: orderData.amount.toString(),
+      });
+      router.push(`/payment/checkout?${query.toString()}`);
+
     } catch (err) {
-      console.error('결제 실패:', err);
-      alert('결제에 실패했습니다: ' + (err.message || '알 수 없는 오류'));
+      console.error('결제 처리 중 오류 발생:', err);
+      setError(err.message || '결제 처리 중 오류가 발생했습니다.');
     } finally {
-      setProcessing(false);
+      setLoading(false);
     }
   };
 
@@ -130,6 +117,13 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">결제하기</h1>
         <p className="text-gray-600">안전한 결제 환경을 제공합니다</p>
       </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong className="font-bold">오류:</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Payment Form */}
@@ -156,7 +150,7 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
             discount={discount}
             finalAmount={finalAmount}
             onPayment={handlePayment}
-            processing={processing}
+            loading={loading}
           />
         </div>
       </div>

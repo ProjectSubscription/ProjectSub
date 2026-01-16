@@ -3,6 +3,7 @@ package com.example.backend.creator.controller;
 import com.example.backend.creator.dto.response.CreatorMyPageResponseDTO;
 import com.example.backend.creator.dto.response.CreatorResponseDTO;
 import com.example.backend.creator.service.CreatorService;
+import com.example.backend.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,10 +26,9 @@ public class CreatorController {
     // 크리에이터 정보 조회
     // 닉네임, 소개글, 구독자 수, 구독하기 버튼, 채널 컨텐츠 목록
     @GetMapping("/creators/{creatorId}")
-    public ResponseEntity<CreatorResponseDTO> creatorInfo(@AuthenticationPrincipal Principal principal,
+    public ResponseEntity<CreatorResponseDTO> creatorInfo(@AuthenticationPrincipal CustomUserDetails customUserDetails,
                                         @PathVariable Long creatorId) {
-        Long memberId = null;
-        // Long memberId = ((CustomUserDetails) principal).getId();
+        Long memberId = customUserDetails.getMemberId();
 
         log.info("크리에이터 정보 조회 요청 - memberId={}", memberId);
 
@@ -42,10 +42,9 @@ public class CreatorController {
     // 크리에이터 마이페이지
     // 대시보드, 정산관리, 컨텐츠 관리, 구독자 관리, 채널 설정 변경
     @GetMapping("/creators/me")
-    public ResponseEntity<?> creatorMyPage(@AuthenticationPrincipal Principal principal) {
+    public ResponseEntity<?> creatorMyPage(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
 
-        Long memberId = null;
-        // Long memberId = ((CustomUserDetails) principal).getId();
+        Long memberId = customUserDetails.getMemberId();
 
         CreatorMyPageResponseDTO myPage = creatorService.getCreatorMyPage(memberId);
 
