@@ -3,14 +3,20 @@ package com.example.backend.notification.controller;
 import com.example.backend.global.security.CustomUserDetails;
 import com.example.backend.notification.dto.request.NotificationSettingUpdateDTO;
 import com.example.backend.notification.dto.response.NotificationListResponseDTO;
+import com.example.backend.notification.dto.response.NotificationResponseDTO;
 import com.example.backend.notification.dto.response.NotificationSettingResponseDTO;
 import com.example.backend.notification.service.NotificationService;
 import com.example.backend.notification.service.NotificationSettingService;
+import com.example.backend.notification.service.NotificationSseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -20,19 +26,34 @@ public class NotificationController {
 
     private final NotificationService notificationService;
     private final NotificationSettingService notificationSettingService;
+    private final NotificationSseService notificationSseService;
 
     // 알림 조회 GET
     @GetMapping("/notifications")
-    public ResponseEntity<NotificationListResponseDTO> getNotifications(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    public ResponseEntity<List<NotificationResponseDTO>> getNotifications(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
         Long memberId = customUserDetails.getMemberId();
 
         log.info("알림 조회 start - memberId={}", memberId);
 
-        NotificationListResponseDTO notifications = notificationService.getNotifications(memberId);
+        List<NotificationResponseDTO> notifications = notificationService.getNotifications(memberId);
 
-        log.info("알림 조회 성공 - count={}", notifications.getNotificationCount());
+        log.info("알림 조회 성공 - count={}", notifications.size());
 
         return ResponseEntity.ok(notifications);
+    }
+
+    // 안읽은 알림 숫자만 가져오기
+    @GetMapping("/notifications/unread-count")
+    public ResponseEntity<Long> getUnreadNotificationCount(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        Long memberId = customUserDetails.getMemberId();
+
+        log.info("안읽은 알림 조회 start - memberId={}", memberId);
+
+        Long unreadNotificationCount = notificationService.getUnreadNotificationCount(memberId);
+
+        log.info("안읽은 알림 개수 = count={}", unreadNotificationCount);
+
+        return ResponseEntity.ok(unreadNotificationCount);
     }
 
     // 알림 읽음 처리 PATCH
@@ -88,7 +109,7 @@ public class NotificationController {
 
     // 알림 설정 변경 PATCH
     @PatchMapping("/notification-settings")
-    public ResponseEntity<?> updateNotificationSettings(@AuthenticationPrincipal CustomUserDetails customUserDetails,
+    public ResponseEntity<Void> updateNotificationSettings(@AuthenticationPrincipal CustomUserDetails customUserDetails,
                                                         @RequestBody NotificationSettingUpdateDTO dto) {
         Long memberId = customUserDetails.getMemberId();
 
@@ -96,14 +117,20 @@ public class NotificationController {
                 memberId, dto.isContentNotify(), dto.isNewsletterNotify(), dto.isEventNotify());
 
         notificationSettingService.updateNotificationSetting(memberId, dto);
-        return null;
+        return ResponseEntity.noContent().build();
     }
 
 
     // sse 연결 GET
-    @GetMapping("/notifications/subscribe")
-    public ResponseEntity<?> subscribe() {
-        return null;
+    @GetMapping(value = "/notifications/subscribe",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribe(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+        Long memberId = customUserDetails.getMemberId();
+
+        log.info("SSE 연결 시도 - memberId={}", memberId);
+
+        return notificationSseService.subscribe(memberId);
     }
 
 }

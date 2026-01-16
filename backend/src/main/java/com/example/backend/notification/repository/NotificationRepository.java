@@ -11,4 +11,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     // 소프트 삭제된 알림과 읽은 알림은 가져오지 않도록
     List<Notification> findByMemberIdAndIsDeletedFalseAndIsReadFalse(Long memberId);
+
+    // 안읽은 알림 개수
+    Long countByMemberIdAndIsReadFalseAndIsDeletedFalse(Long memberId);
 }

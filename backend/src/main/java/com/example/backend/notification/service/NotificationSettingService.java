@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -18,6 +20,7 @@ public class NotificationSettingService {
     private final NotificationSettingRepository notificationSettingRepository;
 
     // 알림 설정 조회
+    @Transactional(readOnly = true)
     public NotificationSettingResponseDTO getNotificationSetting(Long memberId) {
         NotificationSetting notificationSetting = notificationSettingRepository.findByMemberId(memberId)
                 .orElseThrow(); //todo: 나중에 ErrorCode 추가
@@ -64,5 +67,10 @@ public class NotificationSettingService {
     public void deleteNotificationSetting(Long memberId) {
         notificationSettingRepository.deleteByMemberId(memberId);
         log.info("알림 설정 삭제 완료 - memberId={}", memberId);
+    }
+
+    // 특정 알림 설정을 킨 사람들만 필터링
+    public List<Long> getTargetMemberIds(List<Long> memberIds) {
+        return null;
     }
 }

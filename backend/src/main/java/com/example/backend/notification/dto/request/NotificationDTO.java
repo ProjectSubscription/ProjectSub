@@ -15,4 +15,15 @@ public class NotificationDTO {
     private String title;
     private String message;
     private Long targetId;
+
+    public static NotificationDTO create(Long memberId, NotificationType type, String title,
+                                         String message, Long targetId) {
+        return NotificationDTO.builder()
+                .memberId(memberId)
+                .type(type)
+                .title(title)
+                .message(message)
+                .targetId(targetId)
+                .build();
+    }
 }

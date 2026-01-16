@@ -18,7 +18,7 @@ public class Notification extends CreatedAtEntity {
     private Long id;
 
     // 알림 받는 사용자
-    @Column(name = "member_id", nullable = false, unique = true)
+    @Column(name = "member_id", nullable = false)
     private Long memberId;
 
     // 알림 타입(콘텐츠,뉴스레터,이벤트 등)

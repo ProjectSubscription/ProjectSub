@@ -1,5 +1,6 @@
 package com.example.backend.notification.service;
 
+import com.example.backend.notification.dto.event.NotificationCreatedEvent;
 import com.example.backend.notification.dto.request.NotificationDTO;
 import com.example.backend.notification.dto.response.NotificationListResponseDTO;
 import com.example.backend.notification.dto.response.NotificationResponseDTO;
@@ -7,6 +8,7 @@ import com.example.backend.notification.entity.Notification;
 import com.example.backend.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     // 알림 생성
     public NotificationResponseDTO createNotification(NotificationDTO dto) {
@@ -27,21 +30,36 @@ public class NotificationService {
 
         log.info("알림 저장 성공 - message={}", save.getMessage());
 
-        return NotificationResponseDTO.create(save);
+        NotificationResponseDTO notificationResponseDTO = NotificationResponseDTO.create(save);
+
+        // 이벤트 발행
+        applicationEventPublisher.publishEvent(
+                NotificationCreatedEvent.create(notification.getMemberId(), notificationResponseDTO)
+        );
+
+        log.info("알림 이벤트 발행 - memberId={}", notification.getMemberId());
+
+        return notificationResponseDTO;
     }
 
     // 알림 조회
-    public NotificationListResponseDTO getNotifications(Long memberId) {
+    @Transactional(readOnly = true)
+    public List<NotificationResponseDTO> getNotifications(Long memberId) {
         List<NotificationResponseDTO> list =
                 notificationRepository.findByMemberIdAndIsDeletedFalseOrderByCreatedAtDesc(memberId)
                         .stream()
                         .map(NotificationResponseDTO::create)
                         .toList();
-        int size = list.size();
+        log.info("알림 조회 - size={}", list.size());
+        return list;
+    }
 
-        log.info("알림 조회 - size={}", size);
-
-        return NotificationListResponseDTO.create(list, size);
+    // 안읽은 알림 개수 조회
+    @Transactional(readOnly = true)
+    public Long getUnreadNotificationCount(Long memberId) {
+        Long count = notificationRepository.countByMemberIdAndIsReadFalseAndIsDeletedFalse(memberId);
+        log.info("안읽은 알림 개수 count={}", count);
+        return count;
     }
 
     // 알림 읽음 처리
