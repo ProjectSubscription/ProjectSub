@@ -72,8 +72,8 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     @Query("SELECT COUNT(c) FROM Content c WHERE c.channel.id = :channelId AND c.publishedAt BETWEEN :startDate AND :endDate AND c.isDeleted = false")
     long countByChannelIdAndPublishedAtBetweenAndIsDeletedFalse(@Param("channelId") Long channelId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
     
-    // 예약 발행 대기 중인 콘텐츠 조회 (publishedAt이 null이 아니고 현재 시점 이하인 것)
-    @Query("SELECT c FROM Content c WHERE c.publishedAt IS NOT NULL AND c.publishedAt <= :now AND c.isDeleted = false")
+    // 예약 발행 대기 중인 콘텐츠 조회 (publishedAt이 null이 아니고 현재 시점 이하이며, 아직 발행되지 않은 것)
+    @Query("SELECT c FROM Content c WHERE c.publishedAt IS NOT NULL AND c.publishedAt <= :now AND c.isPublished = false AND c.isDeleted = false")
     List<Content> findScheduledContentsToPublish(@Param("now") LocalDateTime now);
     
 }
