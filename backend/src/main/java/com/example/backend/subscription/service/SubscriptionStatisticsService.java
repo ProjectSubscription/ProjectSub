@@ -9,8 +9,6 @@ import com.example.backend.member.entity.Member;
 import com.example.backend.member.repository.MemberRepository;
 import com.example.backend.subscription.dto.response.SubscriberStatisticsResponse;
 import com.example.backend.subscription.entity.Subscription;
-import com.example.backend.subscription.entity.SubscriptionStatus;
-import com.example.backend.subscription.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +24,7 @@ import java.util.stream.Collectors;
 public class SubscriptionStatisticsService {
     private final ChannelRepository channelRepository;
     private final ChannelValidator channelValidator;
-    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionService subscriptionService;
     private final MemberRepository memberRepository;
 
     public SubscriberStatisticsResponse getSubscriberStatisticsByCreatorId(Long creatorId) {
@@ -34,7 +32,7 @@ public class SubscriptionStatisticsService {
 
         channelValidator.validateOwner(creatorId, channel.getId());
 
-        List<Subscription> subscriptions = subscriptionRepository.findByChannelIdAndStatus(channel.getId(), SubscriptionStatus.ACTIVE);
+        List<Subscription> subscriptions = subscriptionService.getActiveSubscriptionsByChannelId(channel.getId());
 
         if (subscriptions.isEmpty()) {
             return new SubscriberStatisticsResponse(0L, Map.of(), Map.of());
