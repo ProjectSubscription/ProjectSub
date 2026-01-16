@@ -15,7 +15,7 @@ public class AuthMemberFacade {
 
     private final MemberService memberService;
 
-    // OAuth 사용자 조회 ->
+    // OAuth 사용자 조회
     public Member findByOAuth(String provider, String providerUserId) {
         return memberService.findRegisteredMemberByOAuth(provider, providerUserId);
     }
