@@ -36,9 +36,6 @@ public class NotificationSseService {
         // 최초 연결 확인
         send(memberId, "CONNECTED");
 
-        // 오프라인일때 왔던 알림 보내기
-        sendUnread(memberId, emitter);
-
         return emitter;
     }
 
@@ -53,21 +50,6 @@ public class NotificationSseService {
         } catch (IOException e) {
             // 에러발생 - 연결이 끊겼다는 것이므로 데이터 정리.
             emitters.remove(memberId);
-        }
-    }
-
-    // 오프라인일때 왔던 알림 로그인했을때 보내기
-    private void sendUnread(Long memberId, SseEmitter emitter) {
-        List<Notification> unread =
-                notificationRepository.findByMemberIdAndIsDeletedFalseAndIsReadFalse(memberId);
-
-        for (Notification n : unread) {
-            try {
-                emitter.send(NotificationResponseDTO.create(n));
-            } catch (IOException e) {
-                emitters.remove(memberId);
-                break;
-            }
         }
     }
 }
