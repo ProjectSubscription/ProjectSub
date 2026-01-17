@@ -64,7 +64,11 @@ async function apiRequest(endpoint, options = {}) {
  * GET 요청
  */
 export async function apiGet(endpoint, params = {}) {
-  const queryString = new URLSearchParams(params).toString();
+  // undefined/null 파라미터는 쿼리에 포함되지 않도록 제거
+  const filteredParams = Object.fromEntries(
+    Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null)
+  );
+  const queryString = new URLSearchParams(filteredParams).toString();
   const url = queryString ? `${endpoint}?${queryString}` : endpoint;
   return apiRequest(url, { method: 'GET' });
 }
