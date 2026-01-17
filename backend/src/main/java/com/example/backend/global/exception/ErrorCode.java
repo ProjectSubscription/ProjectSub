@@ -68,6 +68,7 @@ public enum ErrorCode {
     //토큰
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
     TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다."),
+    INVALID_OR_EXPIRED_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
 
     /* ===== COUPON ===== */
     COUPON_CODE_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 쿠폰 코드입니다."),
@@ -96,6 +97,7 @@ public enum ErrorCode {
     NOTIFICATION_SETTING_NOT_FOUND(HttpStatus.NOT_FOUND, "알림 설정 정보를 찾을 수 없습니다."),
     NOTIFICATION_SETTING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 회원의 알림 설정이 존재합니다."),
     INVALID_NOTIFICATION_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 알림 타입입니다.");
+
 
     private final HttpStatus status;
     private final String message;
