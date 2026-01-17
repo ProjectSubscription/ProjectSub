@@ -3,6 +3,7 @@ package com.example.backend.notification.service;
 import com.example.backend.notification.dto.request.NotificationSettingUpdateDTO;
 import com.example.backend.notification.dto.response.NotificationSettingResponseDTO;
 import com.example.backend.notification.entity.NotificationSetting;
+import com.example.backend.notification.entity.NotificationType;
 import com.example.backend.notification.repository.NotificationSettingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +71,12 @@ public class NotificationSettingService {
     }
 
     // 특정 알림 설정을 킨 사람들만 필터링
-    public List<Long> getTargetMemberIds(List<Long> memberIds) {
-        return null;
+    public List<Long> getTargetMemberIds(List<Long> memberIds, NotificationType type) {
+        return switch (type) {
+            case NEW_CONTENT -> notificationSettingRepository.findMemberIdByMemberIdInAndContentNotifyTrue(memberIds);
+            case NEWS_LETTER -> notificationSettingRepository.findMemberIdByMemberIdInAndNewsletterNotifyTrue(memberIds);
+            case EVENT -> notificationSettingRepository.findMemberIdByMemberIdInAndEventNotifyTrue(memberIds);
+            default -> throw new RuntimeException("타입이 잘못되었습니다."); // todo: 나중에 ErrorCode 추가
+        };
     }
 }
