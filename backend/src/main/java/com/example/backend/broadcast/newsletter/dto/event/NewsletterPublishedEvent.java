@@ -9,4 +9,13 @@ import lombok.Getter;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder(access = AccessLevel.PRIVATE)
 public class NewsletterPublishedEvent {
+    private Long newsletterId;
+    private String title;
+
+    public static NewsletterPublishedEvent create(Long newsletterId, String title) {
+        return NewsletterPublishedEvent.builder()
+                .newsletterId(newsletterId)
+                .title(title)
+                .build();
+    }
 }
