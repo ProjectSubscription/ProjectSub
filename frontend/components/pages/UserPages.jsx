@@ -1,6 +1,8 @@
 import React from 'react';
-import { Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, CreditCard } from 'lucide-react';
-import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember } from '@/app/lib/api';
+import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell } from 'lucide-react';
+import { PageRoute } from '@/app/types';
+import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
+import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember, getNotificationSettings, updateNotificationSettings } from '@/app/lib/api';
 
 // 구독 관련 컴포넌트는 subscription 폴더로 분리됨
 export { MySubscriptionsPage } from '../subscription/MySubscriptionsPage';
@@ -462,7 +464,7 @@ export function MyPage({ userId, onNavigate }) {
       {/* 기타 메뉴 */}
       <div className="grid md:grid-cols-2 gap-6">
         <button
-          onClick={() => onNavigate('subscriptions-me', {})}
+          onClick={() => onNavigate('my-subscriptions', {})}
           className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow text-left"
         >
           <CreditCard className="w-8 h-8 text-blue-600 mb-3" />
