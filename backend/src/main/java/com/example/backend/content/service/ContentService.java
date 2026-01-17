@@ -6,6 +6,7 @@ import com.example.backend.content.dto.ContentCreateRequestDTO;
 import com.example.backend.content.dto.ContentListResponseDTO;
 import com.example.backend.content.dto.ContentResponseDTO;
 import com.example.backend.content.dto.ContentUpdateRequestDTO;
+import com.example.backend.content.dto.event.ContentPublishedEvent;
 import com.example.backend.content.entity.AccessType;
 import com.example.backend.content.entity.Content;
 import com.example.backend.content.entity.ContentType;
@@ -13,6 +14,7 @@ import com.example.backend.content.repository.ContentLikeRepository;
 import com.example.backend.content.repository.ContentRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,7 @@ public class ContentService {
     private final ContentRepository contentRepository;
     private final ChannelRepository channelRepository;
     private final ContentLikeRepository contentLikeRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 콘텐츠 등록 (임시저장 - publishedAt이 null)
@@ -80,7 +83,13 @@ public class ContentService {
                 request.getPrice(),
                 now);
 
-        return ContentResponseDTO.from(contentRepository.save(content));
+        Content saveContent = contentRepository.save(content);
+
+        // 알림 이벤트 발행
+        applicationEventPublisher.publishEvent(
+                ContentPublishedEvent.create(saveContent.getId(), channel.getCreatorId()));
+
+        return ContentResponseDTO.from(saveContent);
     }
 
     /**
@@ -428,7 +437,10 @@ public class ContentService {
             if (!content.isPublished()) {
                 content.publish();
                 contentRepository.save(content);
-                // TODO: 추후 알림 기능 추가 시 여기에 알림 로직 추가
+                // 알림 이벤트 발행
+                applicationEventPublisher.publishEvent(
+                        ContentPublishedEvent.create(content.getId(), content.getChannel().getCreatorId())
+                );
             }
         }
     }
