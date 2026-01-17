@@ -36,6 +36,9 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
     @Query("SELECT c FROM Coupon c WHERE c.expiredAt > :now ORDER BY c.createdAt DESC")
     Page<Coupon> findActiveCoupons(@Param("now") LocalDateTime now, Pageable pageable);
 
+    @Query("SELECT c FROM Coupon c WHERE c.expiredAt > :now ORDER BY c.createdAt DESC")
+    List<Coupon> findAllAvailableCoupons(@Param("now") LocalDateTime now);
+
     @Query("SELECT c FROM Coupon c WHERE c.expiredAt <= :now ORDER BY c.createdAt DESC")
     Page<Coupon> findExpiredCoupons(@Param("now") LocalDateTime now, Pageable pageable);
 

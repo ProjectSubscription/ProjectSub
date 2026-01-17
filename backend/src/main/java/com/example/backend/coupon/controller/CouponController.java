@@ -2,6 +2,7 @@ package com.example.backend.coupon.controller;
 
 import com.example.backend.coupon.dto.response.ChannelCouponResponse;
 import com.example.backend.coupon.dto.response.CouponIssueResponse;
+import com.example.backend.coupon.dto.response.MyCouponResponse;
 import com.example.backend.coupon.service.CouponIssueService;
 import com.example.backend.coupon.service.CouponQueryService;
 import com.example.backend.global.security.CustomUserDetails;
@@ -38,6 +39,25 @@ public class CouponController {
     ) {
         Long memberId = userDetails != null ? userDetails.getMemberId() : null;
         List<ChannelCouponResponse> coupons = couponQueryService.getAvailableCouponsByContent(contentId, memberId);
+        return ResponseEntity.ok(coupons);
+    }
+
+    @GetMapping("/coupons/me/available")
+    public ResponseEntity<List<ChannelCouponResponse>> getAvailableCoupons(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long memberId = userDetails != null ? userDetails.getMemberId() : null;
+        List<ChannelCouponResponse> coupons = couponQueryService.getAllAvailableCoupons(memberId);
+        return ResponseEntity.ok(coupons);
+    }
+
+    @GetMapping("/coupons/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<MyCouponResponse>> getMyCoupons(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long memberId = userDetails.getMemberId();
+        List<MyCouponResponse> coupons = couponQueryService.getMyCoupons(memberId);
         return ResponseEntity.ok(coupons);
     }
 

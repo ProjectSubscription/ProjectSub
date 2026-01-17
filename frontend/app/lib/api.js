@@ -533,7 +533,7 @@ export async function getTopSales(params = {}) {
  * 쿠폰 등록
  */
 export async function registerCoupon(data) {
-  return apiPost('/api/coupons/register', data);
+  return apiPost('/api/coupons/issue', data);
 }
 
 /**
