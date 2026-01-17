@@ -97,11 +97,8 @@ public interface ChannelService {
      * - 사용자가 여러 채널을 탐색할 수 있도록 제공하는 기능
      *
      * @param category 조회할 채널 카테고리 (null이면 전체 조회)
-     * @param pageable 페이징 정보
+     * @param pageable 페이징/정렬 정보
      * @return 채널 목록 페이지
      */
-    Page<ChannelListResponse> getChannelList(
-            ChannelCategory category,
-            Pageable pageable
-    );
+    Page<ChannelListResponse> getChannelList(ChannelCategory category, Pageable pageable);
 }
