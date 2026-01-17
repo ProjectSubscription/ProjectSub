@@ -30,4 +30,14 @@ public interface CouponTargetRepository extends JpaRepository<CouponTarget, Long
             @Param("channelId") Long channelId,
             @Param("targetType") CouponTargetType targetType
     );
+
+    @Query("SELECT ct FROM CouponTarget ct " +
+           "WHERE ct.coupon.id = :couponId " +
+           "AND ct.targetType = :targetType " +
+           "AND (:targetId IS NULL OR ct.targetId = :targetId OR ct.targetId IS NULL)")
+    List<CouponTarget> findByCouponIdAndTargetTypeAndTargetId(
+            @Param("couponId") Long couponId,
+            @Param("targetType") CouponTargetType targetType,
+            @Param("targetId") Long targetId
+    );
 }
