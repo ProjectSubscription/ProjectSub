@@ -41,7 +41,7 @@ public class ContentPublishedListener {
                 .toList();
 
         // 콘텐츠 수신 알림이 켜져있는 구독자들 리스트
-        List<Long> targetMemberIds = notificationSettingService.getTargetMemberIds(subscriberIds);
+        List<Long> targetMemberIds = notificationSettingService.getTargetMemberIds(subscriberIds, NotificationType.NEW_CONTENT);
 
         for (Long memberId : targetMemberIds) {
             NotificationDTO notificationDTO = NotificationDTO.create(memberId,
