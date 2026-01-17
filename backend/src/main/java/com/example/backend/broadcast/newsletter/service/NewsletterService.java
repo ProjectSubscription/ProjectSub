@@ -25,10 +25,17 @@ public class NewsletterService {
     private final NewsletterRepository newsletterRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 
-    // 조회
+    // 상태별 조회
     @Transactional(readOnly = true)
-    public Page<NewsletterResponseDTO> getNewsletters(Pageable pageable) {
-        return newsletterRepository.findAllByStatusAndIsDeletedFalse(NewsletterStatus.PUBLISHED, pageable)
+    public Page<NewsletterResponseDTO> getNewsletters(Pageable pageable, NewsletterStatus status) {
+        return newsletterRepository.findAllByStatusAndIsDeletedFalse(status, pageable)
+                .map(NewsletterResponseDTO::create);
+    }
+
+    // 전체리스트 조회
+    @Transactional(readOnly = true)
+    public Page<NewsletterResponseDTO> getAllNewsletters(Pageable pageable) {
+        return newsletterRepository.findAllByIsDeletedFalse(pageable)
                 .map(NewsletterResponseDTO::create);
     }
 
@@ -43,7 +50,23 @@ public class NewsletterService {
 
         if (newsletter.isDeleted() || !newsletter.isPublished()) {
             log.info("뉴스레터 발행중이지 않습니다 - isPublished={}", newsletter.isPublished());
-            throw new RuntimeException("해당 뉴스레터가 발행중이지 않습니다.");
+            throw new RuntimeException("해당 뉴스레터가 발행중이지 않습니다."); //todo: ErrorCode 추가
+        }
+
+        return NewsletterResponseDTO.create(newsletter);
+    }
+
+    // 관리자용 상세조회 (모든 상태 조회 가능)
+    @Transactional(readOnly = true)
+    public NewsletterResponseDTO getNewsletterForAdmin(Long id) {
+        log.info("뉴스레터 관리자 상세조회 - id={}", id);
+
+        Newsletter newsletter = newsletterRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("뉴스레터가 존재하지 않습니다.")); //todo: ErrorCode 추가
+
+        if (newsletter.isDeleted()) {
+            log.info("뉴스레터가 삭제되었습니다");
+            throw new RuntimeException("삭제된 뉴스레터입니다."); //todo: ErrorCode 추가
         }
 
         return NewsletterResponseDTO.create(newsletter);

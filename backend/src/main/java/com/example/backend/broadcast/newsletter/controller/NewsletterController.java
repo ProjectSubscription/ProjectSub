@@ -2,6 +2,7 @@ package com.example.backend.broadcast.newsletter.controller;
 
 import com.example.backend.broadcast.newsletter.dto.request.NewsletterRequestDTO;
 import com.example.backend.broadcast.newsletter.dto.response.NewsletterResponseDTO;
+import com.example.backend.broadcast.newsletter.entity.NewsletterStatus;
 import com.example.backend.broadcast.newsletter.service.NewsletterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +25,28 @@ public class NewsletterController {
 
     private final NewsletterService newsletterService;
 
-    // 발행된 공지 리스트 조회
+    // 전체 리스트 조회
+    @GetMapping("/admin/newsletters-all")
+    public ResponseEntity<Page<NewsletterResponseDTO>> getAllNewsletters(
+            @PageableDefault(sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<NewsletterResponseDTO> allNewsletters = newsletterService.getAllNewsletters(pageable);
+        return ResponseEntity.ok(allNewsletters);
+    }
+
+    // 상태별 리스트 조회 (admin용)
+    @GetMapping("/admin/newsletters")
+    public ResponseEntity<Page<NewsletterResponseDTO>> getNewslettersForAdmin(
+            @PageableDefault(sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestParam NewsletterStatus status) {
+        Page<NewsletterResponseDTO> newsletters = newsletterService.getNewsletters(pageable, status);
+        return ResponseEntity.ok(newsletters);
+    }
+
+    // 발행된 리스트 조회 (일반 사용자가 보는 리스트)
     @GetMapping("/newsletters")
     public ResponseEntity<Page<NewsletterResponseDTO>> getNewsletters(
             @PageableDefault(sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable) {
-
-        Page<NewsletterResponseDTO> newsletters = newsletterService.getNewsletters(pageable);
+        Page<NewsletterResponseDTO> newsletters = newsletterService.getNewsletters(pageable, NewsletterStatus.PUBLISHED);
         return ResponseEntity.ok(newsletters);
     }
 
@@ -40,6 +57,16 @@ public class NewsletterController {
         log.info("뉴스레터 상세조회 start - id={}", id);
 
         NewsletterResponseDTO newsletter = newsletterService.getNewsletter(id);
+        return ResponseEntity.ok(newsletter);
+    }
+
+    // 관리자용 상세조회 (모든 상태 조회 가능)
+    @GetMapping("/admin/newsletters/{id}")
+    public ResponseEntity<NewsletterResponseDTO> getNewsletterForAdmin(@PathVariable Long id) {
+
+        log.info("뉴스레터 관리자 상세조회 start - id={}", id);
+
+        NewsletterResponseDTO newsletter = newsletterService.getNewsletterForAdmin(id);
         return ResponseEntity.ok(newsletter);
     }
 

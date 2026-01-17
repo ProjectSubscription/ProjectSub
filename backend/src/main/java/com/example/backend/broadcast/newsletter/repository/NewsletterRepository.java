@@ -16,4 +16,7 @@ public interface NewsletterRepository extends JpaRepository<Newsletter, Long> {
     // 제목으로 검색
     List<Newsletter> findAllByTitleContainingAndIsDeletedFalse(String title);
 
+    // 삭제되지 않은 뉴스레터 전체 조회
+    Page<Newsletter> findAllByIsDeletedFalse(Pageable pageable);
+
 }

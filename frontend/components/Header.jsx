@@ -16,7 +16,8 @@ import {
   Video,
   DollarSign,
   Users,
-  FileText
+  FileText,
+  Mail
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { getUnreadNotificationCount, subscribeNotifications } from '@/app/lib/api';
@@ -330,6 +331,16 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                               <CreditCard className="w-4 h-4" />
                               내 구독
                             </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('newsletters');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <Mail className="w-4 h-4" />
+                              뉴스레터
+                            </button>
                             {/* 크리에이터가 아니고, 크리에이터 신청 상태가 APPROVED가 아니면 신청 버튼 표시 */}
                             {!hasRole(currentUser.roles, 'ROLE_CREATOR') && currentUser.creatorStatus !== 'APPROVED' && (
                               <button
@@ -394,6 +405,16 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                             >
                               <Users className="w-4 h-4" />
                               판매자 신청 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('admin-newsletters');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <Mail className="w-4 h-4" />
+                              뉴스레터 관리
                             </button>
                             <button
                               onClick={() => {
