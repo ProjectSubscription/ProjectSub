@@ -31,6 +31,7 @@ export const PageRoute = {
   CREATOR_APPLY: 'creator-apply',
   CREATOR_DASHBOARD: 'creator-dashboard',
   CREATOR_CHANNEL: 'creator-channel',
+  CREATOR_SUBSCRIPTION: 'creator-subscription',
   CREATOR_CONTENT: 'creator-content',
   CREATOR_CONTENT_NEW: 'creator-content-new',
   CREATOR_SETTLEMENT: 'creator-settlement',

@@ -44,6 +44,18 @@ public class SubscriptionPlanController {
         return subscriptionPlanService.getPlansByChannelId(channelId);
     }
 
+    @GetMapping("/all")
+    @PreAuthorize("isAuthenticated()")
+    public List<SubscriptionPlanResponse> getAllPlans(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long channelId) {
+        // 크리에이터 권한 확인
+        if (userDetails == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
+            throw new IllegalArgumentException("크리에이터 권한이 필요합니다.");
+        }
+        return subscriptionPlanService.getAllPlansByChannelId(channelId, userDetails.getMemberId());
+    }
+
     @PutMapping("/{planId}")
     @PreAuthorize("isAuthenticated()")
     public void updatePlan(

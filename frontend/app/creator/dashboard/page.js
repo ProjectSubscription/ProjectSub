@@ -23,5 +23,5 @@ export default function CreatorDashboardRoute() {
     }
   };
 
-  return <CreatorDashboard creatorId="creator-1" onNavigate={handleNavigate} />;
+  return <CreatorDashboard onNavigate={handleNavigate} />;
 }

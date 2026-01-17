@@ -6,22 +6,20 @@ import {
   Search, 
   Bell, 
   ChevronDown,
-  Menu,
-  Home,
   Tv,
   CreditCard,
-  Settings,
   LogOut,
   LayoutDashboard,
   Video,
   DollarSign,
   Users,
-  FileText
+  FileText,
+  Package
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { getUnreadNotificationCount, subscribeNotifications } from '@/app/lib/api';
 
-export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggleSidebar }) {
+export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -195,16 +193,8 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Menu */}
+          {/* Logo */}
           <div className="flex items-center gap-4">
-            {currentUser && onToggleSidebar && (
-              <button
-                onClick={onToggleSidebar}
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
             <button
               onClick={() => onNavigate(currentUser ? 'home' : 'landing')}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -287,7 +277,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                       <User className="w-5 h-5 text-white" />
                     </div>
                     <span className="hidden sm:inline text-sm font-medium text-gray-700">
-                      {currentUser.nickname || currentUser.name}
+                      {currentUser?.nickname || currentUser?.name || '사용자'}
                     </span>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
@@ -300,24 +290,26 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                       />
                       <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                         <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{currentUser.nickname || currentUser.name}</p>
-                          <p className="text-xs text-gray-500">{currentUser.email}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {currentUser?.nickname || currentUser?.name || '사용자'}
+                          </p>
+                          <p className="text-xs text-gray-500">{currentUser?.email || ''}</p>
                           <p className="text-xs text-blue-600 mt-1">
-                            {getDisplayRole(currentUser.roles)}
+                            {getDisplayRole(currentUser?.roles)}
                           </p>
                         </div>
 
-                        {/* 일반 유저 메뉴 (ROLE_USER가 있으면 표시, 크리에이터도 볼 수 있음) */}
-                        {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && (
+                        {/* 일반 사용자 메뉴 */}
+                        {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_CREATOR') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
                                 onNavigate('mypage');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <User className="w-4 h-4" />
+                              <User className="w-4 h-4 text-gray-700" />
                               마이페이지
                             </button>
                             <button
@@ -325,64 +317,93 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                                 setShowUserMenu(false);
                                 onNavigate('subscriptions-me');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <CreditCard className="w-4 h-4" />
+                              <CreditCard className="w-4 h-4 text-gray-700" />
                               내 구독
                             </button>
-                            {/* 크리에이터가 아니고, 크리에이터 신청 상태가 APPROVED가 아니면 신청 버튼 표시 */}
-                            {!hasRole(currentUser.roles, 'ROLE_CREATOR') && currentUser.creatorStatus !== 'APPROVED' && (
+                            {currentUser.creatorStatus !== 'APPROVED' && (
                               <button
                                 onClick={() => {
                                   setShowUserMenu(false);
                                   onNavigate('creator-apply');
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3 text-blue-600"
+                                className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                               >
-                                <Tv className="w-4 h-4" />
+                                <Tv className="w-4 h-4 text-gray-700" />
                                 판매자 신청
                               </button>
                             )}
                           </>
                         )}
 
-                        {/* 크리에이터 메뉴 (ROLE_CREATOR가 있으면 표시) */}
-                        {hasRole(currentUser.roles, 'ROLE_CREATOR') && (
+                        {/* 크리에이터 메뉴 */}
+                        {hasRole(currentUser.roles, 'ROLE_CREATOR') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
                                 onNavigate('creator-dashboard');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <LayoutDashboard className="w-4 h-4" />
+                              <LayoutDashboard className="w-4 h-4 text-gray-700" />
                               대시보드
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('creator-channel');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <Tv className="w-4 h-4 text-gray-700" />
+                              채널 관리
                             </button>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
                                 onNavigate('creator-content');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <Video className="w-4 h-4" />
+                              <Video className="w-4 h-4 text-gray-700" />
                               콘텐츠 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('creator-subscription');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <Package className="w-4 h-4 text-gray-700" />
+                              구독 관리
                             </button>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
                                 onNavigate('creator-settlement');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <DollarSign className="w-4 h-4" />
+                              <DollarSign className="w-4 h-4 text-gray-700" />
                               정산 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('admin-payments');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <CreditCard className="w-4 h-4 text-gray-700" />
+                              결제 내역
                             </button>
                           </>
                         )}
 
-                        {/* 관리자 메뉴 (ROLE_ADMIN이 있으면 표시) */}
+                        {/* 관리자 메뉴 */}
                         {hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
                             <button
@@ -390,9 +411,9 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                                 setShowUserMenu(false);
                                 onNavigate('admin-applications');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <Users className="w-4 h-4" />
+                              <Users className="w-4 h-4 text-gray-700" />
                               판매자 신청 관리
                             </button>
                             <button
@@ -400,9 +421,9 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                                 setShowUserMenu(false);
                                 onNavigate('admin-settlements');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <FileText className="w-4 h-4" />
+                              <FileText className="w-4 h-4 text-gray-700" />
                               정산 관리
                             </button>
                           </>

@@ -15,7 +15,8 @@ import {
   Users,
   FileText,
   TrendingUp,
-  X
+  X,
+  Package
 } from 'lucide-react';
 
 export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, onClose }) {
@@ -41,6 +42,7 @@ export function Sidebar({ currentUser, currentPage, onNavigate, isOpen = true, o
   const creatorNavItems = [
     { icon: LayoutDashboard, label: '대시보드', page: 'creator-dashboard', path: '/creator/dashboard' },
     { icon: Tv, label: '채널 관리', page: 'creator-channel', path: '/creator/channel' },
+    { icon: Package, label: '구독 관리', page: 'creator-subscription', path: '/creator/subscription' },
     { icon: Video, label: '콘텐츠 관리', page: 'creator-content', path: '/creator/content' },
     { icon: DollarSign, label: '정산 관리', page: 'creator-settlement', path: '/creator/settlement' },
   ];

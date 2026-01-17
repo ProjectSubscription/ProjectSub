@@ -3,13 +3,12 @@
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Sidebar } from '@/components/Sidebar';
 import { Footer } from '@/components/Footer';
 import { getMyInfo, logout } from '@/app/lib/api';
+import { UserProvider } from '@/app/lib/UserContext';
 
 export function ClientLayout({ children }) {
   const [currentUser, setCurrentUser] = React.useState(null);
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const pathname = usePathname();
   const router = useRouter();
@@ -116,6 +115,7 @@ export function ClientLayout({ children }) {
       'creator-apply': '/creator/apply',
       'creator-dashboard': '/creator/dashboard',
       'creator-channel': '/creator/channel',
+      'creator-subscription': '/creator/subscription',
       'creator-content': '/creator/content',
       'creator-content-new': '/creator/content/new',
       'creator-settlement': '/creator/settlement',
@@ -136,7 +136,6 @@ export function ClientLayout({ children }) {
   const handleNavigate = (page, params) => {
     const path = getPathFromPage(page);
     router.push(path);
-    setSidebarOpen(false);
   };
 
   // Public pages (no header/sidebar/footer)
@@ -156,46 +155,38 @@ export function ClientLayout({ children }) {
 
   if (isPublicPage) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <UserProvider currentUser={currentUser} loading={loading} refreshUser={refreshUser}>
+        <div className="min-h-screen bg-white flex flex-col">
+          <Header
+            currentUser={currentUser}
+            currentPage={pathname}
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </div>
+      </UserProvider>
+    );
+  }
+
+  // Authenticated pages
+  return (
+    <UserProvider currentUser={currentUser} loading={loading} refreshUser={refreshUser}>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header
           currentUser={currentUser}
           currentPage={pathname}
           onNavigate={handleNavigate}
           onLogout={handleLogout}
         />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Authenticated pages (with sidebar)
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header
-        currentUser={currentUser}
-        currentPage={pathname}
-        onNavigate={handleNavigate}
-        onLogout={handleLogout}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-      />
-      <div className="flex flex-1">
-        {currentUser && (
-          <Sidebar
-            currentUser={currentUser}
-            currentPage={pathname}
-            onNavigate={handleNavigate}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
-        )}
         <main className="flex-1 overflow-x-hidden">
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {children}
           </div>
         </main>
+        <Footer />
       </div>
-      <Footer />
-    </div>
+    </UserProvider>
   );
 }

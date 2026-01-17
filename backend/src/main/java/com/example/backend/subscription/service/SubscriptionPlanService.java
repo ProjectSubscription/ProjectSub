@@ -45,7 +45,26 @@ public class SubscriptionPlanService {
     public List<SubscriptionPlanResponse> getPlansByChannelId(Long channelId) {
         return subscriptionPlanRepository.findActivePlans(channelId)
                 .stream()
-                .map(p -> new SubscriptionPlanResponse(p.getId(), p.getPlanType(), p.getPrice()))
+                .map(p -> new SubscriptionPlanResponse(p.getId(), p.getPlanType(), p.getPrice(), p.isActive()))
+                .toList();
+    }
+
+    public List<SubscriptionPlanResponse> getAllPlansByChannelId(Long channelId, Long memberId) {
+        // 크리에이터 권한 확인
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        
+        if (!member.hasRole(Role.ROLE_ADMIN)) {
+            if (!member.hasRole(Role.ROLE_CREATOR)) {
+                throw new BusinessException(ErrorCode.ACCESS_DENIED);
+            }
+            
+            Creator creator = creatorRepository.findByMemberId(memberId).orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
+            channelValidator.validateOwner(creator.getId(), channelId);
+        }
+        
+        return subscriptionPlanRepository.findAllPlans(channelId)
+                .stream()
+                .map(p -> new SubscriptionPlanResponse(p.getId(), p.getPlanType(), p.getPrice(), p.isActive()))
                 .toList();
     }
 

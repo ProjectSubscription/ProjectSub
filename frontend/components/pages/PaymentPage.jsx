@@ -3,23 +3,64 @@ import { PaymentItemInfo } from '@/components/payment/PaymentItemInfo';
 import { CouponSection } from '@/components/payment/CouponSection';
 import { PaymentMethod } from '@/components/payment/PaymentMethod';
 import { PaymentSummary } from '@/components/payment/PaymentSummary';
-import { mockSubscriptionPlans, mockContents, mockCoupons } from '@/app/mockData';
+import { mockContents, mockCoupons } from '@/app/mockData';
+import { getSubscriptionPlans, getContent, createSubscription } from '@/app/lib/api';
 import { useRouter } from 'next/navigation';
 
-export function PaymentPage({ type, itemId, onNavigate }) {
+export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   const router = useRouter();
   const [couponCode, setCouponCode] = React.useState('');
   const [appliedCoupon, setAppliedCoupon] = React.useState(null);
   const [paymentMethod, setPaymentMethod] = React.useState('card');
   const [loading, setLoading] = React.useState(false);
+  const [itemLoading, setItemLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [item, setItem] = React.useState(null);
 
-  const item = type === 'subscription'
-    ? mockSubscriptionPlans.find(p => p.id === itemId)
-    : mockContents.find(c => c.id === itemId);
+  // 구독 플랜 또는 콘텐츠 정보 로드
+  React.useEffect(() => {
+    async function loadItem() {
+      try {
+        setItemLoading(true);
+        let itemData;
+        
+        if (type === 'subscription') {
+          // 구독 플랜 조회
+          if (!channelId) {
+            throw new Error('채널 ID가 필요합니다.');
+          }
+          const plans = await getSubscriptionPlans(channelId);
+          const plansList = Array.isArray(plans) ? plans : [];
+          itemData = plansList.find(p => p.planId === Number(itemId) || p.id === Number(itemId));
+        } else {
+          // 콘텐츠 조회
+          itemData = await getContent(itemId);
+        }
 
-  if (!item) {
-    return <div className="text-center py-12">결제 정보를 찾을 수 없습니다.</div>;
+        if (!itemData) {
+          throw new Error('결제 정보를 찾을 수 없습니다.');
+        }
+
+        setItem(itemData);
+      } catch (err) {
+        console.error('아이템 로딩 실패:', err);
+        setError(err.message || '결제 정보를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setItemLoading(false);
+      }
+    }
+
+    if (itemId) {
+      loadItem();
+    }
+  }, [type, itemId, channelId]);
+
+  if (itemLoading) {
+    return <div className="text-center py-12">로딩 중...</div>;
+  }
+
+  if (error || !item) {
+    return <div className="text-center py-12 text-red-600">{error || '결제 정보를 찾을 수 없습니다.'}</div>;
   }
 
   const baseAmount = 'price' in item ? item.price || 0 : item.price;
@@ -53,54 +94,59 @@ export function PaymentPage({ type, itemId, onNavigate }) {
     setError(null);
     
     try {
-      // itemId에서 숫자 부분만 추출 (예: "plan-1" -> 1, "content-2" -> 2)
-      // 또는 이미 숫자인 경우 그대로 사용
-      let targetId;
-      if (typeof itemId === 'string' && itemId.includes('-')) {
-        // 문자열에서 숫자 부분 추출 (예: "plan-1" -> 1)
-        const match = itemId.match(/\d+/);
-        targetId = match ? parseInt(match[0], 10) : null;
+      if (type === 'subscription') {
+        // 구독 결제 처리
+        if (!channelId || !itemId) {
+          throw new Error('채널 ID와 플랜 ID가 필요합니다.');
+        }
+
+        const planId = Number(itemId);
+        const channelIdNum = Number(channelId);
+
+        if (isNaN(planId) || isNaN(channelIdNum)) {
+          throw new Error('유효하지 않은 플랜 ID 또는 채널 ID입니다.');
+        }
+
+        // 구독 생성 (결제는 추후 통합 예정)
+        // TODO: 실제 결제 API 연동 시 paySubscription 호출 후 구독 생성
+        try {
+          const subscriptionId = await createSubscription(channelIdNum, planId);
+          console.log('구독 생성 성공:', subscriptionId);
+
+          // 결제 성공 페이지로 이동
+          onNavigate('payment-success', { 
+            amount: finalAmount,
+            type: 'subscription',
+            subscriptionId: subscriptionId 
+          });
+        } catch (subscribeErr) {
+          console.error('구독 생성 실패:', subscribeErr);
+          throw subscribeErr;
+        }
       } else {
-        targetId = Number(itemId);
+        // 콘텐츠 단건 구매 처리 (기존 로직 유지)
+        const contentId = Number(itemId);
+        if (isNaN(contentId)) {
+          throw new Error('유효하지 않은 콘텐츠 ID입니다.');
+        }
+
+        // 콘텐츠 결제 API 호출
+        const paymentData = {
+          contentId: contentId,
+          amount: finalAmount,
+          couponCode: appliedCoupon?.code || null,
+        };
+
+        const paymentResponse = await purchaseContent(paymentData);
+        console.log('콘텐츠 결제 성공:', paymentResponse);
+
+        // 결제 성공 페이지로 이동
+        onNavigate('payment-success', { 
+          amount: finalAmount,
+          type: 'content',
+          contentId: contentId 
+        });
       }
-
-      if (!targetId || isNaN(targetId)) {
-        throw new Error('유효하지 않은 상품 ID입니다.');
-      }
-
-      // 주문 생성 API 호출
-      const requestBody = {
-        orderType: type.toUpperCase(), // "subscription" -> "SUBSCRIPTION", "content" -> "CONTENT"
-        targetId: targetId,
-        originalAmount: baseAmount,
-        discountAmount: appliedCoupon ? finalAmount : null, // 쿠폰 적용 시 할인된 가격, 미적용 시 null
-      };
-
-      const response = await fetch('http://localhost:8080/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Id': '1', // TODO: 실제 로그인한 사용자 ID로 교체 필요
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '주문 생성에 실패했습니다.');
-      }
-
-      const orderData = await response.json();
-      console.log('주문 생성 성공:', orderData);
-
-      // Checkout 페이지로 이동 (Next.js 라우팅 사용)
-      const query = new URLSearchParams({
-        orderCode: orderData.orderCode,
-        orderName: orderData.orderName,
-        amount: orderData.amount.toString(),
-      });
-      router.push(`/payment/checkout?${query.toString()}`);
-
     } catch (err) {
       console.error('결제 처리 중 오류 발생:', err);
       setError(err.message || '결제 처리 중 오류가 발생했습니다.');

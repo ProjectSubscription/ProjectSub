@@ -3,6 +3,7 @@ import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, L
 import { PageRoute } from '@/app/types';
 import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
 import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember, getNotificationSettings, updateNotificationSettings } from '@/app/lib/api';
+import { useUser } from '@/app/lib/UserContext';
 
 // 구독 관련 컴포넌트는 subscription 폴더로 분리됨
 export { MySubscriptionsPage } from '../subscription/MySubscriptionsPage';
@@ -232,6 +233,7 @@ export function MyCreatorApplicationsPage({ userId, onNavigate }) {
 
 // Simple MyPage component
 export function MyPage({ userId, onNavigate }) {
+  const { currentUser, refreshUser } = useUser();
   const [userInfo, setUserInfo] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [editingField, setEditingField] = React.useState(null);
@@ -251,9 +253,16 @@ export function MyPage({ userId, onNavigate }) {
     }
   }, []);
 
+  // Context의 currentUser를 기반으로 userInfo 초기화
   React.useEffect(() => {
-    loadUserInfo();
-  }, [loadUserInfo]);
+    if (currentUser) {
+      setUserInfo(currentUser);
+      setLoading(false);
+    } else {
+      // Context에 없으면 직접 조회 (로그인하지 않은 경우)
+      loadUserInfo();
+    }
+  }, [currentUser, loadUserInfo]);
 
   const handleEdit = (field) => {
     setEditingField(field);
@@ -290,18 +299,18 @@ export function MyPage({ userId, onNavigate }) {
         result = await changeNickname(formData.newNickname);
       }
 
-      // 성공 시 사용자 정보 다시 로드
+      // 성공 시 Context의 사용자 정보 새로고침 (Header도 자동 업데이트됨)
+      if (refreshUser) {
+        await refreshUser();
+      }
+      
+      // 로컬 userInfo도 업데이트
       const updatedInfo = await getMyInfo();
       setUserInfo(updatedInfo);
       setEditingField(null);
       setFormData({});
       
-      // 닉네임 변경 시 페이지 새로고침하여 헤더의 닉네임도 업데이트
-      if (field === 'nickname') {
-        window.location.reload();
-      } else {
-        alert('정보가 변경되었습니다.');
-      }
+      alert('정보가 변경되었습니다.');
     } catch (err) {
       setError(err.message || '정보 변경에 실패했습니다.');
       console.error('정보 변경 오류:', err);
