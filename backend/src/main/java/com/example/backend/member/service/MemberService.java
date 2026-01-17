@@ -240,6 +240,7 @@ public class MemberService {
                 .orElse(null);
 
         if (member != null) {
+            log.info("이메일 로직");
             passwordResetService.sendPasswordResetEmail(member);
         }
 
@@ -250,7 +251,10 @@ public class MemberService {
     //비밀번호 찾기 -> 재설정
     public void passwordReset(String token, String newPassword) {
         log.info("새 비밀번호로 변경 중");
-        passwordResetService.resetPassword(token, newPassword, passwordEncoder);
+        Long memberId = passwordResetService.validateAndConsumeToken(token);
+        Member member = findRegisteredMemberById(memberId);
+        member.resetPassword(newPassword, passwordEncoder);
+        log.info("비밀번호 변경 완료.");
     }
 
     //입력 비밀번호 검증
