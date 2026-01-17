@@ -557,6 +557,30 @@ export async function getExpiredCoupons() {
   return apiGet('/api/coupons/me/expired');
 }
 
+/**
+ * 채널별 다운로드 가능한 쿠폰 목록 조회
+ * GET /api/channels/{channelId}/coupons
+ */
+export async function getChannelCoupons(channelId) {
+  return apiGet(`/api/channels/${channelId}/coupons`);
+}
+
+/**
+ * 컨텐츠별 다운로드 가능한 쿠폰 목록 조회
+ * GET /api/contents/{contentId}/coupons
+ */
+export async function getContentCoupons(contentId) {
+  return apiGet(`/api/contents/${contentId}/coupons`);
+}
+
+/**
+ * 쿠폰 발급 (다운로드)
+ * POST /api/coupons/{couponId}/issue
+ */
+export async function issueCoupon(couponId) {
+  return apiPost(`/api/coupons/${couponId}/issue`);
+}
+
 // ==================== 관리자 쿠폰 관리 ====================
 
 /**

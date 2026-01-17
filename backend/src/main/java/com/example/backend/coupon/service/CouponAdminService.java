@@ -1,6 +1,8 @@
 package com.example.backend.coupon.service;
 
 import com.example.backend.coupon.dto.request.CouponCreateRequest;
+import com.example.backend.coupon.dto.request.CouponUpdateRequest;
+import com.example.backend.coupon.dto.response.CouponListResponse;
 import com.example.backend.coupon.dto.response.CouponResponse;
 import com.example.backend.coupon.entity.Coupon;
 import com.example.backend.coupon.entity.CouponTarget;
@@ -8,15 +10,20 @@ import com.example.backend.coupon.entity.DiscountType;
 import com.example.backend.coupon.entity.RefundType;
 import com.example.backend.coupon.repository.CouponRepository;
 import com.example.backend.coupon.repository.CouponTargetRepository;
+import com.example.backend.coupon.repository.MemberCouponRepository;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
+import com.example.backend.member.entity.Member;
+import com.example.backend.member.entity.Role;
+import com.example.backend.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,9 +32,17 @@ public class CouponAdminService {
     private final CouponRepository couponRepository;
     private final CouponTargetRepository couponTargetRepository;
     private final CouponCodeGenerator couponCodeGenerator;
+    private final MemberRepository memberRepository;
+    private final MemberCouponRepository memberCouponRepository;
 
     @Transactional
-    public CouponResponse createCoupon(CouponCreateRequest request) {
+    public CouponResponse createCoupon(Long memberId, CouponCreateRequest request) {
+        // ADMIN 권한 검증
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!member.hasRole(Role.ROLE_ADMIN)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -69,11 +84,74 @@ public class CouponAdminService {
     }
 
     @Transactional(readOnly = true)
-    public List<CouponResponse> getCoupons() {
-        return couponRepository.findAll()
-                .stream()
-                .map(CouponResponse::fromEntity)
-                .collect(Collectors.toList());
+    public Page<CouponListResponse> getCoupons(Long memberId, String status, Pageable pageable) {
+        // ADMIN 권한 검증
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!member.hasRole(Role.ROLE_ADMIN)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Page<Coupon> coupons;
+
+        // 상태 필터링
+        if ("active".equalsIgnoreCase(status)) {
+            coupons = couponRepository.findActiveCoupons(now, pageable);
+        } else if ("expired".equalsIgnoreCase(status)) {
+            coupons = couponRepository.findExpiredCoupons(now, pageable);
+        } else {
+            // 전체 조회
+            coupons = couponRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+
+        // 통계 포함하여 응답 생성
+        return coupons.map(coupon -> {
+            Long issuedCount = memberCouponRepository.countByCouponId(coupon.getId());
+            Long usedCount = memberCouponRepository.countUsedByCouponId(coupon.getId());
+            return CouponListResponse.fromEntity(coupon, issuedCount != null ? issuedCount : 0L, usedCount != null ? usedCount : 0L);
+        });
+    }
+
+    @Transactional
+    public CouponResponse updateCoupon(Long memberId, Long couponId, CouponUpdateRequest request) {
+        // ADMIN 권한 검증
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!member.hasRole(Role.ROLE_ADMIN)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        // 만료일 수정
+        if (request.expiredAt() != null) {
+            LocalDateTime now = LocalDateTime.now();
+            // 만료일 연장 가능 (새 날짜가 현재보다 이후여야 함)
+            // 이미 만료된 쿠폰도 연장 가능
+            if (request.expiredAt().isBefore(now) || request.expiredAt().equals(now)) {
+                throw new BusinessException(ErrorCode.INVALID_COUPON_PERIOD);
+            }
+            coupon.updateExpiredAt(request.expiredAt());
+        }
+
+        // CouponTarget 수정 (기존 삭제 후 새로 생성)
+        if (request.targets() != null) {
+            // 기존 CouponTarget 삭제
+            List<CouponTarget> existingTargets = couponTargetRepository.findByCouponId(couponId);
+            couponTargetRepository.deleteAll(existingTargets);
+
+            // 새로운 CouponTarget 생성
+            request.targets().forEach(t -> {
+                CouponTarget target = (t.targetId() == null)
+                        ? CouponTarget.forAll(coupon, t.targetType())
+                        : CouponTarget.forSpecific(coupon, t.targetType(), t.targetId());
+                couponTargetRepository.save(target);
+            });
+        }
+
+        return CouponResponse.fromEntity(coupon);
     }
 
     private void validateDiscountValue(DiscountType type, Integer value) {

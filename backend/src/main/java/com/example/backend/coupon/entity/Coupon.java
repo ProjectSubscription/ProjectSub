@@ -59,5 +59,9 @@ public class Coupon extends CreatedAtEntity {
     public boolean isExpired(LocalDateTime now) {
         return !expiredAt.isAfter(now);
     }
+
+    public void updateExpiredAt(LocalDateTime newExpiredAt) {
+        this.expiredAt = newExpiredAt;
+    }
 }
 

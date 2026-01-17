@@ -26,6 +26,7 @@ export default function AdminCouponsPage() {
 
   const [targetType, setTargetType] = useState('');
   const [targetId, setTargetId] = useState('');
+  const [channelId, setChannelId] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -86,6 +87,7 @@ export default function AdminCouponsPage() {
       discountValue: Number(discountValue),
       refundType,
       expiredAt, // LocalDateTime 문자열 (예: 2026-01-15T23:59)
+      channelId: channelId ? Number(channelId) : null,
       targets:
         targetType
           ? [
@@ -108,6 +110,7 @@ export default function AdminCouponsPage() {
       setDiscountValue('');
       setTargetType('');
       setTargetId('');
+      setChannelId('');
       // 목록 새로고침
       await loadCoupons();
     } catch (err) {
@@ -217,6 +220,25 @@ export default function AdminCouponsPage() {
                 이 시점 이후에는 쿠폰 발급 및 사용이 모두 불가능합니다.
               </p>
             </div>
+          </div>
+
+          {/* 채널 ID (선택) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              채널 ID (선택)
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={channelId}
+              onChange={(e) => setChannelId(e.target.value)}
+              placeholder="특정 채널에 연결할 쿠폰인 경우 채널 ID 입력"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isSubmitting}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              비워두면 전체 채널에 사용 가능한 쿠폰이 생성됩니다.
+            </p>
           </div>
 
           {/* 적용 대상 (선택) */}
