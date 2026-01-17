@@ -3,13 +3,11 @@
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
-import { Sidebar } from '@/components/Sidebar';
 import { Footer } from '@/components/Footer';
 import { getMyInfo, logout } from '@/app/lib/api';
 
 export function ClientLayout({ children }) {
   const [currentUser, setCurrentUser] = React.useState(null);
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const pathname = usePathname();
   const router = useRouter();
@@ -105,7 +103,6 @@ export function ClientLayout({ children }) {
   const handleNavigate = (page, params) => {
     const path = getPathFromPage(page);
     router.push(path);
-    setSidebarOpen(false);
   };
 
   // Public pages (no header/sidebar/footer)
@@ -138,7 +135,7 @@ export function ClientLayout({ children }) {
     );
   }
 
-  // Authenticated pages (with sidebar)
+  // Authenticated pages
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header
@@ -146,24 +143,12 @@ export function ClientLayout({ children }) {
         currentPage={pathname}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
       />
-      <div className="flex flex-1">
-        {currentUser && (
-          <Sidebar
-            currentUser={currentUser}
-            currentPage={pathname}
-            onNavigate={handleNavigate}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
-        )}
-        <main className="flex-1 overflow-x-hidden">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </div>
-        </main>
-      </div>
+      <main className="flex-1 overflow-x-hidden">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </div>
+      </main>
       <Footer />
     </div>
   );
