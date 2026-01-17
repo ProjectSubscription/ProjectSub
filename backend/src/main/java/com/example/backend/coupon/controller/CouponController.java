@@ -88,8 +88,8 @@ public class CouponController {
         CouponValidateResponse response = couponValidationService.validateCoupon(
                 memberId,
                 couponId,
-                request.getPaymentType(),
-                request.getTargetId()
+                request.paymentType(),
+                request.targetId()
         );
         return ResponseEntity.ok(response);
     }

@@ -28,7 +28,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CouponAdminService {
-
     private final CouponRepository couponRepository;
     private final CouponTargetRepository couponTargetRepository;
     private final CouponCodeGenerator couponCodeGenerator;

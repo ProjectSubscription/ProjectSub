@@ -52,14 +52,14 @@ public class CouponAdminController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{couponId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CouponResponse> updateCoupon(
-            @PathVariable Long id,
+            @PathVariable Long couponId,
             @Valid @RequestBody CouponUpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long memberId = userDetails.getMemberId();
-        CouponResponse response = couponAdminService.updateCoupon(memberId, id, request);
+        CouponResponse response = couponAdminService.updateCoupon(memberId, couponId, request);
         return ResponseEntity.ok(response);
     }
 }

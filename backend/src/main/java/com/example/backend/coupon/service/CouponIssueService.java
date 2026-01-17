@@ -19,19 +19,11 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class CouponIssueService {
-
     private final CouponRepository couponRepository;
     private final MemberCouponRepository memberCouponRepository;
     private final MemberRepository memberRepository;
     private final ChannelRepository channelRepository;
 
-    /**
-     * 쿠폰 발급 (다운로드)
-     * 
-     * @param memberId 회원 ID
-     * @param couponId 쿠폰 ID
-     * @return 발급된 MemberCoupon ID
-     */
     @Transactional
     public Long issueCoupon(Long memberId, Long couponId) {
         LocalDateTime now = LocalDateTime.now();

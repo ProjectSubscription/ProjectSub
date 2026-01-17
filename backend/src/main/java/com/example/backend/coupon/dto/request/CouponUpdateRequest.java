@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record CouponUpdateRequest(
+        @NotNull
         LocalDateTime expiredAt,
         List<CouponTargetCreateRequest> targets
 ) {

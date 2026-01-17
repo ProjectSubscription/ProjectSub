@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CouponQueryService {
-
     private final CouponRepository couponRepository;
     private final CouponTargetRepository couponTargetRepository;
     private final MemberCouponRepository memberCouponRepository;

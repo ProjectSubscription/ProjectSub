@@ -11,7 +11,6 @@ import java.security.SecureRandom;
 @Component
 @RequiredArgsConstructor
 public class CouponCodeGenerator {
-
     private static final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int CODE_LENGTH = 12;
     private static final int MAX_RETRY = 10;

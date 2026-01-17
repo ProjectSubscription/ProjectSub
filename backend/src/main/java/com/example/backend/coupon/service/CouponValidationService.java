@@ -19,7 +19,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CouponValidationService {
-
     private final MemberCouponRepository memberCouponRepository;
     private final CouponTargetRepository couponTargetRepository;
     private final MemberCouponUseRepository memberCouponUseRepository;
