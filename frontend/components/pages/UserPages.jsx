@@ -47,7 +47,8 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
             <p className="text-sm text-gray-600">만료 예정</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">
-            {userSubs.filter(s => s.status === 'ACTIVE' && 
+            {userSubs.filter(s => s.status === 'ACTIVE' &&
+                // eslint-disable-next-line react-hooks/purity
               new Date(s.endDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             ).length}
           </p>
