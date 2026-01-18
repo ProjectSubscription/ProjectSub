@@ -8,7 +8,7 @@ export default function MyPageRoute() {
 
   const handleNavigate = (page, params) => {
     const routeMap = {
-      'subscriptions-me': '/subscriptions/me',
+      'my-subscriptions': '/my-subscriptions',
       'my-purchases': '/my-purchases',
       'my-reviews': '/my-reviews',
       'my-coupons': '/my-coupons',

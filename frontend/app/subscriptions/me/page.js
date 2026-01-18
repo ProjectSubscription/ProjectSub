@@ -1,23 +1,14 @@
 'use client';
 
-import { MySubscriptionsPage } from '@/components/subscription/MySubscriptionsPage';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function MySubscriptions() {
+export default function SubscriptionsMeRedirect() {
   const router = useRouter();
 
-  const handleNavigate = (page, params) => {
-    const routeMap = {
-      'channel-detail': (params) => `/channels/${params?.channelId || ''}`,
-    };
+  useEffect(() => {
+    router.replace('/my-subscriptions');
+  }, [router]);
 
-    const route = routeMap[page];
-    if (typeof route === 'function') {
-      router.push(route(params));
-    } else if (route) {
-      router.push(route);
-    }
-  };
-
-  return <MySubscriptionsPage onNavigate={handleNavigate} />;
+  return null;
 }

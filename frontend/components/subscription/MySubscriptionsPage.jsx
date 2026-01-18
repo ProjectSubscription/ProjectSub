@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, Calendar, CheckCircle, Clock, Plus, Edit, X } from 'lucide-react';
+import { CreditCard, Calendar, CheckCircle, Clock, Plus, Edit, X, ChevronDown, ChevronUp, Play } from 'lucide-react';
 import { 
   getMySubscriptions, 
   cancelSubscription, 
@@ -9,7 +9,8 @@ import {
   getSubscriptionPlans,
   createSubscriptionPlan,
   updateSubscriptionPlan,
-  apiGet
+  apiGet,
+  getSubscriptionChannelContents
 } from '@/app/lib/api';
 import { useUser } from '@/app/lib/UserContext';
 
@@ -19,6 +20,8 @@ export function MySubscriptionsPage({ onNavigate }) {
   const [error, setError] = React.useState('');
   const [cancellingId, setCancellingId] = React.useState(null);
   const [channelMap, setChannelMap] = React.useState({}); // channelId -> channel info
+  const [channelContents, setChannelContents] = React.useState({}); // channelId -> contents array
+  const [expandedChannels, setExpandedChannels] = React.useState(new Set()); // expanded channel IDs
   const { currentUser } = useUser();
   
   // 크리에이터 관련 state
@@ -34,44 +37,46 @@ export function MySubscriptionsPage({ onNavigate }) {
       try {
         setLoading(true);
         
-        // 사용자 정보는 Context에서 가져옴
+        // 구독 목록 로드 (currentUser가 없어도 API 인증으로 처리)
+        const response = await getMySubscriptions();
+        console.log('구독 목록 응답:', response);
+        const subs = response.content || response || [];
+        console.log('구독 목록 (parsed):', subs);
+        setSubscriptions(subs);
+        
+        // 사용자 정보는 Context에서 가져옴 (크리에이터 역할 확인용)
         const userInfo = currentUser;
-        if (!userInfo) {
-          setLoading(false);
-          return;
-        }
         
         // 역할 확인 (정규화된 roles 배열에서 확인)
-        const hasCreatorRole = userInfo.roles?.some(r => 
+        const hasCreatorRole = userInfo?.roles?.some(r => 
           r === 'CREATOR' || r === 'ROLE_CREATOR'
-        ) || userInfo.role === 'CREATOR';
+        ) || userInfo?.role === 'CREATOR';
         setIsCreator(hasCreatorRole);
 
-        // 구독 목록 로드
-        const response = await getMySubscriptions();
-        const subs = response.content || response || [];
-        setSubscriptions(subs);
-
         // 각 구독의 채널 정보 가져오기
-        const channelIds = [...new Set(subs.map(sub => sub.channelId))];
-        const channelPromises = channelIds.map(async (channelId) => {
-          try {
-            const channel = await getChannel(channelId);
-            return { channelId, channel };
-          } catch (err) {
-            console.warn(`채널 ${channelId} 정보 조회 실패:`, err);
-            return { channelId, channel: null };
-          }
-        });
+        if (subs.length > 0) {
+          const channelIds = [...new Set(subs.map(sub => sub.channelId).filter(Boolean))];
+          if (channelIds.length > 0) {
+            const channelPromises = channelIds.map(async (channelId) => {
+              try {
+                const channel = await getChannel(channelId);
+                return { channelId, channel };
+              } catch (err) {
+                console.warn(`채널 ${channelId} 정보 조회 실패:`, err);
+                return { channelId, channel: null };
+              }
+            });
 
-        const channelResults = await Promise.all(channelPromises);
-        const newChannelMap = {};
-        channelResults.forEach(({ channelId, channel }) => {
-          if (channel) {
-            newChannelMap[channelId] = channel;
+            const channelResults = await Promise.all(channelPromises);
+            const newChannelMap = {};
+            channelResults.forEach(({ channelId, channel }) => {
+              if (channel) {
+                newChannelMap[channelId] = channel;
+              }
+            });
+            setChannelMap(newChannelMap);
           }
-        });
-        setChannelMap(newChannelMap);
+        }
 
         // 크리에이터인 경우 자신의 채널과 구독 상품 조회
         if (hasCreatorRole) {
@@ -117,9 +122,8 @@ export function MySubscriptionsPage({ onNavigate }) {
         setLoading(false);
       }
     }
-    if (currentUser) {
-      loadData();
-    }
+    // currentUser가 없어도 데이터 로드 시도 (API 인증으로 처리)
+    loadData();
   }, [currentUser]);
 
   // 채널의 구독 상품 로드
@@ -137,6 +141,39 @@ export function MySubscriptionsPage({ onNavigate }) {
         [channelId]: []
       }));
     }
+  };
+
+  // 채널의 컨텐츠 로드
+  const loadChannelContents = async (channelId) => {
+    try {
+      const response = await getSubscriptionChannelContents(channelId);
+      const contents = response.content || response || [];
+      setChannelContents(prev => ({
+        ...prev,
+        [channelId]: contents
+      }));
+    } catch (err) {
+      console.error(`채널 ${channelId} 컨텐츠 조회 오류:`, err);
+      setChannelContents(prev => ({
+        ...prev,
+        [channelId]: []
+      }));
+    }
+  };
+
+  // 채널 컨텐츠 토글
+  const toggleChannelContents = async (channelId) => {
+    const newExpanded = new Set(expandedChannels);
+    if (newExpanded.has(channelId)) {
+      newExpanded.delete(channelId);
+    } else {
+      newExpanded.add(channelId);
+      // 컨텐츠가 아직 로드되지 않았다면 로드
+      if (!channelContents[channelId]) {
+        await loadChannelContents(channelId);
+      }
+    }
+    setExpandedChannels(newExpanded);
   };
 
   // 구독 취소 핸들러
@@ -460,6 +497,79 @@ export function MySubscriptionsPage({ onNavigate }) {
                     </button>
                   )}
                 </div>
+                
+                {/* 컨텐츠 목록 토글 버튼 (활성 구독만) */}
+                {!isInactive && channel.channelId && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => toggleChannelContents(channel.channelId || channel.id)}
+                      className="w-full flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      <span className="font-medium">구독한 컨텐츠 보기</span>
+                      {expandedChannels.has(channel.channelId || channel.id) ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
+                    </button>
+                    
+                    {/* 컨텐츠 목록 */}
+                    {expandedChannels.has(channel.channelId || channel.id) && (
+                      <div className="mt-4">
+                        {channelContents[channel.channelId || channel.id] ? (
+                          channelContents[channel.channelId || channel.id].length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {channelContents[channel.channelId || channel.id].map((content) => (
+                                <div
+                                  key={content.contentId || content.id}
+                                  onClick={() => onNavigate('content-detail', { contentId: content.contentId || content.id })}
+                                  className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                                >
+                                  {content.thumbnailUrl && (
+                                    <div className="relative w-full aspect-video mb-3 rounded-lg overflow-hidden">
+                                      <img
+                                        src={content.thumbnailUrl}
+                                        alt={content.title || content.contentTitle}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
+                                        <Play className="w-8 h-8 text-white opacity-0 hover:opacity-100 transition-opacity" />
+                                      </div>
+                                    </div>
+                                  )}
+                                  <h4 className="font-semibold text-gray-900 mb-1 line-clamp-2">
+                                    {content.title || content.contentTitle}
+                                  </h4>
+                                  {content.description && (
+                                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                                      {content.description}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                                    {content.viewCount !== undefined && (
+                                      <span>조회 {content.viewCount.toLocaleString()}</span>
+                                    )}
+                                    {content.likeCount !== undefined && (
+                                      <span>좋아요 {content.likeCount.toLocaleString()}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-500">
+                              <p>이 채널에는 아직 컨텐츠가 없습니다.</p>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <p>로딩 중...</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

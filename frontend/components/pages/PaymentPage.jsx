@@ -4,7 +4,7 @@ import { CouponSection } from '@/components/payment/CouponSection';
 import { PaymentMethod } from '@/components/payment/PaymentMethod';
 import { PaymentSummary } from '@/components/payment/PaymentSummary';
 import { mockContents, mockCoupons } from '@/app/mockData';
-import { getSubscriptionPlans, getContent, createSubscription } from '@/app/lib/api';
+import { getSubscriptionPlans, getContent, createSubscription, getMyCoupons, getAvailableCoupons, purchaseContent } from '@/app/lib/api';
 import { useRouter } from 'next/navigation';
 
 export function PaymentPage({ type, itemId, channelId, onNavigate }) {
@@ -16,6 +16,9 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   const [itemLoading, setItemLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [item, setItem] = React.useState(null);
+  const [myCoupons, setMyCoupons] = React.useState([]);
+  const [availableCouponsList, setAvailableCouponsList] = React.useState([]);
+  const [couponLoading, setCouponLoading] = React.useState(false);
 
   // 구독 플랜 또는 콘텐츠 정보 로드
   React.useEffect(() => {
@@ -55,6 +58,30 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
     }
   }, [type, itemId, channelId]);
 
+  // 사용 가능한 쿠폰 목록 로드
+  React.useEffect(() => {
+    async function loadCoupons() {
+      try {
+        setCouponLoading(true);
+        // 보유 쿠폰과 사용 가능한 쿠폰을 모두 가져옴
+        const [myCouponsData, availableCouponsData] = await Promise.all([
+          getMyCoupons().catch(() => []), // 에러 시 빈 배열 반환
+          getAvailableCoupons().catch(() => []) // 에러 시 빈 배열 반환
+        ]);
+        
+        setMyCoupons(Array.isArray(myCouponsData) ? myCouponsData : []);
+        setAvailableCouponsList(Array.isArray(availableCouponsData) ? availableCouponsData : []);
+      } catch (err) {
+        console.error('쿠폰 목록 로딩 실패:', err);
+        // 쿠폰 로딩 실패는 치명적이지 않으므로 에러를 표시하지 않음
+      } finally {
+        setCouponLoading(false);
+      }
+    }
+
+    loadCoupons();
+  }, []);
+
   if (itemLoading) {
     return <div className="text-center py-12">로딩 중...</div>;
   }
@@ -72,15 +99,44 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   const finalAmount = baseAmount - discount;
 
   const handleApplyCoupon = () => {
-    const coupon = mockCoupons.find(c => c.code === couponCode && !c.isUsed);
-    if (coupon) {
-      if (baseAmount >= (coupon.minAmount || 0)) {
-        setAppliedCoupon(coupon);
-      } else {
-        alert(`최소 ${coupon.minAmount?.toLocaleString()}원 이상 구매 시 사용 가능합니다.`);
+    if (!couponCode || couponCode.trim() === '') {
+      alert('쿠폰 코드를 입력해주세요.');
+      return;
+    }
+
+    // 보유 쿠폰에서 코드로 검색 (사용 가능한 것만)
+    const foundCoupon = myCoupons.find(c => {
+      const isUsed = c.usedAt !== null && c.usedAt !== undefined;
+      const isExpired = c.expiredAt && new Date(c.expiredAt) < new Date();
+      const codeMatch = c.code && c.code.toUpperCase() === couponCode.toUpperCase().trim();
+      return codeMatch && !isUsed && !isExpired;
+    });
+
+    if (foundCoupon) {
+      // 쿠폰 타입 확인 (구독/콘텐츠)
+      const paymentType = type === 'subscription' ? 'SUBSCRIPTION' : 'CONTENT';
+      const hasValidTarget = !foundCoupon.targets || foundCoupon.targets.length === 0 || 
+        foundCoupon.targets.some(t => 
+          (paymentType === 'SUBSCRIPTION' && t.targetType === 'SUBSCRIPTION') ||
+          (paymentType === 'CONTENT' && t.targetType === 'CONTENT')
+        );
+
+      if (!hasValidTarget) {
+        alert('이 쿠폰은 해당 결제 타입에 사용할 수 없습니다.');
+        return;
       }
+
+      // 최소 금액 확인 (API 응답에 minAmount가 없을 수 있으므로 우선 적용)
+      setAppliedCoupon({
+        id: foundCoupon.id,
+        code: foundCoupon.code,
+        discountType: foundCoupon.discountType === 'RATE' ? 'PERCENT' : foundCoupon.discountType,
+        discountValue: foundCoupon.discountValue,
+        minAmount: foundCoupon.minAmount || 0,
+        maxDiscount: foundCoupon.maxDiscount || Infinity,
+      });
     } else {
-      alert('유효하지 않은 쿠폰입니다.');
+      alert('유효하지 않은 쿠폰입니다. 쿠폰 코드를 확인해주세요.');
     }
   };
 
@@ -155,7 +211,21 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
     }
   };
 
-  const availableCoupons = mockCoupons.filter(c => !c.isUsed);
+  // 사용 가능한 쿠폰 목록 (보유 쿠폰 중 사용 가능한 것만)
+  const availableCoupons = myCoupons
+    .filter(c => {
+      const isUsed = c.usedAt !== null && c.usedAt !== undefined;
+      const isExpired = c.expiredAt && new Date(c.expiredAt) < new Date();
+      return !isUsed && !isExpired;
+    })
+    .map(c => ({
+      id: c.id,
+      code: c.code,
+      discountType: c.discountType === 'RATE' ? 'PERCENT' : c.discountType,
+      discountValue: c.discountValue,
+      minAmount: c.minAmount || 0,
+      maxDiscount: c.maxDiscount || Infinity,
+    }));
 
   return (
     <div className="max-w-4xl mx-auto pb-12">
