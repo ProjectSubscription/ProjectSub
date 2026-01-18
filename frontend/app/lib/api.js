@@ -298,6 +298,54 @@ export async function updateChannel(id, data) {
 }
 
 /**
+ * 채널 이미지 업로드
+ */
+export async function uploadChannelThumbnail(channelId, file) {
+  const url = `${API_BASE_URL}/api/channels/${channelId}/thumbnail`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorText = '';
+    let errorData = null;
+
+    try {
+      errorText = await response.text();
+      if (errorText && errorText.trim()) {
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText };
+        }
+      }
+    } catch (readErr) {
+      console.warn('에러 응답 본문 읽기 실패:', readErr);
+    }
+
+    const errorMessage = errorData?.message || errorData?.error || `HTTP error! status: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.warn('JSON 파싱 실패, 빈 응답으로 처리:', error);
+    return null;
+  }
+}
+
+/**
  * 채널 조회
  */
 export async function getChannel(id) {
@@ -305,10 +353,24 @@ export async function getChannel(id) {
 }
 
 /**
+ * 내 채널 조회 (크리에이터)
+ */
+export async function getMyChannel() {
+  return apiGet('/api/channels/my');
+}
+
+/**
  * 채널 목록
  */
 export async function getChannels(params = {}) {
   return apiGet('/api/channels', params);
+}
+
+/**
+ * 채널 카테고리 목록
+ */
+export async function getChannelCategories() {
+  return apiGet('/api/channels/categories');
 }
 
 // ==================== 구독 (SUBSCRIPTION) ====================

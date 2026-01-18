@@ -8,33 +8,19 @@ import { FreeContentSection } from '@/components/landing/FreeContentSection';
 import { CategoryRankingSection } from '@/components/landing/CategoryRankingSection';
 import { CTASection } from '@/components/landing/CTASection';
 import { useAuth } from '@/components/auth/AuthContext';
-import { getChannels, getContents } from '@/app/lib/api';
+import { getChannels, getContents, getChannelCategories } from '@/app/lib/api';
 
-const CATEGORY_DISPLAY_NAME_BY_ENUM = {
-  ECONOMY_BUSINESS: '경제/비즈니스',
-  FINANCE: '재테크',
-  REAL_ESTATE: '부동산',
-  BOOK_PUBLISHING: '책/작가/출판사',
-  HOBBY_PRACTICAL: '취미/실용',
-  EDUCATION: '교육/학습',
-  SELF_DEVELOPMENT: '자기개발/취업',
-  CULTURE_ART: '문화/예술',
-  TREND_LIFE: '트렌드/라이프',
-};
-
-const DEFAULT_CHANNEL_THUMBNAIL_URL =
-  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop&q=60';
 const DEFAULT_CONTENT_THUMBNAIL_URL =
   'https://images.unsplash.com/photo-1526378722484-bd91ca387e72?w=800&auto=format&fit=crop&q=60';
 
-function toChannelCard(dto) {
+function toChannelCard(dto, categoryNameById) {
   return {
     id: dto?.channelId,
     name: dto?.title ?? '',
     description: dto?.description ?? '',
-    category: CATEGORY_DISPLAY_NAME_BY_ENUM[dto?.category] ?? dto?.category ?? '',
+    category: categoryNameById?.[dto?.category] ?? dto?.category ?? '',
     subscriberCount: dto?.subscriberCount ?? 0,
-    thumbnailUrl: DEFAULT_CHANNEL_THUMBNAIL_URL,
+    thumbnailUrl: dto?.thumbnailUrl ?? null,
     creatorName: '',
   };
 }
@@ -65,6 +51,7 @@ export function LandingPage({ onNavigate }) {
   const [categories, setCategories] = React.useState([]);
   const [selectedCategory, setSelectedCategory] = React.useState('');
   const [rankingContents, setRankingContents] = React.useState([]);
+  const [categoryOptions, setCategoryOptions] = React.useState([]);
 
   // 로그아웃/로그인 관계없이 "실존 데이터"만 표시되도록 랜딩도 백엔드 API 사용
   React.useEffect(() => {
@@ -72,14 +59,22 @@ export function LandingPage({ onNavigate }) {
 
     const fetchLandingData = async () => {
       try {
-        const [popularPage, allChannelsPage, contentsPage] = await Promise.all([
+        const [categoryList, popularPage, allChannelsPage, contentsPage] = await Promise.all([
+          getChannelCategories(),
           getChannels({ sort: 'popular', size: 4 }),
           getChannels({ size: 100 }),
           getContents({ size: 200 }),
         ]);
 
-        const popular = (popularPage?.content ?? []).map(toChannelCard).filter((c) => c.id != null);
-        const allChannels = (allChannelsPage?.content ?? []).map(toChannelCard).filter((c) => c.id != null);
+        if (!cancelled) setCategoryOptions(categoryList || []);
+        const categoryMap = Object.fromEntries((categoryList || []).map((c) => [c.id, c.name]));
+
+        const popular = (popularPage?.content ?? [])
+          .map((dto) => toChannelCard(dto, categoryMap))
+          .filter((c) => c.id != null);
+        const allChannels = (allChannelsPage?.content ?? [])
+          .map((dto) => toChannelCard(dto, categoryMap))
+          .filter((c) => c.id != null);
 
         const channelCategoryById = new Map(
           allChannels.map((c) => [c.id, c.category])

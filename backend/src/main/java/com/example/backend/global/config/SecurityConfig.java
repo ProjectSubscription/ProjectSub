@@ -65,6 +65,7 @@ public class SecurityConfig {
                         // 로그인 API는 비로그인 허용
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
 
                         // 공개 조회 허용 (비로그인, 로그인 모두 허용)
                         .requestMatchers(HttpMethod.GET, "/api/channels/**").permitAll()

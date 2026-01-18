@@ -10,14 +10,13 @@ import CouponList from '@/components/coupon/CouponList';
 import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons, getContents } from '@/app/lib/api';
 import { mockReviews } from '@/app/mockData';
 
-const DEFAULT_CHANNEL_THUMBNAIL_URL =
-  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&auto=format&fit=crop&q=60';
-
 function normalizeChannelDetail(channelId, dto) {
   // 백엔드 ChannelDetailResponse: { channelName, channelDescription, subscriberCount, subscribed }
   // UI에서 기대하는 형태로 최소 매핑
   const name = dto?.channelName ?? dto?.name ?? dto?.title ?? '';
   const description = dto?.channelDescription ?? dto?.description ?? '';
+  const thumbnailUrl =
+    dto?.thumbnailUrl ?? dto?.profileImageUrl ?? dto?.profileImage ?? null;
 
   return {
     id: Number(channelId),
@@ -27,7 +26,7 @@ function normalizeChannelDetail(channelId, dto) {
     // 백엔드 상세 응답에 category/creatorName/thumbnail이 없어 임시값 사용
     category: '',
     creatorName: '',
-    thumbnailUrl: DEFAULT_CHANNEL_THUMBNAIL_URL,
+    thumbnailUrl,
   };
 }
 
