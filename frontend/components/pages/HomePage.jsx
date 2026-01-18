@@ -5,8 +5,7 @@ import { HeroBanner } from '@/components/home/HeroBanner';
 import { TrendingChannels } from '@/components/home/TrendingChannels';
 import { NewContent } from '@/components/home/NewContent';
 import { CategoryChannels } from '@/components/home/CategoryChannels';
-import { getChannels } from '@/app/lib/api';
-import { mockContents } from '@/app/mockData';
+import { getChannels, getContents } from '@/app/lib/api';
 
 const CATEGORY_OPTIONS = [
   { id: 'all', name: '전체' },
@@ -49,8 +48,37 @@ export function HomePage({ onNavigate }) {
   const [trendingChannels, setTrendingChannels] = React.useState([]);
   const [loadingChannels, setLoadingChannels] = React.useState(true);
   const [channelError, setChannelError] = React.useState(null);
+  const [newContents, setNewContents] = React.useState([]);
+  const [loadingContents, setLoadingContents] = React.useState(true);
 
-  const newContents = mockContents.slice(0, 4);
+  // 최신 콘텐츠
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const fetchNewContents = async () => {
+      try {
+        setLoadingContents(true);
+        const response = await getContents({ 
+          sort: 'createdAt,desc', 
+          size: 4,
+          page: 0
+        });
+        const items = response?.content ?? [];
+        if (!cancelled) setNewContents(items);
+      } catch (e) {
+        if (!cancelled) {
+          setNewContents([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingContents(false);
+      }
+    };
+
+    fetchNewContents();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 인기 채널
   React.useEffect(() => {
@@ -112,7 +140,11 @@ export function HomePage({ onNavigate }) {
       {trendingChannels.length > 0 && (
         <TrendingChannels channels={trendingChannels} onNavigate={onNavigate} />
       )}
-      <NewContent contents={newContents} onNavigate={onNavigate} />
+      {loadingContents ? (
+        <div className="text-center py-8 text-gray-600">최신 콘텐츠를 불러오는 중...</div>
+      ) : newContents.length > 0 ? (
+        <NewContent contents={newContents} onNavigate={onNavigate} />
+      ) : null}
       {loadingChannels && (
         <div className="text-center -mt-6 text-gray-600">채널을 불러오는 중...</div>
       )}
