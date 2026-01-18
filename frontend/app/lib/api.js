@@ -827,3 +827,112 @@ export function subscribeNotifications() {
   // Next.js API Route를 통해 프록시 (쿠키 자동 포함)
   return new EventSource('/api/notifications/subscribe');
 }
+
+// ==================== 뉴스레터 API ====================
+
+/**
+ * 발행된 뉴스레터 목록 조회 (일반 사용자용)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getNewsletters(page = 0, size = 20) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/newsletters?${params.toString()}`);
+}
+
+/**
+ * 뉴스레터 상세 조회 (일반 사용자용 - 발행된 것만)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function getNewsletter(id) {
+  return apiGet(`/api/newsletters/${id}`);
+}
+
+/**
+ * 뉴스레터 상세 조회 (관리자용 - 모든 상태 조회 가능)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function getNewsletterForAdmin(id) {
+  return apiGet(`/api/admin/newsletters/${id}`);
+}
+
+/**
+ * 전체 뉴스레터 목록 조회 (관리자용)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getAllNewsletters(page = 0, size = 20) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/admin/newsletters-all?${params.toString()}`);
+}
+
+/**
+ * 상태별 뉴스레터 목록 조회 (관리자용)
+ * @param {string} status - 상태 (DRAFT, PUBLISHED, ARCHIVED)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getNewslettersByStatus(status, page = 0, size = 20) {
+  const params = new URLSearchParams({
+    status: status,
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/admin/newsletters?${params.toString()}`);
+}
+
+/**
+ * 뉴스레터 생성 (관리자용)
+ * @param {string} title - 제목
+ * @param {string} content - 내용
+ */
+export async function createNewsletter(title, content) {
+  return apiPost('/api/admin/newsletters', { title, content });
+}
+
+/**
+ * 뉴스레터 수정 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ * @param {string} title - 제목
+ * @param {string} content - 내용
+ */
+export async function updateNewsletter(id, title, content) {
+  return apiPut(`/api/admin/newsletters/${id}`, { title, content });
+}
+
+/**
+ * 뉴스레터 발행 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function publishNewsletter(id) {
+  return apiRequest(`/api/admin/newsletters/${id}/publish`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 뉴스레터 보관 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function archiveNewsletter(id) {
+  return apiRequest(`/api/admin/newsletters/${id}/archive`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 뉴스레터 삭제 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function deleteNewsletter(id) {
+  return apiDelete(`/api/admin/newsletters/${id}`);
+}
