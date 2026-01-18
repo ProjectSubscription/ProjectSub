@@ -2,6 +2,7 @@ package com.example.backend.channel.controller;
 
 import com.example.backend.channel.dto.request.ChannelCreateRequest;
 import com.example.backend.channel.dto.request.ChannelUpdateRequest;
+import com.example.backend.channel.dto.response.CategoryResponse;
 import com.example.backend.channel.dto.response.ChannelDetailResponse;
 import com.example.backend.channel.dto.response.ChannelListResponse;
 import com.example.backend.channel.dto.response.ChannelThumbnailResponse;
@@ -23,6 +24,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
+
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -174,6 +178,18 @@ public class ChannelController {
     ) {
         Pageable resolvedPageable = applySort(pageable, sort);
         return channelService.getChannelList(category, resolvedPageable);
+    }
+
+    /**
+     * 채널 카테고리 목록 조회
+     * GET /api/channels/categories
+     * 권한: 공개
+     */
+    @GetMapping("/categories")
+    public List<CategoryResponse> getChannelCategories() {
+        return Arrays.stream(ChannelCategory.values())
+                .map(category -> new CategoryResponse(category.name(), category.getDisplayName()))
+                .toList();
     }
 
     private Pageable applySort(Pageable pageable, String sort) {
