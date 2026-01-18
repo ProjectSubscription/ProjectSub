@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { Users, Star, ArrowRight } from 'lucide-react';
 
-export function PopularChannelsSection({ channels, onNavigate }) {
+export function PopularChannelsSection({ channels, onNavigate, isAuthenticated = false }) {
   return (
     <section className="py-20">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -11,7 +13,7 @@ export function PopularChannelsSection({ channels, onNavigate }) {
             <p className="text-gray-600">지금 가장 핫한 크리에이터들을 만나보세요</p>
           </div>
           <button
-            onClick={() => onNavigate('login')}
+            onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
             className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
           >
             전체보기
@@ -22,7 +24,7 @@ export function PopularChannelsSection({ channels, onNavigate }) {
           {channels.map((channel) => (
             <div
               key={channel.id}
-              onClick={() => onNavigate('login')}
+              onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
               className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
             >
               <div className="relative aspect-video">
