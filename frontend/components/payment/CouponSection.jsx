@@ -37,20 +37,33 @@ export function CouponSection({ couponCode, onCouponCodeChange, appliedCoupon, o
           </button>
         </div>
       )}
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-800 font-medium mb-1">사용 가능한 쿠폰:</p>
-        <div className="space-y-1">
-          {availableCoupons.map(c => (
-            <button
-              key={c.id}
-              onClick={() => onCouponCodeChange(c.code)}
-              className="text-sm text-blue-600 hover:text-blue-700 underline block"
-            >
-              {c.code} - {c.discountType === 'PERCENT' ? `${c.discountValue}% 할인` : `${c.discountValue.toLocaleString()}원 할인`}
-            </button>
-          ))}
+      {availableCoupons && availableCoupons.length > 0 && (
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-800 font-medium mb-1">사용 가능한 쿠폰:</p>
+          <div className="space-y-1">
+            {availableCoupons.map(c => {
+              const discountType = c.discountType === 'RATE' || c.discountType === 'PERCENT' ? 'RATE' : 'AMOUNT';
+              const discountText = discountType === 'RATE' 
+                ? `${c.discountValue}% 할인` 
+                : `${c.discountValue?.toLocaleString() || c.discountValue}원 할인`;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => onCouponCodeChange(c.code)}
+                  className="text-sm text-blue-600 hover:text-blue-700 underline block w-full text-left"
+                >
+                  {c.code} - {discountText}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+      {availableCoupons && availableCoupons.length === 0 && (
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm text-gray-600">사용 가능한 쿠폰이 없습니다.</p>
+        </div>
+      )}
     </div>
   );
 }
