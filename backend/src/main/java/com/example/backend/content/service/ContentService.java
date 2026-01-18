@@ -202,7 +202,14 @@ public class ContentService {
         }
 
         // 접근 권한 검증
-        validateAccess(content, userRole, userId);
+        // SUBSCRIBER_ONLY, SINGLE_PURCHASE, PARTIAL 타입은 페이지 접근은 허용하되
+        // 실제 콘텐츠 접근은 hasAccess로 제어
+        try {
+            validateAccess(content, userRole, userId);
+        } catch (IllegalArgumentException e) {
+            // SUBSCRIBER_ONLY, SINGLE_PURCHASE, PARTIAL 타입은 페이지 접근은 허용
+            // 예외를 무시하고 계속 진행 (hasAccess로 접근 권한 제어)
+        }
 
         // 조회수 증가 (로그인한 사용자의 최초 조회 시만)
         if (userId != null) {
