@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { MessageSquare, Star, ThumbsUp, CornerDownRight, MessageCircle } from 'lucide-react';
+import { createReviewComment, getReviewComments } from '@/app/lib/api';
 
 // Recursive Comment Item Component
 function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
@@ -115,14 +115,15 @@ function ReviewItem({ review, currentUser, onNavigate }) {
       setLoadingComments(true);
       // Check if review.id is a real ID (number) or mock ID (string)
       if (typeof review.id === 'number') {
-        const response = await axios.get(`http://localhost:8080/api/reviews/${review.id}/comments`);
-        setComments(response.data);
+        const commentsData = await getReviewComments(review.id);
+        setComments(commentsData || []);
       } else {
         // Mock comments for mock reviews
         setComments([]);
       }
     } catch (error) {
       console.error('Failed to fetch comments:', error);
+      setComments([]);
     } finally {
       setLoadingComments(false);
     }
@@ -135,23 +136,28 @@ function ReviewItem({ review, currentUser, onNavigate }) {
       return;
     }
 
-    if (!commentText.trim()) return;
+    if (!commentText.trim()) {
+      alert('댓글 내용을 입력해주세요.');
+      return;
+    }
 
     try {
-      await axios.post(`http://localhost:8080/api/reviews/${review.id}/comments`, {
-        reviewId: review.id,
-        memberId: currentUser.id, 
-        comment: commentText,
+      // reviewId는 URL path variable로 전달됨
+      // memberId는 백엔드 세션(@AuthenticationPrincipal)에서 가져오므로 body에 포함하지 않음
+      // body에는 comment와 parentId만 전달
+      await createReviewComment(review.id, {
+        comment: commentText.trim(),
         parentId: parentId
       });
       
       if (!parentId) {
         setNewComment('');
       }
-      fetchComments(); // Refresh comments
+      // 댓글 목록 새로고침
+      await fetchComments();
     } catch (error) {
       console.error('Failed to submit comment:', error);
-      alert('댓글 등록에 실패했습니다.');
+      alert(error.message || '댓글 등록에 실패했습니다.');
     }
   };
 
