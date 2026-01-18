@@ -1,5 +1,8 @@
 import React from 'react';
-import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell } from 'lucide-react';
+import {
+    CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell,
+    Ticket
+} from 'lucide-react';
 import { PageRoute } from '@/app/types';
 import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
 import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember, getNotificationSettings, updateNotificationSettings } from '@/app/lib/api';
@@ -44,7 +47,8 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
             <p className="text-sm text-gray-600">만료 예정</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">
-            {userSubs.filter(s => s.status === 'ACTIVE' && 
+            {userSubs.filter(s => s.status === 'ACTIVE' &&
+                // eslint-disable-next-line react-hooks/purity
               new Date(s.endDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             ).length}
           </p>
@@ -746,6 +750,14 @@ export function MyPage({ userId, onNavigate }) {
           <h3 className="text-xl font-bold text-gray-900 mb-2">크리에이터 신청 이력</h3>
           <p className="text-gray-600">신청 내역 및 승인 상태 확인</p>
         </button>
+          <button
+              onClick={() => onNavigate('my-coupons', {})}
+              className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow text-left"
+          >
+              <Ticket className="w-8 h-8 text-orange-600 mb-3" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">다운받은 쿠폰</h3>
+              <p className="text-gray-600">사용가능한 쿠폰 보기</p>
+          </button>
       </div>
 
       {/* 회원 탈퇴 섹션 */}
