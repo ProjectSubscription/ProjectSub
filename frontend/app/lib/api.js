@@ -28,13 +28,34 @@ async function apiRequest(endpoint, options = {}) {
   });
 
   if (!response.ok) {
+    // 응답 본문을 텍스트로 읽기 (한 번만 읽을 수 있으므로)
+    let errorText = '';
+    let errorData = null;
+    
+    try {
+      errorText = await response.text();
+      if (errorText && errorText.trim()) {
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (parseErr) {
+          // JSON이 아닌 경우 텍스트 그대로 사용
+          errorData = { message: errorText };
+        }
+      }
+    } catch (readErr) {
+      // 응답 본문 읽기 실패 시 무시
+      console.warn('에러 응답 본문 읽기 실패:', readErr);
+    }
+    
     // 401 Unauthorized 에러에 대한 특별 처리
     if (response.status === 401) {
-      const error = await response.json().catch(() => ({ message: '인증에 실패했습니다.' }));
-      throw new Error(error.message || '인증에 실패했습니다.');
+      const errorMessage = errorData?.message || '인증에 실패했습니다.';
+      throw new Error(errorMessage);
     }
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    
+    // 기타 에러 처리
+    const errorMessage = errorData?.message || errorData?.error || `HTTP error! status: ${response.status}`;
+    throw new Error(errorMessage);
   }
 
   // 204 No Content는 빈 응답
@@ -64,7 +85,11 @@ async function apiRequest(endpoint, options = {}) {
  * GET 요청
  */
 export async function apiGet(endpoint, params = {}) {
-  const queryString = new URLSearchParams(params).toString();
+  // undefined/null 파라미터는 쿼리에 포함되지 않도록 제거
+  const filteredParams = Object.fromEntries(
+    Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null)
+  );
+  const queryString = new URLSearchParams(filteredParams).toString();
   const url = queryString ? `${endpoint}?${queryString}` : endpoint;
   return apiRequest(url, { method: 'GET' });
 }
@@ -162,6 +187,22 @@ export async function registerMember(data) {
 
 /**
  * 내 정보 조회
+ * 
+ * @returns {Promise<Object>} 백엔드에서 반환한 원시 사용자 정보 (정규화되지 않음)
+ * 
+ * @description
+ * 일반적으로는 `useUser()` Context 훅을 사용하여 정규화된 사용자 정보를 가져오는 것이 권장됩니다.
+ * 이 함수는 다음 경우에만 직접 호출하세요:
+ * - ClientLayout에서 사용자 정보를 초기 로드할 때
+ * - 사용자 정보를 강제로 새로고침해야 할 때
+ * - Context가 없는 특수한 상황
+ * 
+ * @example
+ * // 권장: Context 사용
+ * const { currentUser } = useUser();
+ * 
+ * // 특수한 경우: 직접 호출
+ * const userInfo = await getMyInfo();
  */
 export async function getMyInfo() {
   return apiGet('/api/members/me');
@@ -317,17 +358,36 @@ export async function createSubscriptionPlan(channelId, data) {
 }
 
 /**
- * 구독 상품 조회
+ * 구독 상품 조회 (활성화된 상품만)
  */
 export async function getSubscriptionPlans(channelId) {
   return apiGet(`/api/channels/${channelId}/plans`);
 }
 
 /**
+ * 구독 상품 전체 조회 (크리에이터용 - 활성/비활성 모두)
+ */
+export async function getAllSubscriptionPlans(channelId) {
+  return apiGet(`/api/channels/${channelId}/plans/all`);
+}
+
+/**
+ * 구독 상품 수정
+ */
+export async function updateSubscriptionPlan(channelId, planId, data) {
+  return apiPut(`/api/channels/${channelId}/plans/${planId}`, data);
+}
+
+/**
  * 구독 신청
  */
-export async function createSubscription(data) {
-  return apiPost('/api/subscriptions', data);
+export async function createSubscription(channelId, planId) {
+  // 백엔드 API는 @RequestParam으로 channelId와 planId를 받으므로 쿼리 파라미터로 전달
+  const queryParams = new URLSearchParams({
+    channelId: channelId.toString(),
+    planId: planId.toString(),
+  });
+  return apiPost(`/api/subscriptions?${queryParams.toString()}`, {});
 }
 
 /**
@@ -766,4 +826,113 @@ export async function updateNotificationSettings(data) {
 export function subscribeNotifications() {
   // Next.js API Route를 통해 프록시 (쿠키 자동 포함)
   return new EventSource('/api/notifications/subscribe');
+}
+
+// ==================== 뉴스레터 API ====================
+
+/**
+ * 발행된 뉴스레터 목록 조회 (일반 사용자용)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getNewsletters(page = 0, size = 20) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/newsletters?${params.toString()}`);
+}
+
+/**
+ * 뉴스레터 상세 조회 (일반 사용자용 - 발행된 것만)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function getNewsletter(id) {
+  return apiGet(`/api/newsletters/${id}`);
+}
+
+/**
+ * 뉴스레터 상세 조회 (관리자용 - 모든 상태 조회 가능)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function getNewsletterForAdmin(id) {
+  return apiGet(`/api/admin/newsletters/${id}`);
+}
+
+/**
+ * 전체 뉴스레터 목록 조회 (관리자용)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getAllNewsletters(page = 0, size = 20) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/admin/newsletters-all?${params.toString()}`);
+}
+
+/**
+ * 상태별 뉴스레터 목록 조회 (관리자용)
+ * @param {string} status - 상태 (DRAFT, PUBLISHED, ARCHIVED)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getNewslettersByStatus(status, page = 0, size = 20) {
+  const params = new URLSearchParams({
+    status: status,
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/admin/newsletters?${params.toString()}`);
+}
+
+/**
+ * 뉴스레터 생성 (관리자용)
+ * @param {string} title - 제목
+ * @param {string} content - 내용
+ */
+export async function createNewsletter(title, content) {
+  return apiPost('/api/admin/newsletters', { title, content });
+}
+
+/**
+ * 뉴스레터 수정 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ * @param {string} title - 제목
+ * @param {string} content - 내용
+ */
+export async function updateNewsletter(id, title, content) {
+  return apiPut(`/api/admin/newsletters/${id}`, { title, content });
+}
+
+/**
+ * 뉴스레터 발행 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function publishNewsletter(id) {
+  return apiRequest(`/api/admin/newsletters/${id}/publish`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 뉴스레터 보관 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function archiveNewsletter(id) {
+  return apiRequest(`/api/admin/newsletters/${id}/archive`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 뉴스레터 삭제 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function deleteNewsletter(id) {
+  return apiDelete(`/api/admin/newsletters/${id}`);
 }
