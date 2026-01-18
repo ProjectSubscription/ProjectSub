@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { Play, TrendingUp, Users, ArrowRight } from 'lucide-react';
 
-export function HeroSection({ onNavigate }) {
+export function HeroSection({ onNavigate, isAuthenticated = false }) {
   return (
     <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white overflow-hidden">
       <div className="absolute inset-0 bg-black opacity-10"></div>
@@ -17,14 +19,14 @@ export function HeroSection({ onNavigate }) {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <button
-                onClick={() => onNavigate('login')}
+                onClick={() => onNavigate(isAuthenticated ? 'home' : 'login')}
                 className="px-8 py-4 bg-white text-blue-600 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
               >
                 지금 시작하기
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
-                onClick={() => onNavigate('login')}
+                onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
                 className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-medium hover:bg-white hover:text-blue-600 transition-colors"
               >
                 무료 콘텐츠 둘러보기
