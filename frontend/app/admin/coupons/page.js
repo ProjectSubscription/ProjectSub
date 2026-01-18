@@ -18,6 +18,14 @@ const TARGET_TYPES = [
   { value: 'CONTENT', label: '콘텐츠 단건 구매' },
 ];
 
+// 쿠폰 상태 판단 함수
+const getCouponStatus = (expiredAt) => {
+  if (!expiredAt) return null;
+  const now = new Date();
+  const expiredDate = new Date(expiredAt);
+  return now <= expiredDate ? 'active' : 'expired';
+};
+
 export default function AdminCouponsPage() {
   const [discountType, setDiscountType] = useState('RATE');
   const [discountValue, setDiscountValue] = useState('');
@@ -332,31 +340,50 @@ export default function AdminCouponsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     만료 일시
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    상태
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {coupons.map((coupon) => (
-                  <tr key={coupon.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-mono text-sm text-gray-900">
-                      {coupon.code}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {coupon.discountType === 'RATE'
-                        ? `비율 ${coupon.discountValue}%`
-                        : `금액 ${coupon.discountValue?.toLocaleString()}원`}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {coupon.refundType === 'EXPIRE_ON_REFUND'
-                        ? '환불 시 쿠폰 소멸'
-                        : '환불 시 쿠폰 복원'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {coupon.expiredAt
-                        ? new Date(coupon.expiredAt).toLocaleString('ko-KR')
-                        : '-'}
-                    </td>
-                  </tr>
-                ))}
+                {coupons.map((coupon) => {
+                  const status = getCouponStatus(coupon.expiredAt);
+                  return (
+                    <tr key={coupon.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-mono text-sm text-gray-900">
+                        {coupon.code}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {coupon.discountType === 'RATE'
+                          ? `비율 ${coupon.discountValue}%`
+                          : `금액 ${coupon.discountValue?.toLocaleString()}원`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {coupon.refundType === 'EXPIRE_ON_REFUND'
+                          ? '환불 시 쿠폰 소멸'
+                          : '환불 시 쿠폰 복원'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {coupon.expiredAt
+                          ? new Date(coupon.expiredAt).toLocaleString('ko-KR')
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {status === 'active' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            활성
+                          </span>
+                        ) : status === 'expired' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            만료
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
