@@ -9,6 +9,7 @@ public class ChannelDetailResponse {
 
     private String channelName;
     private String channelDescription;
+    private String thumbnailUrl;
     private int subscriberCount;
     private boolean subscribed;
 }

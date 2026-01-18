@@ -25,6 +25,9 @@ public class Channel extends AuditableEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(length = 2048)
+    private String thumbnailUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ChannelCategory category;
@@ -39,22 +42,29 @@ public class Channel extends AuditableEntity {
             Long creatorId,
             String title,
             String description,
+            String thumbnailUrl,
             ChannelCategory category
     ) {
         return Channel.builder()
                 .creatorId(creatorId)
                 .title(title)
                 .description(description)
+                .thumbnailUrl(thumbnailUrl)
                 .category(category)
                 .subscriberCount(0)
                 .isActive(true)
                 .build();
     }
 
-    public void update(String title, String description, ChannelCategory category) {
+    public void update(String title, String description, String thumbnailUrl, ChannelCategory category) {
         this.title = title;
         this.description = description;
+        this.thumbnailUrl = thumbnailUrl;
         this.category = category;
+    }
+
+    public void updateThumbnail(String thumbnailUrl) {
+        this.thumbnailUrl = thumbnailUrl;
     }
 
     public void deactivate() {

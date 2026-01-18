@@ -1,19 +1,20 @@
 package com.example.backend.global.config;
 
-import com.example.backend.auth.resolver.LoginMemberArgumentResolver;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.List;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     @Override
-    public void addArgumentResolvers(
-            List<HandlerMethodArgumentResolver> resolvers
-    ) {
-        resolvers.add(new LoginMemberArgumentResolver());
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        Path uploadPath = Paths.get("uploads").toAbsolutePath();
+        String uploadLocation = uploadPath.toUri().toString();
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations(uploadLocation);
     }
 }
