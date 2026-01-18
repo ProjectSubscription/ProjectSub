@@ -3,17 +3,23 @@ package com.example.backend.channel.controller;
 import com.example.backend.channel.dto.request.ChannelCreateRequest;
 import com.example.backend.channel.dto.request.ChannelUpdateRequest;
 import com.example.backend.channel.dto.response.ChannelDetailResponse;
+import com.example.backend.channel.dto.response.ChannelListResponse;
 import com.example.backend.channel.dto.response.MyChannelResponse;
 import com.example.backend.channel.entity.Channel;
-import com.example.backend.channel.service.ChannelService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-import com.example.backend.channel.dto.response.ChannelListResponse;
 import com.example.backend.channel.entity.ChannelCategory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.example.backend.channel.service.ChannelService;
+import com.example.backend.creator.entity.Creator;
+import com.example.backend.creator.repository.CreatorRepository;
+import com.example.backend.global.exception.BusinessException;
+import com.example.backend.global.exception.ErrorCode;
+import com.example.backend.global.security.CustomUserDetails;
+import com.example.backend.member.entity.Role;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,6 +27,7 @@ import org.springframework.data.domain.Sort;
 public class ChannelController {
 
     private final ChannelService channelService;
+    private final CreatorRepository creatorRepository;
 
     /**
      * 채널 생성
@@ -29,10 +36,12 @@ public class ChannelController {
      */
     @PostMapping
     public void createChannel(
-            @RequestParam Long creatorId,
-            @RequestBody ChannelCreateRequest request
+            @RequestParam(required = false) Long creatorId,
+            @RequestBody ChannelCreateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        channelService.createChannel(creatorId, request);
+        Long resolvedCreatorId = resolveCreatorIdForWrite(userDetails, creatorId);
+        channelService.createChannel(resolvedCreatorId, request);
     }
 
     /**
@@ -43,10 +52,13 @@ public class ChannelController {
     @PutMapping("/{channelId}")
     public void updateChannel(
             @PathVariable Long channelId,
-            @RequestParam Long creatorId,
-            @RequestBody ChannelUpdateRequest request
+            @RequestParam(required = false) Long creatorId,
+            @RequestBody ChannelUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        channelService.updateChannel(channelId, creatorId, request);
+
+        Long resolvedCreatorId = resolveCreatorIdForWrite(userDetails, creatorId);
+        channelService.updateChannel(channelId, resolvedCreatorId, request);
     }
 
     /**
@@ -58,9 +70,12 @@ public class ChannelController {
     @DeleteMapping("/{channelId}")
     public void deactivateChannel(
             @PathVariable Long channelId,
-            @RequestParam Long creatorId
+            @RequestParam(required = false) Long creatorId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        channelService.deactivateChannel(channelId, creatorId);
+
+        Long resolvedCreatorId = resolveCreatorIdForWrite(userDetails, creatorId);
+        channelService.deactivateChannel(channelId, resolvedCreatorId);
     }
 
     /**
@@ -72,9 +87,12 @@ public class ChannelController {
     @GetMapping("/{channelId}")
     public ChannelDetailResponse getChannelDetail(
             @PathVariable Long channelId,
-            @RequestParam(required = false) Long memberId
+            @RequestParam(required = false) Long memberId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return channelService.getChannelDetail(channelId, memberId);
+        // 보안상 memberId 파라미터는 신뢰하지 않고, 로그인한 사용자 기준으로만 구독 여부를 계산한다.
+        Long resolvedMemberId = (userDetails != null) ? userDetails.getMemberId() : null;
+        return channelService.getChannelDetail(channelId, resolvedMemberId);
     }
 
 
@@ -86,9 +104,11 @@ public class ChannelController {
      */
     @GetMapping("/my")
     public MyChannelResponse getMyChannel(
-            @RequestParam Long creatorId
+            @RequestParam(required = false) Long creatorId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Channel channel = channelService.getMyChannel(creatorId);
+        Long resolvedCreatorId = resolveCreatorIdForWrite(userDetails, creatorId);
+        Channel channel = channelService.getMyChannel(resolvedCreatorId);
 
         return new MyChannelResponse(
                 channel.getId(),
@@ -109,9 +129,11 @@ public class ChannelController {
     @GetMapping("/creator/{creatorId}")
     public ChannelDetailResponse getChannelByCreator(
             @PathVariable Long creatorId,
-            @RequestParam(required = false) Long memberId
+            @RequestParam(required = false) Long memberId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return channelService.getChannelByCreator(creatorId, memberId);
+        Long resolvedMemberId = (userDetails != null) ? userDetails.getMemberId() : null;
+        return channelService.getChannelByCreator(creatorId, resolvedMemberId);
     }
 
     /**
@@ -123,12 +145,47 @@ public class ChannelController {
     @GetMapping
     public Page<ChannelListResponse> getChannels(
             @RequestParam(required = false) ChannelCategory category,
+            @RequestParam(required = false) String sort,
             @PageableDefault(
                     size = 20,
                     sort = "createdAt",
                     direction = Sort.Direction.DESC
             ) Pageable pageable
     ) {
-        return channelService.getChannelList(category, pageable);
+        Pageable resolvedPageable = applySort(pageable, sort);
+        return channelService.getChannelList(category, resolvedPageable);
+    }
+
+    private Pageable applySort(Pageable pageable, String sort) {
+        // 인기/신규
+        String normalized = (sort == null) ? "new" : sort.trim().toLowerCase();
+
+        Sort resolvedSort;
+        if ("popular".equals(normalized)) {
+            resolvedSort = Sort.by(Sort.Direction.DESC, "subscriberCount");
+        } else {
+            // new (default)
+            resolvedSort = Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), resolvedSort);
+    }
+
+
+    /**
+     * 채널 쓰기 작업에서 creatorId를 안전하게 결정
+     * 로그인한 사용자(memberId)로 Creator를 조회하여 creatorId로 사용
+     */
+    private Long resolveCreatorIdForWrite(CustomUserDetails userDetails, Long creatorIdParam) {
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        if (userDetails.getRoles() == null || !userDetails.getRoles().contains(Role.ROLE_CREATOR)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        Creator creator = creatorRepository.findByMemberId(userDetails.getMemberId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
+        return creator.getId();
     }
 }
