@@ -227,4 +227,24 @@ public class ContentController {
         long count = contentService.getRecentPublishedContentCountByCreatorId(creatorId);
         return ResponseEntity.ok(count);
     }
+
+    /**
+     * 최근 본 콘텐츠 조회
+     * GET /api/contents/recent-viewed
+     * 권한: 로그인한 사용자 (일반유저, 크리에이터, 관리자)
+     */
+    @GetMapping("/recent-viewed")
+    public ResponseEntity<Page<ContentListResponseDTO>> getRecentViewedContents(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 20, sort = "lastViewedAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        // 로그인한 사용자만 조회 가능
+        if (userDetails == null) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+
+        Long memberId = userDetails.getMemberId();
+        Page<ContentListResponseDTO> response = contentService.getRecentViewedContents(memberId, pageable);
+        return ResponseEntity.ok(response);
+    }
 }

@@ -8,7 +8,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 /**
  * API 요청 헬퍼 함수
  */
-async function apiRequest(endpoint, options = {}) {
+export async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   const defaultOptions = {
     credentials: 'include', // 쿠키 포함 (세션 기반 인증)
@@ -28,34 +28,13 @@ async function apiRequest(endpoint, options = {}) {
   });
 
   if (!response.ok) {
-    // 응답 본문을 텍스트로 읽기 (한 번만 읽을 수 있으므로)
-    let errorText = '';
-    let errorData = null;
-    
-    try {
-      errorText = await response.text();
-      if (errorText && errorText.trim()) {
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (parseErr) {
-          // JSON이 아닌 경우 텍스트 그대로 사용
-          errorData = { message: errorText };
-        }
-      }
-    } catch (readErr) {
-      // 응답 본문 읽기 실패 시 무시
-      console.warn('에러 응답 본문 읽기 실패:', readErr);
-    }
-    
     // 401 Unauthorized 에러에 대한 특별 처리
     if (response.status === 401) {
-      const errorMessage = errorData?.message || '인증에 실패했습니다.';
-      throw new Error(errorMessage);
+      const error = await response.json().catch(() => ({ message: '인증에 실패했습니다.' }));
+      throw new Error(error.message || '인증에 실패했습니다.');
     }
-    
-    // 기타 에러 처리
-    const errorMessage = errorData?.message || errorData?.error || `HTTP error! status: ${response.status}`;
-    throw new Error(errorMessage);
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
 
   // 204 No Content는 빈 응답
@@ -187,22 +166,6 @@ export async function registerMember(data) {
 
 /**
  * 내 정보 조회
- * 
- * @returns {Promise<Object>} 백엔드에서 반환한 원시 사용자 정보 (정규화되지 않음)
- * 
- * @description
- * 일반적으로는 `useUser()` Context 훅을 사용하여 정규화된 사용자 정보를 가져오는 것이 권장됩니다.
- * 이 함수는 다음 경우에만 직접 호출하세요:
- * - ClientLayout에서 사용자 정보를 초기 로드할 때
- * - 사용자 정보를 강제로 새로고침해야 할 때
- * - Context가 없는 특수한 상황
- * 
- * @example
- * // 권장: Context 사용
- * const { currentUser } = useUser();
- * 
- * // 특수한 경우: 직접 호출
- * const userInfo = await getMyInfo();
  */
 export async function getMyInfo() {
   return apiGet('/api/members/me');
@@ -358,17 +321,10 @@ export async function createSubscriptionPlan(channelId, data) {
 }
 
 /**
- * 구독 상품 조회 (활성화된 상품만)
+ * 구독 상품 조회
  */
 export async function getSubscriptionPlans(channelId) {
   return apiGet(`/api/channels/${channelId}/plans`);
-}
-
-/**
- * 구독 상품 전체 조회 (크리에이터용 - 활성/비활성 모두)
- */
-export async function getAllSubscriptionPlans(channelId) {
-  return apiGet(`/api/channels/${channelId}/plans/all`);
 }
 
 /**
@@ -381,13 +337,8 @@ export async function updateSubscriptionPlan(channelId, planId, data) {
 /**
  * 구독 신청
  */
-export async function createSubscription(channelId, planId) {
-  // 백엔드 API는 @RequestParam으로 channelId와 planId를 받으므로 쿼리 파라미터로 전달
-  const queryParams = new URLSearchParams({
-    channelId: channelId.toString(),
-    planId: planId.toString(),
-  });
-  return apiPost(`/api/subscriptions?${queryParams.toString()}`, {});
+export async function createSubscription(data) {
+  return apiPost('/api/subscriptions', data);
 }
 
 /**
@@ -750,6 +701,20 @@ export async function likeContent(contentId) {
  */
 export async function unlikeContent(contentId) {
   return apiDelete(`/api/contents/${contentId}/like`);
+}
+
+/**
+ * 최근 본 콘텐츠 조회
+ */
+export async function getRecentViewedContents(params = {}) {
+  return apiGet('/api/contents/recent-viewed', params);
+}
+
+/**
+ * 채널의 대표 콘텐츠 조회
+ */
+export async function getFeaturedContents(channelId) {
+  return apiGet(`/api/contents/channels/${channelId}/featured`);
 }
 
 // ==================== 정산 ====================

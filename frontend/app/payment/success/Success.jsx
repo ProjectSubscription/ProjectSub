@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { apiRequest, getMyInfo } from "@/app/lib/api";
 import "../../../styles/App.css";
 
 export function SuccessPage({ onNavigate }) {
@@ -63,13 +64,10 @@ export function SuccessPage({ onNavigate }) {
     async function confirm() {
       try {
         setLoading(true);
-        // 백엔드 API로 직접 결제 승인 요청
+        // 백엔드 API로 직접 결제 승인 요청 (apiRequest 사용하여 인증 정보 자동 포함)
         // 백엔드의 PaymentService가 토스 페이먼츠 API를 호출하고 결제 정보를 저장합니다
-        const response = await fetch("http://localhost:8080/api/payments/confirm", {
+        const json = await apiRequest('/api/payments/confirm', {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify({
             paymentKey: requestData.paymentKey,
             orderId: requestData.orderId,
@@ -77,46 +75,42 @@ export function SuccessPage({ onNavigate }) {
           }),
         });
 
-        // 응답 본문을 안전하게 파싱
-        let json;
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          try {
-            json = await response.json();
-          } catch (e) {
-            console.error("JSON 파싱 실패:", e);
-            const text = await response.text();
-            console.error("응답 본문:", text);
-            throw new Error("서버 응답을 파싱할 수 없습니다.");
-          }
-        } else {
-          const text = await response.text();
-          console.error("JSON이 아닌 응답:", text);
-          throw new Error("서버가 JSON 형식으로 응답하지 않았습니다.");
-        }
-
-        if (!response.ok) {
-          // 결제 실패 비즈니스 로직
-          const errorMessage = json?.message || json?.error || response.statusText || "결제 승인에 실패했습니다.";
-          const errorCode = json?.code || String(response.status);
-          console.error("결제 승인 실패:", {
-            status: response.status,
-            statusText: response.statusText,
-            body: json
-          });
-          setError(errorMessage);
-          setLoading(false);
-          if (onNavigate) {
-            onNavigate('payment-fail', { 
-              message: errorMessage,
-              code: errorCode
-            });
-          }
-          return;
-        }
-
         // 결제 성공 비즈니스 로직
         console.log("결제 승인 성공:", json);
+        
+        // 구독 결제인 경우 구독 생성
+        const orderCode = json.orderCode || requestData.orderId;
+        if (orderCode && typeof window !== 'undefined') {
+          const orderKey = `pending_subscription_${orderCode}`;
+          const pendingSubscription = localStorage.getItem(orderKey);
+          
+          if (pendingSubscription) {
+            try {
+              const { channelId, planId } = JSON.parse(pendingSubscription);
+              console.log('구독 생성 시도:', { channelId, planId });
+              
+              // 구독 생성 API 호출 (쿼리 파라미터 사용)
+              const userInfo = await getMyInfo();
+              const memberId = userInfo?.id || userInfo?.memberId;
+              
+              if (memberId && channelId && planId) {
+                const subscriptionResponse = await apiRequest(`/api/subscriptions?channelId=${channelId}&planId=${planId}`, {
+                  method: 'POST',
+                  headers: {
+                    'User-Id': memberId.toString(),
+                  },
+                });
+                console.log('구독 생성 성공:', subscriptionResponse);
+                
+                // localStorage에서 제거
+                localStorage.removeItem(orderKey);
+              }
+            } catch (subErr) {
+              console.error('구독 생성 실패:', subErr);
+              // 구독 생성 실패해도 결제는 성공했으므로 계속 진행
+            }
+          }
+        }
         
         // 처리 완료 표시 (localStorage에 저장)
         if (typeof window !== 'undefined') {
