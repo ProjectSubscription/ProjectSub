@@ -64,7 +64,11 @@ async function apiRequest(endpoint, options = {}) {
  * GET 요청
  */
 export async function apiGet(endpoint, params = {}) {
-  const queryString = new URLSearchParams(params).toString();
+  // undefined/null 파라미터는 쿼리에 포함되지 않도록 제거
+  const filteredParams = Object.fromEntries(
+    Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null)
+  );
+  const queryString = new URLSearchParams(filteredParams).toString();
   const url = queryString ? `${endpoint}?${queryString}` : endpoint;
   return apiRequest(url, { method: 'GET' });
 }
@@ -129,7 +133,14 @@ export async function login(email, password) {
  * OAuth 로그인 (리다이렉트)
  */
 export function oauthLogin(provider) {
-  window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`;
+  try {
+    const oauthUrl = `${API_BASE_URL}/oauth2/authorization/${provider}`;
+    console.log('OAuth 로그인 시도:', oauthUrl);
+    window.location.href = oauthUrl;
+  } catch (error) {
+    console.error('OAuth 로그인 오류:', error);
+    alert('소셜 로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+  }
 }
 
 /**
@@ -137,6 +148,13 @@ export function oauthLogin(provider) {
  */
 export async function logout() {
   return apiPost('/api/auth/logout');
+}
+
+/**
+ * OAuth 프로필 완성 (추가 정보 입력)
+ */
+export async function completeOAuthProfile(token, data) {
+  return apiPost(`/api/oauth/complete-profile?token=${encodeURIComponent(token)}`, data);
 }
 
 /**
@@ -519,7 +537,7 @@ export async function getTopSales(params = {}) {
  * 쿠폰 등록
  */
 export async function registerCoupon(data) {
-  return apiPost('/api/coupons/register', data);
+  return apiPost('/api/coupons/issue', data);
 }
 
 /**
@@ -541,6 +559,48 @@ export async function getAvailableCoupons() {
  */
 export async function getExpiredCoupons() {
   return apiGet('/api/coupons/me/expired');
+}
+
+/**
+ * 채널별 다운로드 가능한 쿠폰 목록 조회
+ * GET /api/channels/{channelId}/coupons
+ */
+export async function getChannelCoupons(channelId) {
+  return apiGet(`/api/channels/${channelId}/coupons`);
+}
+
+/**
+ * 컨텐츠별 다운로드 가능한 쿠폰 목록 조회
+ * GET /api/contents/{contentId}/coupons
+ */
+export async function getContentCoupons(contentId) {
+  return apiGet(`/api/contents/${contentId}/coupons`);
+}
+
+/**
+ * 쿠폰 발급 (다운로드)
+ * POST /api/coupons/{couponId}/issue
+ */
+export async function issueCoupon(couponId) {
+  return apiPost(`/api/coupons/${couponId}/issue`);
+}
+
+// ==================== 관리자 쿠폰 관리 ====================
+
+/**
+ * 관리자 쿠폰 생성
+ * POST /api/admin/coupons
+ */
+export async function createAdminCoupon(data) {
+  return apiPost('/api/admin/coupons', data);
+}
+
+/**
+ * 관리자 쿠폰 목록 조회
+ * GET /api/admin/coupons
+ */
+export async function getAdminCoupons(params = {}) {
+  return apiGet('/api/admin/coupons', params);
 }
 
 // ==================== 마이페이지 ====================
@@ -657,4 +717,71 @@ export async function getFeaturedContents(channelId) {
  */
 export async function getSettlements(params = {}) {
   return apiGet('/api/settlements', params);
+}
+
+// ==================== 알림 (NOTIFICATION) ====================
+
+/**
+ * 알림 목록 조회
+ */
+export async function getNotifications() {
+  return apiGet('/api/notifications');
+}
+
+/**
+ * 안읽은 알림 개수 조회
+ */
+export async function getUnreadNotificationCount() {
+  return apiGet('/api/notifications/unread-count');
+}
+
+/**
+ * 알림 읽음 처리
+ */
+export async function readNotification(notificationId) {
+  return apiRequest(`/api/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 알림 전체 읽음 처리
+ */
+export async function readAllNotifications() {
+  return apiRequest('/api/notifications/read-all', {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 알림 삭제
+ */
+export async function deleteNotification(notificationId) {
+  return apiDelete(`/api/notifications/${notificationId}/delete`);
+}
+
+/**
+ * 알림 설정 조회
+ */
+export async function getNotificationSettings() {
+  return apiGet('/api/notification-settings');
+}
+
+/**
+ * 알림 설정 변경
+ */
+export async function updateNotificationSettings(data) {
+  return apiRequest('/api/notification-settings', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * SSE 알림 구독 연결
+ * Next.js API Route를 통해 프록시하여 쿠키 인증 문제 해결
+ */
+export function subscribeNotifications() {
+  // Next.js API Route를 통해 프록시 (쿠키 자동 포함)
+  return new EventSource('/api/notifications/subscribe');
 }

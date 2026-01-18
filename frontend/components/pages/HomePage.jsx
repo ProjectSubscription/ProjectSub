@@ -1,103 +1,129 @@
+ 'use client';
+
 import React from 'react';
 import { HeroBanner } from '@/components/home/HeroBanner';
 import { TrendingChannels } from '@/components/home/TrendingChannels';
 import { NewContent } from '@/components/home/NewContent';
 import { CategoryChannels } from '@/components/home/CategoryChannels';
-import { getContents, getChannels } from '@/app/lib/api';
-import { mockChannels } from '@/app/mockData';
+import { getChannels } from '@/app/lib/api';
+import { mockContents } from '@/app/mockData';
+
+const CATEGORY_OPTIONS = [
+  { id: 'all', name: '전체' },
+  { id: 'ECONOMY_BUSINESS', name: '경제/비즈니스' },
+  { id: 'FINANCE', name: '재테크' },
+  { id: 'REAL_ESTATE', name: '부동산' },
+  { id: 'BOOK_PUBLISHING', name: '책/작가/출판사' },
+  { id: 'HOBBY_PRACTICAL', name: '취미/실용' },
+  { id: 'EDUCATION', name: '교육/학습' },
+  { id: 'SELF_DEVELOPMENT', name: '자기개발/취업' },
+  { id: 'CULTURE_ART', name: '문화/예술' },
+  { id: 'TREND_LIFE', name: '트렌드/라이프' },
+];
+
+const CATEGORY_DISPLAY_NAME_BY_ENUM = Object.fromEntries(
+  CATEGORY_OPTIONS
+    .filter((c) => c.id !== 'all')
+    .map((c) => [c.id, c.name])
+);
+
+const DEFAULT_CHANNEL_THUMBNAIL_URL =
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop&q=60';
+
+function toChannelCard(dto) {
+  // 백엔드 ChannelListResponse: { channelId, title, description, category, subscriberCount }
+  return {
+    id: dto?.channelId,
+    name: dto?.title ?? '',
+    description: dto?.description ?? '',
+    category: CATEGORY_DISPLAY_NAME_BY_ENUM[dto?.category] ?? dto?.category ?? '',
+    subscriberCount: dto?.subscriberCount ?? 0,
+    thumbnailUrl: DEFAULT_CHANNEL_THUMBNAIL_URL,
+    creatorName: '', // 백엔드 목록 응답에 creatorName/thumbnail이 없어 임시값
+  };
+}
 
 export function HomePage({ onNavigate }) {
   const [selectedCategory, setSelectedCategory] = React.useState('all');
-  const [newContents, setNewContents] = React.useState([]);
+  const [channels, setChannels] = React.useState([]);
   const [trendingChannels, setTrendingChannels] = React.useState([]);
-  const [filteredChannels, setFilteredChannels] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
+  const [loadingChannels, setLoadingChannels] = React.useState(true);
+  const [channelError, setChannelError] = React.useState(null);
 
-  const categories = [
-    { id: 'all', name: '전체' },
-    { id: '예술', name: '예술' },
-    { id: '교육', name: '교육' },
-    { id: '음악', name: '음악' },
-    { id: '건강', name: '건강' },
-    { id: '요리', name: '요리' },
-    { id: '비즈니스', name: '비즈니스' }
-  ];
+  const newContents = mockContents.slice(0, 4);
 
-  // 콘텐츠 목록 로드
+  // 인기 채널
   React.useEffect(() => {
-    const fetchData = async () => {
+    let cancelled = false;
+
+    const fetchTrending = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        // 최신 콘텐츠 조회 (생성일 기준 내림차순, 최대 4개)
-        const contentsResponse = await getContents({
-          page: 0,
-          size: 4,
-          sort: 'createdAt,DESC'
-        });
-        
-        // Page 객체에서 content 배열 추출
-        const contents = contentsResponse?.content || contentsResponse || [];
-        setNewContents(contents);
-
-        // 채널 목록 조회
-        try {
-          const channelsResponse = await getChannels();
-          const channels = Array.isArray(channelsResponse) ? channelsResponse : [];
-          setTrendingChannels(channels.slice(0, 6));
-          setFilteredChannels(channels);
-        } catch (err) {
-          console.warn('채널 목록 조회 실패, mock 데이터 사용:', err);
-          // 채널 API 실패 시 mock 데이터 사용
-          setTrendingChannels(mockChannels.slice(0, 6));
-          setFilteredChannels(mockChannels);
-        }
-      } catch (err) {
-        console.error('데이터 로딩 실패:', err);
-        setError(err.message || '데이터를 불러오는데 실패했습니다.');
-        // 에러 발생 시 빈 배열로 설정
-        setNewContents([]);
-        setTrendingChannels(mockChannels.slice(0, 6));
-        setFilteredChannels(mockChannels);
-      } finally {
-        setLoading(false);
+        const page = await getChannels({ sort: 'popular', size: 6 });
+        const items = (page?.content ?? []).map(toChannelCard).filter((c) => c.id != null);
+        if (!cancelled) setTrendingChannels(items);
+      } catch (e) {
+        // 인기 섹션은 실패해도 전체 화면을 막지 않음
+        if (!cancelled) setTrendingChannels([]);
       }
     };
 
-    fetchData();
+    fetchTrending();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // 카테고리 변경 시 채널 필터링
+  // 카테고리(전체 포함) 채널 목록
   React.useEffect(() => {
-    if (selectedCategory === 'all') {
-      setFilteredChannels(trendingChannels.length > 0 ? trendingChannels : mockChannels);
-    } else {
-      const filtered = (trendingChannels.length > 0 ? trendingChannels : mockChannels)
-        .filter(c => c.category === selectedCategory);
-      setFilteredChannels(filtered);
-    }
-  }, [selectedCategory, trendingChannels]);
+    let cancelled = false;
 
-  if (loading) {
-    return <div className="text-center py-12">로딩 중...</div>;
-  }
+    const fetchChannels = async () => {
+      try {
+        setLoadingChannels(true);
+        setChannelError(null);
 
-  if (error && newContents.length === 0) {
-    return <div className="text-center py-12 text-red-600">오류: {error}</div>;
-  }
+        const params = { size: 50 };
+        if (selectedCategory && selectedCategory !== 'all') {
+          params.category = selectedCategory; // 백엔드는 enum 문자열을 기대
+        }
+
+        const page = await getChannels(params);
+        const items = (page?.content ?? []).map(toChannelCard).filter((c) => c.id != null);
+        if (!cancelled) setChannels(items);
+      } catch (e) {
+        if (!cancelled) {
+          setChannels([]);
+          setChannelError(e?.message || '채널 목록을 불러오지 못했습니다.');
+        }
+      } finally {
+        if (!cancelled) setLoadingChannels(false);
+      }
+    };
+
+    fetchChannels();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategory]);
 
   return (
     <div className="space-y-12 pb-12">
       <HeroBanner onNavigate={onNavigate} />
-      <TrendingChannels channels={trendingChannels} onNavigate={onNavigate} />
+      {trendingChannels.length > 0 && (
+        <TrendingChannels channels={trendingChannels} onNavigate={onNavigate} />
+      )}
       <NewContent contents={newContents} onNavigate={onNavigate} />
+      {loadingChannels && (
+        <div className="text-center -mt-6 text-gray-600">채널을 불러오는 중...</div>
+      )}
+      {channelError && (
+        <div className="text-center -mt-6 text-red-600">{channelError}</div>
+      )}
       <CategoryChannels
-        categories={categories}
+        categories={CATEGORY_OPTIONS}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
-        channels={filteredChannels}
+        channels={channels}
         onNavigate={onNavigate}
       />
     </div>

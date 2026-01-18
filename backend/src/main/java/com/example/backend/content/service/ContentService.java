@@ -6,6 +6,7 @@ import com.example.backend.content.dto.ContentCreateRequestDTO;
 import com.example.backend.content.dto.ContentListResponseDTO;
 import com.example.backend.content.dto.ContentResponseDTO;
 import com.example.backend.content.dto.ContentUpdateRequestDTO;
+import com.example.backend.content.dto.event.ContentPublishedEvent;
 import com.example.backend.content.entity.AccessType;
 import com.example.backend.content.entity.Content;
 import com.example.backend.content.entity.ContentType;
@@ -20,6 +21,7 @@ import com.example.backend.subscription.entity.SubscriptionStatus;
 import com.example.backend.subscription.repository.SubscriptionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ public class ContentService {
     private final ContentRepository contentRepository;
     private final ChannelRepository channelRepository;
     private final ContentLikeRepository contentLikeRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
     private final ContentViewRepository contentViewRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final OrderRepository orderRepository;
@@ -90,7 +93,13 @@ public class ContentService {
                 request.getPrice(),
                 now);
 
-        return ContentResponseDTO.from(contentRepository.save(content));
+        Content saveContent = contentRepository.save(content);
+
+        // 알림 이벤트 발행
+        applicationEventPublisher.publishEvent(
+                ContentPublishedEvent.create(saveContent.getId(), channel.getCreatorId()));
+
+        return ContentResponseDTO.from(saveContent);
     }
 
     /**
@@ -230,7 +239,7 @@ public class ContentService {
                 // 구독자만 접근 가능: 해당 채널에 대한 활성 구독이 있는지 확인
                 hasAccess = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
                         userId, content.getChannel().getId(), SubscriptionStatus.ACTIVE);
-            } else if (content.getAccessType() == AccessType.SINGLE_PURCHASE || 
+            } else if (content.getAccessType() == AccessType.SINGLE_PURCHASE ||
                        content.getAccessType() == AccessType.PARTIAL) {
                 // 구매한 사용자만 접근 가능: 해당 콘텐츠를 구매했는지 확인
                 hasAccess = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
@@ -422,7 +431,7 @@ public class ContentService {
         // 일반 유저는 구매한 콘텐츠 또는 구독한 채널의 콘텐츠에 접근 가능
         if ("USER".equals(userRole) || "ROLE_USER".equals(userRole)) {
             Long channelId = content.getChannel().getId();
-            
+
             if (accessType == AccessType.SUBSCRIBER_ONLY) {
                 // 구독자만 접근 가능: 해당 채널에 대한 활성 구독이 있는지 확인
                 boolean hasActiveSubscription = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
@@ -480,7 +489,7 @@ public class ContentService {
     public Page<ContentListResponseDTO> getRecentViewedContents(Long memberId, Pageable pageable) {
         // ContentView 조회 (lastViewedAt 기준 내림차순)
         Page<ContentView> contentViews = contentViewRepository.findByMemberIdOrderByLastViewedAtDesc(memberId, pageable);
-        
+
         // ContentView의 contentId로 Content 조회 및 DTO 변환
         List<ContentListResponseDTO> contentList = contentViews.getContent().stream()
                 .map(contentView -> {
@@ -503,7 +512,7 @@ public class ContentService {
                 })
                 .filter(content -> content != null) // null 제거 (삭제되었거나 게시되지 않은 콘텐츠)
                 .toList();
-        
+
         // 필터링된 결과를 Page로 변환
         return new org.springframework.data.domain.PageImpl<>(
                 contentList,
@@ -526,7 +535,10 @@ public class ContentService {
             if (!content.isPublished()) {
                 content.publish();
                 contentRepository.save(content);
-                // TODO: 추후 알림 기능 추가 시 여기에 알림 로직 추가
+                // 알림 이벤트 발행
+                applicationEventPublisher.publishEvent(
+                        ContentPublishedEvent.create(content.getId(), content.getChannel().getCreatorId())
+                );
             }
         }
     }

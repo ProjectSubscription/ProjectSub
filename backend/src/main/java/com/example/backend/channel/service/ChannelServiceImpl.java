@@ -30,6 +30,13 @@ public class ChannelServiceImpl implements ChannelService {
     //채널 생성
     @Override
     public void createChannel(Long creatorId, ChannelCreateRequest request) {
+        if (creatorId == null || request == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        if (request.getTitle() == null || request.getCategory() == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         if (channelRepository.findOneByCreatorId(creatorId).isPresent()) {
             throw new BusinessException(ErrorCode.CHANNEL_ALREADY_EXISTS);
         }
@@ -40,20 +47,28 @@ public class ChannelServiceImpl implements ChannelService {
                 request.getDescription(),
                 request.getCategory()
         );
+
         channelRepository.save(channel);
     }
 
     //채널 수정
     @Override
-    public void updateChannel(
-            Long channelId,
-            Long creatorId,
-            ChannelUpdateRequest request
-    ) {
+    public void updateChannel(Long channelId, Long creatorId, ChannelUpdateRequest request) {
+        if (channelId == null || creatorId == null || request == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+        if (request.getTitle() == null || request.getCategory() == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         channelValidator.validateOwner(creatorId, channelId);
 
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
+
+        if (!channel.isActive()) {
+            throw new BusinessException(ErrorCode.CHANNEL_INACTIVE);
+        }
 
         channel.update(
                 request.getTitle(),
@@ -65,10 +80,18 @@ public class ChannelServiceImpl implements ChannelService {
     //채널 비활성화
     @Override
     public void deactivateChannel(Long channelId, Long creatorId) {
+        if (channelId == null || creatorId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         channelValidator.validateOwner(creatorId, channelId);
 
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
+
+        if (!channel.isActive()) {
+            throw new BusinessException(ErrorCode.CHANNEL_INACTIVE);
+        }
 
         channel.deactivate();
     }
@@ -77,6 +100,10 @@ public class ChannelServiceImpl implements ChannelService {
     @Override
     @Transactional(readOnly = true)
     public Channel getMyChannel(Long creatorId) {
+        if (creatorId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         return channelRepository.findOneByCreatorId(creatorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
     }
@@ -84,12 +111,17 @@ public class ChannelServiceImpl implements ChannelService {
     //채널 상세 조회 (channelId 기준)
     @Override
     @Transactional(readOnly = true)
-    public ChannelDetailResponse getChannelDetail(
-            Long channelId,
-            Long memberId
-    ) {
-        Channel channel = channelRepository.findByIdAndIsActiveTrue(channelId)
+    public ChannelDetailResponse getChannelDetail(Long channelId, Long memberId) {
+        if (channelId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
+
+        if (!channel.isActive()) {
+            throw new BusinessException(ErrorCode.CHANNEL_INACTIVE);
+        }
 
         boolean subscribed = memberId != null &&
                 subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
@@ -98,10 +130,9 @@ public class ChannelServiceImpl implements ChannelService {
                         SubscriptionStatus.ACTIVE
                 );
 
-        int subscriberCount =
-                subscriptionRepository
-                        .findByChannelIdAndStatus(channelId, SubscriptionStatus.ACTIVE)
-                        .size();
+        int subscriberCount = subscriptionRepository
+                .findByChannelIdAndStatus(channelId, SubscriptionStatus.ACTIVE)
+                .size();
 
         return new ChannelDetailResponse(
                 channel.getTitle(),
@@ -114,12 +145,17 @@ public class ChannelServiceImpl implements ChannelService {
     //채널 상세 조회 (creatorId + memberId 기준 )
     @Override
     @Transactional(readOnly = true)
-    public ChannelDetailResponse getChannelByCreator(
-            Long creatorId,
-            Long memberId
-    ) {
+    public ChannelDetailResponse getChannelByCreator(Long creatorId, Long memberId) {
+        if (creatorId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         Channel channel = channelRepository.findOneByCreatorId(creatorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
+
+        if (!channel.isActive()) {
+            throw new BusinessException(ErrorCode.CHANNEL_INACTIVE);
+        }
 
         boolean subscribed = memberId != null &&
                 subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
@@ -128,10 +164,9 @@ public class ChannelServiceImpl implements ChannelService {
                         SubscriptionStatus.ACTIVE
                 );
 
-        int subscriberCount =
-                subscriptionRepository
-                        .findByChannelIdAndStatus(channel.getId(), SubscriptionStatus.ACTIVE)
-                        .size();
+        int subscriberCount = subscriptionRepository
+                .findByChannelIdAndStatus(channel.getId(), SubscriptionStatus.ACTIVE)
+                .size();
 
         return new ChannelDetailResponse(
                 channel.getTitle(),
@@ -145,6 +180,10 @@ public class ChannelServiceImpl implements ChannelService {
     @Override
     @Transactional(readOnly = true)
     public Channel getChannelByCreatorId(Long creatorId) {
+        if (creatorId == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         return channelRepository.findOneByCreatorId(creatorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
     }
@@ -152,10 +191,11 @@ public class ChannelServiceImpl implements ChannelService {
     // 채널 목록 조회
     @Override
     @Transactional(readOnly = true)
-    public Page<ChannelListResponse> getChannelList(
-            ChannelCategory category,
-            Pageable pageable
-    ) {
+    public Page<ChannelListResponse> getChannelList(ChannelCategory category, Pageable pageable) {
+        if (pageable == null) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
         Page<Channel> channels;
 
         if (category == null) {
