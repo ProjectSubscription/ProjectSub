@@ -100,10 +100,12 @@ public enum ErrorCode {
     /* ===== Content Review ===== */
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 콘텐츠에 대한 리뷰를 작성했습니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
+    REVIEW_ACCESS_DENIED(HttpStatus.FORBIDDEN, "리뷰를 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다."),
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다."),
 
     /* ===== Content Review Comment ===== */
-    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
+    COMMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "댓글을 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다.");
 
     private final HttpStatus status;
     private final String message;
