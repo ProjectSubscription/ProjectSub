@@ -4,97 +4,13 @@ import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { getMyInfo, logout } from '@/app/lib/api';
-import { UserProvider } from '@/app/lib/UserContext';
+import { UserProvider, useUser } from '@/components/contexts/UserContext';
 
-export function ClientLayout({ children }) {
-  const [currentUser, setCurrentUser] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
+// ClientLayout 내부 컴포넌트 (useUser 훅 사용)
+function ClientLayoutContent({ children }) {
+  const { currentUser, loading, handleLogout } = useUser();
   const pathname = usePathname();
   const router = useRouter();
-
-  // 사용자 정보 로드 및 정규화 함수
-  const loadUser = React.useCallback(async () => {
-    try {
-      const user = await getMyInfo();
-      // 백엔드 응답을 일관된 구조로 정규화
-      // roles는 Set<Role>이므로 배열로 변환하고, role도 계산
-      const normalizedUser = {
-        ...user,
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname || user.name,
-        name: user.nickname || user.name,
-        roles: user.roles ? (Array.isArray(user.roles) ? user.roles : Array.from(user.roles)) : [],
-        // roles에서 주요 role 추출 (우선순위: ADMIN > CREATOR > USER)
-        role: user.roles 
-          ? (Array.isArray(user.roles) ? user.roles : Array.from(user.roles)).find(r => 
-              r === 'ROLE_ADMIN' || r === 'ADMIN'
-            ) ? 'ADMIN'
-            : (Array.isArray(user.roles) ? user.roles : Array.from(user.roles)).find(r => 
-                r === 'ROLE_CREATOR' || r === 'CREATOR'
-              ) ? 'CREATOR'
-            : 'USER'
-          : 'USER',
-        birthYear: user.birthYear,
-        gender: user.gender,
-        creatorStatus: user.creatorStatus || 'NONE'
-      };
-      setCurrentUser(normalizedUser);
-      return normalizedUser;
-    } catch (error) {
-      // 인증되지 않은 사용자 또는 서버 오류
-      console.log('사용자 정보 로드 실패:', error.message);
-      setCurrentUser(null);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // 사용자 정보 로드 (경로 변경 시에도 다시 로드)
-  React.useEffect(() => {
-    loadUser();
-  }, [pathname, loadUser]); // pathname 변경 시 사용자 정보 다시 로드
-
-  const handleLogout = async () => {
-    try {
-      console.log('로그아웃 시작...');
-      
-      // 로그아웃 API 호출
-      await logout();
-      console.log('✅ 로그아웃 API 호출 성공 - 백엔드 세션 무효화 완료');
-      
-      // 사용자 정보 즉시 초기화 (Header와 Sidebar 모두 동기화)
-      setCurrentUser(null);
-      setLoading(false);
-      console.log('✅ 사용자 정보 상태 초기화 완료');
-      
-      // 세션이 제대로 삭제되었는지 확인
-      try {
-        const userCheck = await getMyInfo();
-        console.warn('⚠️ 경고: 로그아웃 후에도 사용자 정보가 남아있음:', userCheck);
-        // 세션이 남아있다면 강제로 초기화
-        setCurrentUser(null);
-      } catch (error) {
-        // 예상된 에러: 인증되지 않은 사용자 (정상)
-        console.log('✅ 세션 삭제 확인됨: 인증되지 않은 사용자 (정상)');
-      }
-      
-      // 페이지 완전히 새로고침하여 UI 업데이트 및 세션 쿠키 확인
-      console.log('✅ 페이지 새로고침하여 UI 업데이트...');
-      window.location.href = '/';
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-      alert('로그아웃 중 오류가 발생했습니다. 다시 시도해주세요.');
-    }
-  };
-
-  // 사용자 정보 새로고침 함수 (외부에서 호출 가능)
-  const refreshUser = React.useCallback(async () => {
-    setLoading(true);
-    await loadUser();
-  }, [loadUser]);
 
   // 페이지 경로 매핑 (기존 문자열 기반 라우팅을 Next.js 경로로 변환)
   const getPathFromPage = (page) => {
@@ -108,20 +24,20 @@ export function ClientLayout({ children }) {
       'payment': '/payment',
       'payment-success': '/payment/success',
       'mypage': '/mypage',
-      'subscriptions-me': '/subscriptions/me',
+      'my-subscriptions': '/my-subscriptions',
       'my-purchases': '/my-purchases',
       'my-reviews': '/my-reviews',
       'my-coupons': '/my-coupons',
       'creator-apply': '/creator/apply',
       'creator-dashboard': '/creator/dashboard',
       'creator-channel': '/creator/channel',
-      'creator-subscription': '/creator/subscription',
       'creator-content': '/creator/content',
       'creator-content-new': '/creator/content/new',
       'creator-settlement': '/creator/settlement',
       'admin-applications': '/admin/applications',
       'admin-payments': '/admin/payments',
       'admin-settlements': '/admin/settlements',
+      'admin-coupons': '/admin/coupons',
       'password-reset-request': '/password-reset-request',
       'password-reset': (params) => `/password-reset?token=${params?.token || ''}`,
     };
@@ -155,38 +71,43 @@ export function ClientLayout({ children }) {
 
   if (isPublicPage) {
     return (
-      <UserProvider currentUser={currentUser} loading={loading} refreshUser={refreshUser}>
-        <div className="min-h-screen bg-white flex flex-col">
-          <Header
-            currentUser={currentUser}
-            currentPage={pathname}
-            onNavigate={handleNavigate}
-            onLogout={handleLogout}
-          />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-      </UserProvider>
-    );
-  }
-
-  // Authenticated pages
-  return (
-    <UserProvider currentUser={currentUser} loading={loading} refreshUser={refreshUser}>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-white flex flex-col">
         <Header
           currentUser={currentUser}
           currentPage={pathname}
           onNavigate={handleNavigate}
           onLogout={handleLogout}
         />
-        <main className="flex-1 overflow-x-hidden">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {children}
-          </div>
-        </main>
+        <main className="flex-1">{children}</main>
         <Footer />
       </div>
+    );
+  }
+
+  // Authenticated pages
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header
+        currentUser={currentUser}
+        currentPage={pathname}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
+      <main className="flex-1 overflow-x-hidden">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+// ClientLayout 최상위 컴포넌트 (UserProvider로 감싸기)
+export function ClientLayout({ children }) {
+  return (
+    <UserProvider>
+      <ClientLayoutContent>{children}</ClientLayoutContent>
     </UserProvider>
   );
 }

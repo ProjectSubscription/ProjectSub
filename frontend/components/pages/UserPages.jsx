@@ -1,12 +1,166 @@
 import React from 'react';
-import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell } from 'lucide-react';
+import {
+    CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell,
+    Ticket
+} from 'lucide-react';
 import { PageRoute } from '@/app/types';
 import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
 import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember, getNotificationSettings, updateNotificationSettings } from '@/app/lib/api';
-import { useUser } from '@/app/lib/UserContext';
 
-// 구독 관련 컴포넌트는 subscription 폴더로 분리됨
-export { MySubscriptionsPage } from '../subscription/MySubscriptionsPage';
+export function MySubscriptionsPage({ userId, onNavigate }) {
+  const userSubs = mockUserSubscriptions.filter(s => s.userId === userId);
+
+  return (
+    <div className="space-y-6 pb-12">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">내 구독</h1>
+        <p className="text-gray-600">구독 중인 채널을 관리하세요</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <CreditCard className="w-5 h-5 text-blue-600" />
+            </div>
+            <p className="text-sm text-gray-600">활성 구독</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">
+            {userSubs.filter(s => s.status === 'ACTIVE').length}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            </div>
+            <p className="text-sm text-gray-600">총 구독 수</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{userSubs.length}</p>
+        </div>
+        <div className="bg-white rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-5 h-5 text-orange-600" />
+            </div>
+            <p className="text-sm text-gray-600">만료 예정</p>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">
+            {userSubs.filter(s => s.status === 'ACTIVE' &&
+                // eslint-disable-next-line react-hooks/purity
+              new Date(s.endDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            ).length}
+          </p>
+        </div>
+      </div>
+
+      {/* Active Subscriptions */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">활성 구독</h2>
+        <div className="space-y-4">
+          {userSubs.filter(s => s.status === 'ACTIVE').map(sub => {
+            const channel = mockChannels.find(c => c.id === sub.channelId);
+            const plan = mockSubscriptionPlans.find(p => p.id === sub.planId);
+            if (!channel || !plan) return null;
+
+            return (
+              <div key={sub.id} className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex gap-4 flex-1">
+                    <img
+                      src={channel.thumbnailUrl}
+                      alt={channel.name}
+                      className="w-24 h-24 rounded-lg object-cover"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-900 mb-1">{channel.name}</h3>
+                      <p className="text-sm text-gray-600 mb-3">{channel.creatorName}</p>
+                      <div className="flex flex-wrap gap-4 text-sm">
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Calendar className="w-4 h-4" />
+                          <span>시작: {sub.startDate}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>만료: {sub.endDate}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-3">
+                      활성
+                    </span>
+                    <p className="text-sm text-gray-600 mb-1">{plan.name}</p>
+                    <p className="font-bold text-gray-900">{plan.price.toLocaleString()}원</p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200 flex gap-3">
+                  <button
+                    onClick={() => onNavigate('channel-detail', { channelId: channel.id })}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    채널 보기
+                  </button>
+                  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                    구독 취소
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Expired Subscriptions */}
+      {userSubs.filter(s => s.status === 'EXPIRED').length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">만료된 구독</h2>
+          <div className="space-y-4">
+            {userSubs.filter(s => s.status === 'EXPIRED').map(sub => {
+              const channel = mockChannels.find(c => c.id === sub.channelId);
+              const plan = mockSubscriptionPlans.find(p => p.id === sub.planId);
+              if (!channel || !plan) return null;
+
+              return (
+                <div key={sub.id} className="bg-white rounded-xl p-6 shadow-sm opacity-75">
+                  <div className="flex items-start justify-between">
+                    <div className="flex gap-4 flex-1">
+                      <img
+                        src={channel.thumbnailUrl}
+                        alt={channel.name}
+                        className="w-24 h-24 rounded-lg object-cover grayscale"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 mb-1">{channel.name}</h3>
+                        <p className="text-sm text-gray-600 mb-3">{channel.creatorName}</p>
+                        <div className="text-sm text-gray-500">
+                          만료일: {sub.endDate}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+                      만료됨
+                    </span>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => onNavigate('channel-detail', { channelId: channel.id })}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      다시 구독하기
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // My Creator Applications Page
 export function MyCreatorApplicationsPage({ userId, onNavigate }) {
@@ -233,13 +387,15 @@ export function MyCreatorApplicationsPage({ userId, onNavigate }) {
 
 // Simple MyPage component
 export function MyPage({ userId, onNavigate }) {
-  const { currentUser, refreshUser } = useUser();
   const [userInfo, setUserInfo] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [editingField, setEditingField] = React.useState(null);
   const [formData, setFormData] = React.useState({});
   const [error, setError] = React.useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [notificationSettings, setNotificationSettings] = React.useState(null);
+  const [loadingSettings, setLoadingSettings] = React.useState(true);
+  const [savingSettings, setSavingSettings] = React.useState(false);
 
   const loadUserInfo = React.useCallback(async () => {
     try {
@@ -253,16 +409,49 @@ export function MyPage({ userId, onNavigate }) {
     }
   }, []);
 
-  // Context의 currentUser를 기반으로 userInfo 초기화
   React.useEffect(() => {
-    if (currentUser) {
-      setUserInfo(currentUser);
-      setLoading(false);
-    } else {
-      // Context에 없으면 직접 조회 (로그인하지 않은 경우)
-      loadUserInfo();
+    loadUserInfo();
+    loadNotificationSettings();
+  }, [loadUserInfo]);
+
+  const loadNotificationSettings = async () => {
+    try {
+      setLoadingSettings(true);
+      const settings = await getNotificationSettings();
+      setNotificationSettings(settings);
+    } catch (err) {
+      console.error('알림 설정 조회 오류:', err);
+    } finally {
+      setLoadingSettings(false);
     }
-  }, [currentUser, loadUserInfo]);
+  };
+
+  const handleNotificationSettingChange = async (field, value) => {
+    try {
+      setSavingSettings(true);
+      // 현재 설정을 가져오고, 변경할 필드만 업데이트
+      const currentSettings = notificationSettings || {
+        contentNotify: false,
+        newsletterNotify: false,
+        eventNotify: false,
+      };
+      
+      // 3가지 설정을 모두 포함한 객체 생성
+      const updatedSettings = {
+        contentNotify: field === 'contentNotify' ? value : currentSettings.contentNotify,
+        newsletterNotify: field === 'newsletterNotify' ? value : currentSettings.newsletterNotify,
+        eventNotify: field === 'eventNotify' ? value : currentSettings.eventNotify,
+      };
+      
+      await updateNotificationSettings(updatedSettings);
+      setNotificationSettings(updatedSettings);
+    } catch (err) {
+      alert(err.message || '알림 설정 변경에 실패했습니다.');
+      console.error('알림 설정 변경 오류:', err);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleEdit = (field) => {
     setEditingField(field);
@@ -299,18 +488,18 @@ export function MyPage({ userId, onNavigate }) {
         result = await changeNickname(formData.newNickname);
       }
 
-      // 성공 시 Context의 사용자 정보 새로고침 (Header도 자동 업데이트됨)
-      if (refreshUser) {
-        await refreshUser();
-      }
-      
-      // 로컬 userInfo도 업데이트
+      // 성공 시 사용자 정보 다시 로드
       const updatedInfo = await getMyInfo();
       setUserInfo(updatedInfo);
       setEditingField(null);
       setFormData({});
       
-      alert('정보가 변경되었습니다.');
+      // 닉네임 변경 시 페이지 새로고침하여 헤더의 닉네임도 업데이트
+      if (field === 'nickname') {
+        window.location.reload();
+      } else {
+        alert('정보가 변경되었습니다.');
+      }
     } catch (err) {
       setError(err.message || '정보 변경에 실패했습니다.');
       console.error('정보 변경 오류:', err);
@@ -470,6 +659,71 @@ export function MyPage({ userId, onNavigate }) {
         </div>
       </div>
 
+      {/* 알림 설정 섹션 */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Bell className="w-6 h-6 text-gray-600" />
+          <h2 className="text-xl font-bold text-gray-900">알림 수신 설정</h2>
+        </div>
+
+        {loadingSettings ? (
+          <div className="py-4 text-center">
+            <p className="text-gray-600">로딩 중...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* 콘텐츠 알림 */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-200">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-900">새로운 콘텐츠 알림</label>
+                <p className="text-xs text-gray-500 mt-1">구독한 채널의 새 콘텐츠 알림을 받습니다</p>
+              </div>
+              <button
+                onClick={() => handleNotificationSettingChange('contentNotify', !notificationSettings?.contentNotify)}
+                disabled={savingSettings}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  notificationSettings?.contentNotify ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notificationSettings?.contentNotify ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 뉴스레터 알림 (백엔드 미구현 - 비활성화) */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-200 opacity-50">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-900">뉴스레터 알림</label>
+                <p className="text-xs text-gray-500 mt-1">뉴스레터 및 업데이트 알림을 받습니다</p>
+              </div>
+              <button
+                disabled
+                className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 cursor-not-allowed"
+              >
+                <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-1" />
+              </button>
+            </div>
+
+            {/* 이벤트 알림 (백엔드 미구현 - 비활성화) */}
+            <div className="flex items-center justify-between py-3 opacity-50">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-900">이벤트 알림</label>
+                <p className="text-xs text-gray-500 mt-1">이벤트 및 프로모션 알림을 받습니다</p>
+              </div>
+              <button
+                disabled
+                className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 cursor-not-allowed"
+              >
+                <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-1" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 기타 메뉴 */}
       <div className="grid md:grid-cols-2 gap-6">
         <button
@@ -496,6 +750,14 @@ export function MyPage({ userId, onNavigate }) {
           <h3 className="text-xl font-bold text-gray-900 mb-2">크리에이터 신청 이력</h3>
           <p className="text-gray-600">신청 내역 및 승인 상태 확인</p>
         </button>
+          <button
+              onClick={() => onNavigate('my-coupons', {})}
+              className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow text-left"
+          >
+              <Ticket className="w-8 h-8 text-orange-600 mb-3" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">다운받은 쿠폰</h3>
+              <p className="text-gray-600">사용가능한 쿠폰 보기</p>
+          </button>
       </div>
 
       {/* 회원 탈퇴 섹션 */}

@@ -3,9 +3,11 @@
 import { LoginPage } from '@/components/pages/LoginPage';
 import { useRouter } from 'next/navigation';
 import { oauthLogin, login } from '../lib/api';
+import { useUser } from '@/components/contexts/UserContext';
 
 export default function Login() {
   const router = useRouter();
+  const { refreshUser } = useUser();
 
   const handleLogin = async (email, password) => {
     try {
@@ -14,8 +16,9 @@ export default function Login() {
       
       // 로그인 성공 확인
       if (result && result.success) {
+        // 사용자 정보 즉시 새로고침하여 헤더에 반영
+        await refreshUser();
         // 로그인 성공 시 홈으로 이동
-        // pathname 변경으로 ClientLayout의 useEffect가 다시 실행되어 사용자 정보 로드됨
         router.push('/home');
       } else {
         throw new Error('로그인에 실패했습니다.');

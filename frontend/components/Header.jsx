@@ -14,7 +14,7 @@ import {
   DollarSign,
   Users,
   FileText,
-  Package
+  Tag
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { getUnreadNotificationCount, subscribeNotifications } from '@/app/lib/api';
@@ -193,7 +193,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo & Menu */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => onNavigate(currentUser ? 'home' : 'landing')}
@@ -277,7 +277,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                       <User className="w-5 h-5 text-white" />
                     </div>
                     <span className="hidden sm:inline text-sm font-medium text-gray-700">
-                      {currentUser?.nickname || currentUser?.name || '사용자'}
+                      {currentUser.nickname || currentUser.name}
                     </span>
                     <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
@@ -290,18 +290,19 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                       />
                       <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                         <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">
-                            {currentUser?.nickname || currentUser?.name || '사용자'}
-                          </p>
-                          <p className="text-xs text-gray-500">{currentUser?.email || ''}</p>
+                          <p className="text-sm font-medium text-gray-900">{currentUser.nickname || currentUser.name}</p>
+                          <p className="text-xs text-gray-500">{currentUser.email}</p>
                           <p className="text-xs text-blue-600 mt-1">
-                            {getDisplayRole(currentUser?.roles)}
+                            {getDisplayRole(currentUser.roles)}
                           </p>
                         </div>
 
-                        {/* 일반 사용자 메뉴 */}
-                        {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_CREATOR') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && (
+                        {/* 일반 유저 메뉴 (모든 사용자가 볼 수 있음, ADMIN은 제외) */}
+                        {!hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
+                            <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                              사용자
+                            </div>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
@@ -309,37 +310,41 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <User className="w-4 h-4 text-gray-700" />
+                              <User className="w-4 h-4" />
                               마이페이지
                             </button>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
-                                onNavigate('subscriptions-me');
+                                onNavigate('my-subscriptions');
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <CreditCard className="w-4 h-4 text-gray-700" />
+                              <CreditCard className="w-4 h-4" />
                               내 구독
                             </button>
-                            {currentUser.creatorStatus !== 'APPROVED' && (
+                            {/* 크리에이터가 아니고, 크리에이터 신청 상태가 APPROVED가 아니면 신청 버튼 표시 */}
+                            {!hasRole(currentUser.roles, 'ROLE_CREATOR') && currentUser.creatorStatus !== 'APPROVED' && (
                               <button
                                 onClick={() => {
                                   setShowUserMenu(false);
                                   onNavigate('creator-apply');
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3 text-blue-600"
                               >
-                                <Tv className="w-4 h-4 text-gray-700" />
+                                <Tv className="w-4 h-4" />
                                 판매자 신청
                               </button>
                             )}
                           </>
                         )}
 
-                        {/* 크리에이터 메뉴 */}
-                        {hasRole(currentUser.roles, 'ROLE_CREATOR') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && (
+                        {/* 크리에이터 메뉴 (ROLE_CREATOR가 있으면 표시) */}
+                        {hasRole(currentUser.roles, 'ROLE_CREATOR') && (
                           <>
+                            <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                              크리에이터
+                            </div>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
@@ -347,7 +352,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <LayoutDashboard className="w-4 h-4 text-gray-700" />
+                              <LayoutDashboard className="w-4 h-4" />
                               대시보드
                             </button>
                             <button
@@ -357,7 +362,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <Tv className="w-4 h-4 text-gray-700" />
+                              <Tv className="w-4 h-4" />
                               채널 관리
                             </button>
                             <button
@@ -367,17 +372,17 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <Video className="w-4 h-4 text-gray-700" />
+                              <Video className="w-4 h-4" />
                               콘텐츠 관리
                             </button>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
-                                onNavigate('creator-subscription');
+                                onNavigate('my-subscriptions');
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <Package className="w-4 h-4 text-gray-700" />
+                              <CreditCard className="w-4 h-4" />
                               구독 관리
                             </button>
                             <button
@@ -387,7 +392,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <DollarSign className="w-4 h-4 text-gray-700" />
+                              <DollarSign className="w-4 h-4" />
                               정산 관리
                             </button>
                             <button
@@ -397,15 +402,18 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <CreditCard className="w-4 h-4 text-gray-700" />
-                              결제 내역
+                              <FileText className="w-4 h-4" />
+                              결제내역
                             </button>
                           </>
                         )}
 
-                        {/* 관리자 메뉴 */}
+                        {/* 관리자 메뉴 (ROLE_ADMIN이 있으면 표시) */}
                         {hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
+                            <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                              관리자
+                            </div>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
@@ -413,7 +421,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <Users className="w-4 h-4 text-gray-700" />
+                              <Users className="w-4 h-4" />
                               판매자 신청 관리
                             </button>
                             <button
@@ -423,8 +431,28 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
-                              <FileText className="w-4 h-4 text-gray-700" />
+                              <FileText className="w-4 h-4" />
                               정산 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('admin-payments');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              결제 내역
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('admin-coupons');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <Tag className="w-4 h-4" />
+                              쿠폰 관리
                             </button>
                           </>
                         )}
