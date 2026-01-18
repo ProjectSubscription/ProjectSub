@@ -13,6 +13,8 @@ public class ChannelUpdateRequest {
 
     private String description;
 
+    private String thumbnailUrl;
+
     @NotNull
     private ChannelCategory category;
 }

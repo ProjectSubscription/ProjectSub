@@ -55,7 +55,7 @@ public class CreatorService {
 
         ChannelCreateRequest channelCreateRequest =
                 ChannelCreateRequest.create(dto.getChannelName(), dto.getChannelDescription(),
-                dto.getCategory());
+                null, dto.getCategory());
 
         // 채널도 같이 생성
         channelService.createChannel(saveCreator.getId(), channelCreateRequest);

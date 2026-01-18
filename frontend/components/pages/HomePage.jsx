@@ -5,39 +5,17 @@ import { HeroBanner } from '@/components/home/HeroBanner';
 import { TrendingChannels } from '@/components/home/TrendingChannels';
 import { NewContent } from '@/components/home/NewContent';
 import { CategoryChannels } from '@/components/home/CategoryChannels';
-import { getChannels, getContents } from '@/app/lib/api';
+import { getChannels, getContents, getChannelCategories } from '@/app/lib/api';
 
-const CATEGORY_OPTIONS = [
-  { id: 'all', name: '전체' },
-  { id: 'ECONOMY_BUSINESS', name: '경제/비즈니스' },
-  { id: 'FINANCE', name: '재테크' },
-  { id: 'REAL_ESTATE', name: '부동산' },
-  { id: 'BOOK_PUBLISHING', name: '책/작가/출판사' },
-  { id: 'HOBBY_PRACTICAL', name: '취미/실용' },
-  { id: 'EDUCATION', name: '교육/학습' },
-  { id: 'SELF_DEVELOPMENT', name: '자기개발/취업' },
-  { id: 'CULTURE_ART', name: '문화/예술' },
-  { id: 'TREND_LIFE', name: '트렌드/라이프' },
-];
-
-const CATEGORY_DISPLAY_NAME_BY_ENUM = Object.fromEntries(
-  CATEGORY_OPTIONS
-    .filter((c) => c.id !== 'all')
-    .map((c) => [c.id, c.name])
-);
-
-const DEFAULT_CHANNEL_THUMBNAIL_URL =
-  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&auto=format&fit=crop&q=60';
-
-function toChannelCard(dto) {
+function toChannelCard(dto, categoryNameById) {
   // 백엔드 ChannelListResponse: { channelId, title, description, category, subscriberCount }
   return {
     id: dto?.channelId,
     name: dto?.title ?? '',
     description: dto?.description ?? '',
-    category: CATEGORY_DISPLAY_NAME_BY_ENUM[dto?.category] ?? dto?.category ?? '',
+    category: categoryNameById?.[dto?.category] ?? dto?.category ?? '',
     subscriberCount: dto?.subscriberCount ?? 0,
-    thumbnailUrl: DEFAULT_CHANNEL_THUMBNAIL_URL,
+    thumbnailUrl: dto?.thumbnailUrl ?? null,
     creatorName: '', // 백엔드 목록 응답에 creatorName/thumbnail이 없어 임시값
   };
 }
@@ -50,6 +28,36 @@ export function HomePage({ onNavigate }) {
   const [channelError, setChannelError] = React.useState(null);
   const [newContents, setNewContents] = React.useState([]);
   const [loadingContents, setLoadingContents] = React.useState(true);
+  const [categoryOptions, setCategoryOptions] = React.useState([{ id: 'all', name: '전체' }]);
+
+  const categoryNameById = React.useMemo(() => {
+    return Object.fromEntries(
+      categoryOptions
+        .filter((c) => c.id !== 'all')
+        .map((c) => [c.id, c.name])
+    );
+  }, [categoryOptions]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const fetchCategories = async () => {
+      try {
+        const categories = await getChannelCategories();
+        if (cancelled) return;
+        setCategoryOptions([{ id: 'all', name: '전체' }, ...(categories || [])]);
+      } catch {
+        if (!cancelled) {
+          setCategoryOptions([{ id: 'all', name: '전체' }]);
+        }
+      }
+    };
+
+    fetchCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 최신 콘텐츠
   React.useEffect(() => {
@@ -87,7 +95,9 @@ export function HomePage({ onNavigate }) {
     const fetchTrending = async () => {
       try {
         const page = await getChannels({ sort: 'popular', size: 6 });
-        const items = (page?.content ?? []).map(toChannelCard).filter((c) => c.id != null);
+        const items = (page?.content ?? [])
+          .map((dto) => toChannelCard(dto, categoryNameById))
+          .filter((c) => c.id != null);
         if (!cancelled) setTrendingChannels(items);
       } catch (e) {
         // 인기 섹션은 실패해도 전체 화면을 막지 않음
@@ -99,7 +109,7 @@ export function HomePage({ onNavigate }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [categoryNameById]);
 
   // 카테고리(전체 포함) 채널 목록
   React.useEffect(() => {
@@ -116,7 +126,9 @@ export function HomePage({ onNavigate }) {
         }
 
         const page = await getChannels(params);
-        const items = (page?.content ?? []).map(toChannelCard).filter((c) => c.id != null);
+        const items = (page?.content ?? [])
+          .map((dto) => toChannelCard(dto, categoryNameById))
+          .filter((c) => c.id != null);
         if (!cancelled) setChannels(items);
       } catch (e) {
         if (!cancelled) {
@@ -132,7 +144,7 @@ export function HomePage({ onNavigate }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedCategory]);
+  }, [selectedCategory, categoryNameById]);
 
   return (
     <div className="space-y-12 pb-12">
@@ -152,7 +164,7 @@ export function HomePage({ onNavigate }) {
         <div className="text-center -mt-6 text-red-600">{channelError}</div>
       )}
       <CategoryChannels
-        categories={CATEGORY_OPTIONS}
+        categories={categoryOptions}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         channels={channels}
