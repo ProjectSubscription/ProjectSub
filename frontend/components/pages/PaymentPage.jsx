@@ -3,20 +3,97 @@ import { PaymentItemInfo } from '@/components/payment/PaymentItemInfo';
 import { CouponSection } from '@/components/payment/CouponSection';
 import { PaymentMethod } from '@/components/payment/PaymentMethod';
 import { PaymentSummary } from '@/components/payment/PaymentSummary';
-import { mockSubscriptionPlans, mockContents, mockCoupons } from '@/app/mockData';
+import { mockSubscriptionPlans, mockCoupons } from '@/app/mockData';
+import { getContent, getChannel, getMyInfo } from '@/app/lib/api';
 import { useRouter } from 'next/navigation';
 
-export function PaymentPage({ type, itemId, onNavigate }) {
+export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   const router = useRouter();
   const [couponCode, setCouponCode] = React.useState('');
   const [appliedCoupon, setAppliedCoupon] = React.useState(null);
   const [paymentMethod, setPaymentMethod] = React.useState('card');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
+  const [item, setItem] = React.useState(null);
+  const [itemLoading, setItemLoading] = React.useState(true);
+  const [memberId, setMemberId] = React.useState(null);
 
-  const item = type === 'subscription'
-    ? mockSubscriptionPlans.find(p => p.id === itemId)
-    : mockContents.find(c => c.id === itemId);
+  // 현재 로그인한 사용자 정보 가져오기
+  React.useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const userInfo = await getMyInfo();
+        if (userInfo && userInfo.id) {
+          setMemberId(userInfo.id);
+        }
+      } catch (err) {
+        console.error('사용자 정보 로딩 실패:', err);
+        // 로그인하지 않은 경우 에러 표시하지 않고, 결제 시점에 체크
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  // 백엔드에서 아이템 정보 가져오기
+  React.useEffect(() => {
+    const fetchItem = async () => {
+      try {
+        setItemLoading(true);
+        if (type === 'content' && itemId) {
+          // 콘텐츠 정보 가져오기
+          const id = typeof itemId === 'string' ? parseInt(itemId, 10) : itemId;
+          const contentData = await getContent(id);
+          // PaymentItemInfo에 맞는 형식으로 변환
+          setItem({
+            id: contentData.id || contentData.contentId || id,
+            title: contentData.title,
+            description: contentData.description || contentData.body,
+            price: contentData.price || 0,
+            thumbnailUrl: contentData.mediaUrl || contentData.thumbnailUrl,
+            accessType: contentData.accessType,
+          });
+        } else if (type === 'subscription' && channelId) {
+          // 구독 정보 가져오기 (채널 정보에서)
+          const channelData = await getChannel(channelId);
+          // 구독 플랜 정보는 채널에서 가져오거나 별도 API 필요
+          // 일단 mockData 사용
+          const plan = mockSubscriptionPlans.find(p => p.id === itemId);
+          if (plan) {
+            setItem(plan);
+          } else {
+            // 채널 정보로 구독 플랜 생성
+            setItem({
+              id: channelId,
+              name: channelData.title || channelData.name,
+              description: channelData.description || '',
+              price: channelData.subscriptionPrice || 0,
+              thumbnailUrl: channelData.thumbnailUrl,
+            });
+          }
+        } else {
+          // fallback: mockData 사용
+          const plan = mockSubscriptionPlans.find(p => p.id === itemId);
+          if (plan) {
+            setItem(plan);
+          }
+        }
+      } catch (err) {
+        console.error('아이템 정보 로딩 실패:', err);
+        setError('결제 정보를 불러오는데 실패했습니다.');
+      } finally {
+        setItemLoading(false);
+      }
+    };
+
+    if (itemId) {
+      fetchItem();
+    }
+  }, [type, itemId, channelId]);
+
+  if (itemLoading) {
+    return <div className="text-center py-12">로딩 중...</div>;
+  }
 
   if (!item) {
     return <div className="text-center py-12">결제 정보를 찾을 수 없습니다.</div>;
@@ -76,11 +153,17 @@ export function PaymentPage({ type, itemId, onNavigate }) {
         discountAmount: appliedCoupon ? finalAmount : null, // 쿠폰 적용 시 할인된 가격, 미적용 시 null
       };
 
-      const response = await fetch('http://localhost:8080/api/orders', {
+      if (!memberId) {
+        throw new Error('로그인이 필요합니다.');
+      }
+
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+      const response = await fetch(`${API_BASE_URL}/api/orders`, {
         method: 'POST',
+        credentials: 'include', // 쿠키 포함 (세션 기반 인증)
         headers: {
           'Content-Type': 'application/json',
-          'User-Id': '1', // TODO: 실제 로그인한 사용자 ID로 교체 필요
+          'User-Id': memberId.toString(),
         },
         body: JSON.stringify(requestBody),
       });

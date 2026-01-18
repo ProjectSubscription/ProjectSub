@@ -40,7 +40,7 @@ export function ContentSidebar({ channel, relatedContents, onNavigate }) {
           {relatedContents.map((relatedContent) => (
             <div
               key={relatedContent.id}
-              onClick={() => onNavigate('content-detail', { contentId: relatedContent.id })}
+              onClick={() => window.location.href = `/contents/${relatedContent.id}`}
               className="flex gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
             >
               <img

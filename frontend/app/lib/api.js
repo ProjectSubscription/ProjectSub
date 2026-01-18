@@ -636,6 +636,20 @@ export async function unlikeContent(contentId) {
   return apiDelete(`/api/contents/${contentId}/like`);
 }
 
+/**
+ * 최근 본 콘텐츠 조회
+ */
+export async function getRecentViewedContents(params = {}) {
+  return apiGet('/api/contents/recent-viewed', params);
+}
+
+/**
+ * 채널의 대표 콘텐츠 조회
+ */
+export async function getFeaturedContents(channelId) {
+  return apiGet(`/api/contents/channels/${channelId}/featured`);
+}
+
 // ==================== 정산 ====================
 
 /**

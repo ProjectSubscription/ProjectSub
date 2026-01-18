@@ -39,19 +39,13 @@ export function ContentGrid({ contents, isSubscribed, onNavigate }) {
                 </div>
               )}
               <div className="absolute top-3 left-3">
-                {content.accessType === 'FREE' && (
+                {content.accessType === 'FREE' ? (
                   <span className="bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
                     무료
                   </span>
-                )}
-                {content.accessType === 'SUBSCRIPTION' && (
-                  <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    구독자 전용
-                  </span>
-                )}
-                {content.accessType === 'PAID' && (
+                ) : (
                   <span className="bg-purple-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    {content.price?.toLocaleString()}원
+                    유료
                   </span>
                 )}
               </div>
