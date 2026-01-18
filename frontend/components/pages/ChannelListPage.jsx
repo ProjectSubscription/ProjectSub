@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tv, Users, Search, Filter } from 'lucide-react';
-import { getChannels } from '@/app/lib/api';
+import { getChannels, getChannelCategories } from '@/app/lib/api';
 
 export function ChannelListPage({ onNavigate }) {
   const [channels, setChannels] = React.useState([]);
@@ -10,19 +10,7 @@ export function ChannelListPage({ onNavigate }) {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [page, setPage] = React.useState(0);
   const [totalPages, setTotalPages] = React.useState(0);
-  // 카테고리 목록
-  const categories = [
-    { id: 'all', name: '전체' },
-    { id: 'ECONOMY_BUSINESS', name: '경제/비즈니스' },
-    { id: 'FINANCE', name: '재테크' },
-    { id: 'REAL_ESTATE', name: '부동산' },
-    { id: 'BOOK_PUBLISHING', name: '책/작가/출판사' },
-    { id: 'HOBBY_PRACTICAL', name: '취미/실용' },
-    { id: 'EDUCATION', name: '교육/학습' },
-    { id: 'SELF_DEVELOPMENT', name: '자기개발/취업' },
-    { id: 'CULTURE_ART', name: '문화/예술' },
-    { id: 'TREND_LIFE', name: '트렌드/라이프' }
-  ];
+  const [categories, setCategories] = React.useState([{ id: 'all', name: '전체' }]);
 
   // 채널 목록 로드
   React.useEffect(() => {
@@ -54,6 +42,28 @@ export function ChannelListPage({ onNavigate }) {
 
     loadChannels();
   }, [selectedCategory, page]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const fetchCategories = async () => {
+      try {
+        const data = await getChannelCategories();
+        if (!cancelled) {
+          setCategories([{ id: 'all', name: '전체' }, ...(data || [])]);
+        }
+      } catch {
+        if (!cancelled) {
+          setCategories([{ id: 'all', name: '전체' }]);
+        }
+      }
+    };
+
+    fetchCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 검색 필터링
   const filteredChannels = channels.filter(channel => {
@@ -155,8 +165,18 @@ export function ChannelListPage({ onNavigate }) {
                   className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                 >
                   {/* 썸네일 */}
-                  <div className="w-full h-48 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg mb-4 flex items-center justify-center">
-                    <Tv className="w-16 h-16 text-white opacity-80" />
+                  <div className="w-full h-48 rounded-lg mb-4 overflow-hidden bg-gray-100 flex items-center justify-center">
+                    {channel.thumbnailUrl ? (
+                      <img
+                        src={channel.thumbnailUrl}
+                        alt={channel.title || channel.channelName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold">
+                        {(channel.title || channel.channelName || '?').slice(0, 1)}
+                      </div>
+                    )}
                   </div>
 
                   {/* 채널 정보 */}

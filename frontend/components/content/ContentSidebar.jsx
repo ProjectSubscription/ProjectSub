@@ -11,11 +11,17 @@ export function ContentSidebar({ channel, relatedContents, onNavigate }) {
           className="cursor-pointer"
         >
           <div className="flex items-center gap-3 mb-4">
-            <img
-              src={channel.thumbnailUrl}
-              alt={channel.name}
-              className="w-16 h-16 rounded-lg object-cover"
-            />
+            {channel.thumbnailUrl ? (
+              <img
+                src={channel.thumbnailUrl}
+                alt={channel.name}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-lg font-bold">
+                {channel.name?.slice(0, 1) || '?'}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <h4 className="font-bold text-gray-900 truncate">{channel.name}</h4>
               <p className="text-sm text-gray-500">{channel.creatorName}</p>
