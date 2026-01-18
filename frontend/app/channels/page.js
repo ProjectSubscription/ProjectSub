@@ -1,6 +1,6 @@
 'use client';
 
-import { HomePage } from '@/components/pages/HomePage';
+import { ChannelListPage } from '@/components/pages/ChannelListPage';
 import { useRouter } from 'next/navigation';
 
 export default function ChannelsPage() {
@@ -8,6 +8,7 @@ export default function ChannelsPage() {
 
   const handleNavigate = (page, params) => {
     const routeMap = {
+      'channels': '/channels',
       'channel-detail': (params) => `/channels/${params?.channelId || ''}`,
       'content-detail': (params) => `/contents/${params?.contentId || ''}`,
     };
@@ -20,5 +21,5 @@ export default function ChannelsPage() {
     }
   };
 
-  return <HomePage onNavigate={handleNavigate} />;
+  return <ChannelListPage onNavigate={handleNavigate} />;
 }

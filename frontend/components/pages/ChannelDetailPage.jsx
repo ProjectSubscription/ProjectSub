@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { ChannelHeader } from '@/components/channel/ChannelHeader';
 import { SubscriptionPlans } from '@/components/channel/SubscriptionPlans';
@@ -7,6 +9,27 @@ import { ChannelAbout } from '@/components/channel/ChannelAbout';
 import CouponList from '@/components/coupon/CouponList';
 import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons } from '@/app/lib/api';
 import { mockChannels, mockContents, mockReviews } from '@/app/mockData';
+
+const DEFAULT_CHANNEL_THUMBNAIL_URL =
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&auto=format&fit=crop&q=60';
+
+function normalizeChannelDetail(channelId, dto) {
+  // 백엔드 ChannelDetailResponse: { channelName, channelDescription, subscriberCount, subscribed }
+  // UI에서 기대하는 형태로 최소 매핑
+  const name = dto?.channelName ?? dto?.name ?? dto?.title ?? '';
+  const description = dto?.channelDescription ?? dto?.description ?? '';
+
+  return {
+    id: Number(channelId),
+    name,
+    description,
+    subscriberCount: dto?.subscriberCount ?? 0,
+    // 백엔드 상세 응답에 category/creatorName/thumbnail이 없어 임시값 사용
+    category: '',
+    creatorName: '',
+    thumbnailUrl: DEFAULT_CHANNEL_THUMBNAIL_URL,
+  };
+}
 
 export function ChannelDetailPage({ channelId, onNavigate }) {
   const [activeTab, setActiveTab] = React.useState('content');
@@ -43,7 +66,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
           })
         ]);
 
-        setChannel(channelData);
+        setChannel(normalizeChannelDetail(channelId, channelData));
         setPlans(plansData || []);
         
         // 쿠폰 데이터 디버깅
@@ -52,14 +75,21 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
         console.log('쿠폰 타입:', Array.isArray(couponsData) ? '배열' : typeof couponsData);
         setCoupons(Array.isArray(couponsData) ? couponsData : []);
         
-        // 구독 상태 확인
-        const hasActiveSubscription = mySubscriptions?.some(
-          sub => sub.channelId === Number(channelId) && sub.status === 'ACTIVE'
-        );
-        setIsSubscribed(hasActiveSubscription);
+        // 구독 상태 확인:
+        // 1) 백엔드 상세 응답(subscribed)이 있으면 우선 사용
+        // 2) 없으면 내 구독 목록으로 fallback
+        if (typeof channelData?.subscribed === 'boolean') {
+          setIsSubscribed(channelData.subscribed);
+        } else {
+          const hasActiveSubscription = (mySubscriptions || []).some(
+            (sub) => sub.channelId === Number(channelId) && sub.status === 'ACTIVE'
+          );
+          setIsSubscribed(Boolean(hasActiveSubscription));
+        }
 
         // 임시로 mockContents 사용 (콘텐츠 API 연동 필요 시 수정)
-        const contents = mockContents.filter(c => c.channelId === channelId);
+        // channelId가 숫자 경로로 바뀌었기 때문에, mock 데이터(채널 id가 'channel-1')와는 매칭되지 않을 수 있음
+        const contents = mockContents.filter(c => String(c.channelId) === String(channelId));
         setChannelContents(contents);
       } catch (err) {
         console.error('데이터 로딩 실패:', err);

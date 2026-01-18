@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
 
-export function CTASection({ onNavigate }) {
+export function CTASection({ onNavigate, isAuthenticated = false }) {
   return (
     <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -13,13 +15,13 @@ export function CTASection({ onNavigate }) {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => onNavigate('login')}
+            onClick={() => onNavigate(isAuthenticated ? 'creator-apply' : 'login')}
             className="px-8 py-4 bg-white text-blue-600 rounded-lg font-medium hover:bg-gray-100 transition-colors"
           >
             크리에이터 신청하기
           </button>
           <button
-            onClick={() => onNavigate('login')}
+            onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
             className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-medium hover:bg-white hover:text-blue-600 transition-colors"
           >
             더 알아보기
