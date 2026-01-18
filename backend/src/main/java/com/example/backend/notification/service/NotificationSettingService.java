@@ -1,5 +1,7 @@
 package com.example.backend.notification.service;
 
+import com.example.backend.global.exception.BusinessException;
+import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.notification.dto.request.NotificationSettingUpdateDTO;
 import com.example.backend.notification.dto.response.NotificationSettingResponseDTO;
 import com.example.backend.notification.entity.NotificationSetting;
@@ -24,7 +26,7 @@ public class NotificationSettingService {
     @Transactional(readOnly = true)
     public NotificationSettingResponseDTO getNotificationSetting(Long memberId) {
         NotificationSetting notificationSetting = notificationSettingRepository.findByMemberId(memberId)
-                .orElseThrow(); //todo: 나중에 ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_SETTING_NOT_FOUND));
 
         log.info("알림 설정 조회 성공 - contentNotify={}, newsletterNotify={}, eventNotify={}",
                 notificationSetting.isContentNotify(), notificationSetting.isNewsletterNotify(), notificationSetting.isEventNotify());
@@ -37,7 +39,7 @@ public class NotificationSettingService {
 
         // 두 번 요청이 들어왔을 때 차단
         if (notificationSettingRepository.existsByMemberId(memberId)) {
-            throw new RuntimeException("이미 알림 설정이 존재합니다."); // todo: 나중에 ErrorCode 추가
+            throw new BusinessException(ErrorCode.NOTIFICATION_SETTING_ALREADY_EXISTS);
         }
 
         NotificationSetting notificationSetting = NotificationSetting.create(memberId);
@@ -55,7 +57,7 @@ public class NotificationSettingService {
         log.info("알림 설정 변경 start - memberId={}", memberId);
 
         NotificationSetting notificationSetting = notificationSettingRepository.findByMemberId(memberId)
-                .orElseThrow(); //todo: 나중에 ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_SETTING_NOT_FOUND));
 
         notificationSetting.update(dto);
 
@@ -76,7 +78,7 @@ public class NotificationSettingService {
             case NEW_CONTENT -> notificationSettingRepository.findMemberIdByMemberIdInAndContentNotifyTrue(memberIds);
             case NEWS_LETTER -> notificationSettingRepository.findMemberIdByMemberIdInAndNewsletterNotifyTrue(memberIds);
             case EVENT -> notificationSettingRepository.findMemberIdByMemberIdInAndEventNotifyTrue(memberIds);
-            default -> throw new RuntimeException("타입이 잘못되었습니다."); // todo: 나중에 ErrorCode 추가
+            default -> throw new BusinessException(ErrorCode.INVALID_NOTIFICATION_TYPE);
         };
     }
 }
