@@ -3,8 +3,8 @@ import { PaymentItemInfo } from '@/components/payment/PaymentItemInfo';
 import { CouponSection } from '@/components/payment/CouponSection';
 import { PaymentMethod } from '@/components/payment/PaymentMethod';
 import { PaymentSummary } from '@/components/payment/PaymentSummary';
-import { mockSubscriptionPlans, mockCoupons } from '@/app/mockData';
-import { getContent, getChannel, getMyInfo } from '@/app/lib/api';
+import { mockContents, mockCoupons } from '@/app/mockData';
+import { getSubscriptionPlans, getContent, createSubscription, getMyCoupons, getAvailableCoupons, purchaseContent } from '@/app/lib/api';
 import { useRouter } from 'next/navigation';
 
 export function PaymentPage({ type, itemId, channelId, onNavigate }) {
@@ -13,90 +13,81 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   const [appliedCoupon, setAppliedCoupon] = React.useState(null);
   const [paymentMethod, setPaymentMethod] = React.useState('card');
   const [loading, setLoading] = React.useState(false);
+  const [itemLoading, setItemLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [item, setItem] = React.useState(null);
-  const [itemLoading, setItemLoading] = React.useState(true);
-  const [memberId, setMemberId] = React.useState(null);
+  const [myCoupons, setMyCoupons] = React.useState([]);
+  const [availableCouponsList, setAvailableCouponsList] = React.useState([]);
+  const [couponLoading, setCouponLoading] = React.useState(false);
 
-  // 현재 로그인한 사용자 정보 가져오기
+  // 구독 플랜 또는 콘텐츠 정보 로드
   React.useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const userInfo = await getMyInfo();
-        if (userInfo && userInfo.id) {
-          setMemberId(userInfo.id);
-        }
-      } catch (err) {
-        console.error('사용자 정보 로딩 실패:', err);
-        // 로그인하지 않은 경우 에러 표시하지 않고, 결제 시점에 체크
-      }
-    };
-
-    fetchCurrentUser();
-  }, []);
-
-  // 백엔드에서 아이템 정보 가져오기
-  React.useEffect(() => {
-    const fetchItem = async () => {
+    async function loadItem() {
       try {
         setItemLoading(true);
-        if (type === 'content' && itemId) {
-          // 콘텐츠 정보 가져오기
-          const id = typeof itemId === 'string' ? parseInt(itemId, 10) : itemId;
-          const contentData = await getContent(id);
-          // PaymentItemInfo에 맞는 형식으로 변환
-          setItem({
-            id: contentData.id || contentData.contentId || id,
-            title: contentData.title,
-            description: contentData.description || contentData.body,
-            price: contentData.price || 0,
-            thumbnailUrl: contentData.mediaUrl || contentData.thumbnailUrl,
-            accessType: contentData.accessType,
-          });
-        } else if (type === 'subscription' && channelId) {
-          // 구독 정보 가져오기 (채널 정보에서)
-          const channelData = await getChannel(channelId);
-          // 구독 플랜 정보는 채널에서 가져오거나 별도 API 필요
-          // 일단 mockData 사용
-          const plan = mockSubscriptionPlans.find(p => p.id === itemId);
-          if (plan) {
-            setItem(plan);
-          } else {
-            // 채널 정보로 구독 플랜 생성
-            setItem({
-              id: channelId,
-              name: channelData.title || channelData.name,
-              description: channelData.description || '',
-              price: channelData.subscriptionPrice || 0,
-              thumbnailUrl: channelData.thumbnailUrl,
-            });
+        let itemData;
+        
+        if (type === 'subscription') {
+          // 구독 플랜 조회
+          if (!channelId) {
+            throw new Error('채널 ID가 필요합니다.');
           }
+          const plans = await getSubscriptionPlans(channelId);
+          const plansList = Array.isArray(plans) ? plans : [];
+          itemData = plansList.find(p => p.planId === Number(itemId) || p.id === Number(itemId));
         } else {
-          // fallback: mockData 사용
-          const plan = mockSubscriptionPlans.find(p => p.id === itemId);
-          if (plan) {
-            setItem(plan);
-          }
+          // 콘텐츠 조회
+          itemData = await getContent(itemId);
         }
+
+        if (!itemData) {
+          throw new Error('결제 정보를 찾을 수 없습니다.');
+        }
+
+        setItem(itemData);
       } catch (err) {
-        console.error('아이템 정보 로딩 실패:', err);
-        setError('결제 정보를 불러오는데 실패했습니다.');
+        console.error('아이템 로딩 실패:', err);
+        setError(err.message || '결제 정보를 불러오는 중 오류가 발생했습니다.');
       } finally {
         setItemLoading(false);
       }
-    };
+    }
 
     if (itemId) {
-      fetchItem();
+      loadItem();
     }
   }, [type, itemId, channelId]);
+
+  // 사용 가능한 쿠폰 목록 로드
+  React.useEffect(() => {
+    async function loadCoupons() {
+      try {
+        setCouponLoading(true);
+        // 보유 쿠폰과 사용 가능한 쿠폰을 모두 가져옴
+        const [myCouponsData, availableCouponsData] = await Promise.all([
+          getMyCoupons().catch(() => []), // 에러 시 빈 배열 반환
+          getAvailableCoupons().catch(() => []) // 에러 시 빈 배열 반환
+        ]);
+        
+        setMyCoupons(Array.isArray(myCouponsData) ? myCouponsData : []);
+        setAvailableCouponsList(Array.isArray(availableCouponsData) ? availableCouponsData : []);
+      } catch (err) {
+        console.error('쿠폰 목록 로딩 실패:', err);
+        // 쿠폰 로딩 실패는 치명적이지 않으므로 에러를 표시하지 않음
+      } finally {
+        setCouponLoading(false);
+      }
+    }
+
+    loadCoupons();
+  }, []);
 
   if (itemLoading) {
     return <div className="text-center py-12">로딩 중...</div>;
   }
 
-  if (!item) {
-    return <div className="text-center py-12">결제 정보를 찾을 수 없습니다.</div>;
+  if (error || !item) {
+    return <div className="text-center py-12 text-red-600">{error || '결제 정보를 찾을 수 없습니다.'}</div>;
   }
 
   const baseAmount = 'price' in item ? item.price || 0 : item.price;
@@ -108,15 +99,44 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   const finalAmount = baseAmount - discount;
 
   const handleApplyCoupon = () => {
-    const coupon = mockCoupons.find(c => c.code === couponCode && !c.isUsed);
-    if (coupon) {
-      if (baseAmount >= (coupon.minAmount || 0)) {
-        setAppliedCoupon(coupon);
-      } else {
-        alert(`최소 ${coupon.minAmount?.toLocaleString()}원 이상 구매 시 사용 가능합니다.`);
+    if (!couponCode || couponCode.trim() === '') {
+      alert('쿠폰 코드를 입력해주세요.');
+      return;
+    }
+
+    // 보유 쿠폰에서 코드로 검색 (사용 가능한 것만)
+    const foundCoupon = myCoupons.find(c => {
+      const isUsed = c.usedAt !== null && c.usedAt !== undefined;
+      const isExpired = c.expiredAt && new Date(c.expiredAt) < new Date();
+      const codeMatch = c.code && c.code.toUpperCase() === couponCode.toUpperCase().trim();
+      return codeMatch && !isUsed && !isExpired;
+    });
+
+    if (foundCoupon) {
+      // 쿠폰 타입 확인 (구독/콘텐츠)
+      const paymentType = type === 'subscription' ? 'SUBSCRIPTION' : 'CONTENT';
+      const hasValidTarget = !foundCoupon.targets || foundCoupon.targets.length === 0 || 
+        foundCoupon.targets.some(t => 
+          (paymentType === 'SUBSCRIPTION' && t.targetType === 'SUBSCRIPTION') ||
+          (paymentType === 'CONTENT' && t.targetType === 'CONTENT')
+        );
+
+      if (!hasValidTarget) {
+        alert('이 쿠폰은 해당 결제 타입에 사용할 수 없습니다.');
+        return;
       }
+
+      // 최소 금액 확인 (API 응답에 minAmount가 없을 수 있으므로 우선 적용)
+      setAppliedCoupon({
+        id: foundCoupon.id,
+        code: foundCoupon.code,
+        discountType: foundCoupon.discountType === 'RATE' ? 'PERCENT' : foundCoupon.discountType,
+        discountValue: foundCoupon.discountValue,
+        minAmount: foundCoupon.minAmount || 0,
+        maxDiscount: foundCoupon.maxDiscount || Infinity,
+      });
     } else {
-      alert('유효하지 않은 쿠폰입니다.');
+      alert('유효하지 않은 쿠폰입니다. 쿠폰 코드를 확인해주세요.');
     }
   };
 
@@ -130,60 +150,59 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
     setError(null);
     
     try {
-      // itemId에서 숫자 부분만 추출 (예: "plan-1" -> 1, "content-2" -> 2)
-      // 또는 이미 숫자인 경우 그대로 사용
-      let targetId;
-      if (typeof itemId === 'string' && itemId.includes('-')) {
-        // 문자열에서 숫자 부분 추출 (예: "plan-1" -> 1)
-        const match = itemId.match(/\d+/);
-        targetId = match ? parseInt(match[0], 10) : null;
+      if (type === 'subscription') {
+        // 구독 결제 처리
+        if (!channelId || !itemId) {
+          throw new Error('채널 ID와 플랜 ID가 필요합니다.');
+        }
+
+        const planId = Number(itemId);
+        const channelIdNum = Number(channelId);
+
+        if (isNaN(planId) || isNaN(channelIdNum)) {
+          throw new Error('유효하지 않은 플랜 ID 또는 채널 ID입니다.');
+        }
+
+        // 구독 생성 (결제는 추후 통합 예정)
+        // TODO: 실제 결제 API 연동 시 paySubscription 호출 후 구독 생성
+        try {
+          const subscriptionId = await createSubscription(channelIdNum, planId);
+          console.log('구독 생성 성공:', subscriptionId);
+
+          // 결제 성공 페이지로 이동
+          onNavigate('payment-success', { 
+            amount: finalAmount,
+            type: 'subscription',
+            subscriptionId: subscriptionId 
+          });
+        } catch (subscribeErr) {
+          console.error('구독 생성 실패:', subscribeErr);
+          throw subscribeErr;
+        }
       } else {
-        targetId = Number(itemId);
+        // 콘텐츠 단건 구매 처리 (기존 로직 유지)
+        const contentId = Number(itemId);
+        if (isNaN(contentId)) {
+          throw new Error('유효하지 않은 콘텐츠 ID입니다.');
+        }
+
+        // 콘텐츠 결제 API 호출
+        const paymentData = {
+          contentId: contentId,
+          amount: finalAmount,
+          couponCode: appliedCoupon?.code || null,
+        };
+
+        const paymentResponse = await purchaseContent(paymentData);
+        console.log('콘텐츠 결제 성공:', paymentResponse);
+
+        // 결제 성공 페이지로 이동
+        onNavigate('payment-success', { 
+          amount: finalAmount,
+          type: 'content',
+          contentId: contentId 
+        });
       }
-
-      if (!targetId || isNaN(targetId)) {
-        throw new Error('유효하지 않은 상품 ID입니다.');
-      }
-
-      // 주문 생성 API 호출
-      const requestBody = {
-        orderType: type.toUpperCase(), // "subscription" -> "SUBSCRIPTION", "content" -> "CONTENT"
-        targetId: targetId,
-        originalAmount: baseAmount,
-        discountAmount: appliedCoupon ? finalAmount : null, // 쿠폰 적용 시 할인된 가격, 미적용 시 null
-      };
-
-      if (!memberId) {
-        throw new Error('로그인이 필요합니다.');
-      }
-
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-      const response = await fetch(`${API_BASE_URL}/api/orders`, {
-        method: 'POST',
-        credentials: 'include', // 쿠키 포함 (세션 기반 인증)
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Id': memberId.toString(),
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '주문 생성에 실패했습니다.');
-      }
-
-      const orderData = await response.json();
-      console.log('주문 생성 성공:', orderData);
-
-      // Checkout 페이지로 이동 (Next.js 라우팅 사용)
-      const query = new URLSearchParams({
-        orderCode: orderData.orderCode,
-        orderName: orderData.orderName,
-        amount: orderData.amount.toString(),
-      });
-      router.push(`/payment/checkout?${query.toString()}`);
-
     } catch (err) {
       console.error('결제 처리 중 오류 발생:', err);
       setError(err.message || '결제 처리 중 오류가 발생했습니다.');
@@ -192,7 +211,21 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
     }
   };
 
-  const availableCoupons = mockCoupons.filter(c => !c.isUsed);
+  // 사용 가능한 쿠폰 목록 (보유 쿠폰 중 사용 가능한 것만)
+  const availableCoupons = myCoupons
+    .filter(c => {
+      const isUsed = c.usedAt !== null && c.usedAt !== undefined;
+      const isExpired = c.expiredAt && new Date(c.expiredAt) < new Date();
+      return !isUsed && !isExpired;
+    })
+    .map(c => ({
+      id: c.id,
+      code: c.code,
+      discountType: c.discountType === 'RATE' ? 'PERCENT' : c.discountType,
+      discountValue: c.discountValue,
+      minAmount: c.minAmount || 0,
+      maxDiscount: c.maxDiscount || Infinity,
+    }));
 
   return (
     <div className="max-w-4xl mx-auto pb-12">
