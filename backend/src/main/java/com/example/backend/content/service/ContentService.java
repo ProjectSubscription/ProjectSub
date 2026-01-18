@@ -9,8 +9,15 @@ import com.example.backend.content.dto.ContentUpdateRequestDTO;
 import com.example.backend.content.entity.AccessType;
 import com.example.backend.content.entity.Content;
 import com.example.backend.content.entity.ContentType;
+import com.example.backend.content.entity.ContentView;
 import com.example.backend.content.repository.ContentLikeRepository;
 import com.example.backend.content.repository.ContentRepository;
+import com.example.backend.content.repository.ContentViewRepository;
+import com.example.backend.order.entity.OrderStatus;
+import com.example.backend.order.entity.OrderType;
+import com.example.backend.order.repository.OrderRepository;
+import com.example.backend.subscription.entity.SubscriptionStatus;
+import com.example.backend.subscription.repository.SubscriptionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +36,9 @@ public class ContentService {
     private final ContentRepository contentRepository;
     private final ChannelRepository channelRepository;
     private final ContentLikeRepository contentLikeRepository;
+    private final ContentViewRepository contentViewRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final OrderRepository orderRepository;
 
     /**
      * 콘텐츠 등록 (임시저장 - publishedAt이 null)
@@ -185,17 +195,50 @@ public class ContentService {
         // 접근 권한 검증
         validateAccess(content, userRole, userId);
 
-        // 조회수 증가 (최초 조회 시)
-        // TODO: 추후에 조회수 도메인 생성 후 변경 예정
-        content.increaseViewCount();
-        contentRepository.save(content);
+        // 조회수 증가 (로그인한 사용자의 최초 조회 시만)
+        if (userId != null) {
+            // 로그인한 사용자의 경우: 조회 기록 확인
+            boolean hasViewed = contentViewRepository.existsByMemberIdAndContentId(userId, contentId);
+            if (!hasViewed) {
+                // 최초 조회인 경우 조회 기록 저장 및 조회수 증가
+                ContentView contentView = ContentView.create(userId, contentId);
+                contentViewRepository.save(contentView);
+                content.increaseViewCount();
+                contentRepository.save(content);
+            } else {
+                // 이미 조회한 경우 조회 기록의 lastViewedAt만 업데이트
+                contentViewRepository.findByMemberIdAndContentId(userId, contentId)
+                        .ifPresent(view -> {
+                            view.updateLastViewedAt(LocalDateTime.now());
+                            contentViewRepository.save(view);
+                        });
+            }
+        }
+        // 비로그인 사용자의 경우: 조회수 증가하지 않음
 
         // 좋아요 여부 확인 (userId가 null이면 false)
         Boolean isLiked = userId != null 
                 ? contentLikeRepository.existsContentLikeByContentIdAndMemberId(contentId, userId)
                 : false;
 
-        return ContentResponseDTO.from(content, isLiked);
+        // 접근 권한 여부 확인 (구매/구독 완료 여부)
+        Boolean hasAccess = false;
+        if (content.getAccessType() == AccessType.FREE) {
+            hasAccess = true; // 무료 콘텐츠는 항상 접근 가능
+        } else if (userId != null) {
+            if (content.getAccessType() == AccessType.SUBSCRIBER_ONLY) {
+                // 구독자만 접근 가능: 해당 채널에 대한 활성 구독이 있는지 확인
+                hasAccess = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
+                        userId, content.getChannel().getId(), SubscriptionStatus.ACTIVE);
+            } else if (content.getAccessType() == AccessType.SINGLE_PURCHASE || 
+                       content.getAccessType() == AccessType.PARTIAL) {
+                // 구매한 사용자만 접근 가능: 해당 콘텐츠를 구매했는지 확인
+                hasAccess = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
+                        userId, contentId, OrderType.CONTENT, OrderStatus.PAID);
+            }
+        }
+
+        return ContentResponseDTO.from(content, isLiked, hasAccess);
     }
 
     /**
@@ -377,15 +420,31 @@ public class ContentService {
         }
 
         // 일반 유저는 구매한 콘텐츠 또는 구독한 채널의 콘텐츠에 접근 가능
-        // SUBSCRIBER_ONLY, SINGLE_PURCHASE, PARTIAL의 경우 구독/구매 여부 확인 필요
-        // Channel 도메인과 구독/구매 도메인이 완성되면 구현
         if ("USER".equals(userRole) || "ROLE_USER".equals(userRole)) {
-            if (accessType == AccessType.SUBSCRIBER_ONLY || 
-                accessType == AccessType.SINGLE_PURCHASE || 
-                accessType == AccessType.PARTIAL) {
-                // TODO: 구독/구매 여부 확인 로직 구현 필요
-                // 임시로 접근 허용 (구독/구매 도메인 완성 후 수정 필요)
-                // throw new IllegalArgumentException("구독 또는 구매가 필요합니다.");
+            Long channelId = content.getChannel().getId();
+            
+            if (accessType == AccessType.SUBSCRIBER_ONLY) {
+                // 구독자만 접근 가능: 해당 채널에 대한 활성 구독이 있는지 확인
+                boolean hasActiveSubscription = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
+                        userId, channelId, SubscriptionStatus.ACTIVE);
+                if (!hasActiveSubscription) {
+                    throw new IllegalArgumentException("이 콘텐츠는 구독자만 접근할 수 있습니다.");
+                }
+            } else if (accessType == AccessType.SINGLE_PURCHASE) {
+                // 구매한 사용자만 접근 가능: 해당 콘텐츠를 구매했는지 확인
+                boolean hasPurchased = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
+                        userId, content.getId(), OrderType.CONTENT, OrderStatus.PAID);
+                if (!hasPurchased) {
+                    throw new IllegalArgumentException("이 콘텐츠를 구매해야 접근할 수 있습니다.");
+                }
+            } else if (accessType == AccessType.PARTIAL) {
+                // PARTIAL: 구매했으면 전체 접근 가능, 아니면 미리보기만 제공
+                // 구매 여부 확인 (구매했으면 접근 허용, 아니면 미리보기만 제공하므로 예외 발생하지 않음)
+                // 실제 미리보기 처리는 getContentById에서 처리
+                boolean hasPurchased = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
+                        userId, content.getId(), OrderType.CONTENT, OrderStatus.PAID);
+                // 구매하지 않았어도 미리보기는 제공하므로 예외를 발생시키지 않음
+                // 전체 콘텐츠 접근 여부는 별도로 확인 필요 (현재는 접근 허용)
             }
         }
     }
@@ -412,6 +471,45 @@ public class ContentService {
         if (accessType == AccessType.FREE && price != null && price != 0) {
             throw new IllegalArgumentException("FREE 콘텐츠의 가격은 0이어야 합니다.");
         }
+    }
+
+    /**
+     * 최근 본 콘텐츠 조회
+     * 사용자가 최근에 조회한 콘텐츠를 lastViewedAt 기준으로 정렬하여 반환
+     */
+    public Page<ContentListResponseDTO> getRecentViewedContents(Long memberId, Pageable pageable) {
+        // ContentView 조회 (lastViewedAt 기준 내림차순)
+        Page<ContentView> contentViews = contentViewRepository.findByMemberIdOrderByLastViewedAtDesc(memberId, pageable);
+        
+        // ContentView의 contentId로 Content 조회 및 DTO 변환
+        List<ContentListResponseDTO> contentList = contentViews.getContent().stream()
+                .map(contentView -> {
+                    try {
+                        // 삭제되지 않은 콘텐츠만 조회
+                        Content content = contentRepository.findByIdAndIsDeletedFalse(contentView.getContentId())
+                                .orElse(null);
+                        if (content == null) {
+                            return null;
+                        }
+                        // 게시된 콘텐츠만 반환
+                        if (content.isPublished()) {
+                            return ContentListResponseDTO.from(content);
+                        }
+                        return null;
+                    } catch (Exception e) {
+                        // 콘텐츠가 존재하지 않거나 삭제된 경우 null 반환
+                        return null;
+                    }
+                })
+                .filter(content -> content != null) // null 제거 (삭제되었거나 게시되지 않은 콘텐츠)
+                .toList();
+        
+        // 필터링된 결과를 Page로 변환
+        return new org.springframework.data.domain.PageImpl<>(
+                contentList,
+                pageable,
+                contentViews.getTotalElements()
+        );
     }
 
     /**
