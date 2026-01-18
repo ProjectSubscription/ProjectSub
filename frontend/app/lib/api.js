@@ -654,6 +654,17 @@ export async function issueCoupon(couponId) {
   return apiPost(`/api/coupons/${couponId}/issue`);
 }
 
+/**
+ * 쿠폰 검증
+ * POST /api/coupons/{couponId}/validate
+ */
+export async function validateCoupon(couponId, paymentType, targetId) {
+  return apiPost(`/api/coupons/${couponId}/validate`, {
+    paymentType,
+    targetId,
+  });
+}
+
 // ==================== 관리자 쿠폰 관리 ====================
 
 /**
