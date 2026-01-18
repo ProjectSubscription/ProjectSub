@@ -244,7 +244,7 @@ class SubscriptionStatisticsServiceTest {
         Set<Role> roles = new HashSet<>();
         roles.add(Role.ROLE_USER);
 
-        Member member = Member.create("test" + memberId + "@example.com", "password", "nickname" + memberId, roles, null, birthYear);
+        Member member = Member.create("test" + memberId + "@example.com", "password", "nickname" + memberId, roles, birthYear, null);
         
         // Reflection을 사용해서 ID 설정
         try {

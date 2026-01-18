@@ -84,6 +84,11 @@ public class SubscriptionService {
                 memberId, channelId, SubscriptionStatus.ACTIVE);
     }
 
+    @Transactional(readOnly = true)
+    public List<Subscription> getActiveSubscriptionsByChannelId(Long channelId) {
+        return subscriptionRepository.findByChannelIdAndStatus(channelId, SubscriptionStatus.ACTIVE);
+    }
+
     private LocalDateTime calculateExpiredAt(LocalDateTime startedAt, PlanType planType) {
         return switch (planType) {
             case MONTHLY -> startedAt.plusMonths(1);

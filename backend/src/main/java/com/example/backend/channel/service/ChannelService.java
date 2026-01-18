@@ -6,6 +6,7 @@ import com.example.backend.channel.dto.response.ChannelDetailResponse;
 import com.example.backend.channel.dto.response.ChannelListResponse;
 import com.example.backend.channel.entity.Channel;
 import com.example.backend.channel.entity.ChannelCategory;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -34,6 +35,18 @@ public interface ChannelService {
      * @param request   수정할 채널 정보
      */
     void updateChannel(Long channelId, Long creatorId, ChannelUpdateRequest request);
+
+    /**
+     * 채널 이미지 수정
+     *
+     * - 채널 소유자만 이미지 업로드 가능
+     *
+     * @param channelId 채널 ID
+     * @param creatorId 크리에이터 ID
+     * @param file 이미지 파일
+     * @return 저장된 이미지 URL
+     */
+    String updateChannelThumbnail(Long channelId, Long creatorId, MultipartFile file);
 
     /**
      * 채널 비활성화
@@ -97,11 +110,8 @@ public interface ChannelService {
      * - 사용자가 여러 채널을 탐색할 수 있도록 제공하는 기능
      *
      * @param category 조회할 채널 카테고리 (null이면 전체 조회)
-     * @param pageable 페이징 정보
+     * @param pageable 페이징/정렬 정보
      * @return 채널 목록 페이지
      */
-    Page<ChannelListResponse> getChannelList(
-            ChannelCategory category,
-            Pageable pageable
-    );
+    Page<ChannelListResponse> getChannelList(ChannelCategory category, Pageable pageable);
 }

@@ -1,8 +1,11 @@
 import React from 'react';
-import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle } from 'lucide-react';
+import {
+    CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell,
+    Ticket
+} from 'lucide-react';
 import { PageRoute } from '@/app/types';
 import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
-import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember } from '@/app/lib/api';
+import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember, getNotificationSettings, updateNotificationSettings } from '@/app/lib/api';
 
 export function MySubscriptionsPage({ userId, onNavigate }) {
   const userSubs = mockUserSubscriptions.filter(s => s.userId === userId);
@@ -44,7 +47,8 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
             <p className="text-sm text-gray-600">만료 예정</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">
-            {userSubs.filter(s => s.status === 'ACTIVE' && 
+            {userSubs.filter(s => s.status === 'ACTIVE' &&
+                // eslint-disable-next-line react-hooks/purity
               new Date(s.endDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             ).length}
           </p>
@@ -389,6 +393,9 @@ export function MyPage({ userId, onNavigate }) {
   const [formData, setFormData] = React.useState({});
   const [error, setError] = React.useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+  const [notificationSettings, setNotificationSettings] = React.useState(null);
+  const [loadingSettings, setLoadingSettings] = React.useState(true);
+  const [savingSettings, setSavingSettings] = React.useState(false);
 
   const loadUserInfo = React.useCallback(async () => {
     try {
@@ -404,7 +411,47 @@ export function MyPage({ userId, onNavigate }) {
 
   React.useEffect(() => {
     loadUserInfo();
+    loadNotificationSettings();
   }, [loadUserInfo]);
+
+  const loadNotificationSettings = async () => {
+    try {
+      setLoadingSettings(true);
+      const settings = await getNotificationSettings();
+      setNotificationSettings(settings);
+    } catch (err) {
+      console.error('알림 설정 조회 오류:', err);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const handleNotificationSettingChange = async (field, value) => {
+    try {
+      setSavingSettings(true);
+      // 현재 설정을 가져오고, 변경할 필드만 업데이트
+      const currentSettings = notificationSettings || {
+        contentNotify: false,
+        newsletterNotify: false,
+        eventNotify: false,
+      };
+      
+      // 3가지 설정을 모두 포함한 객체 생성
+      const updatedSettings = {
+        contentNotify: field === 'contentNotify' ? value : currentSettings.contentNotify,
+        newsletterNotify: field === 'newsletterNotify' ? value : currentSettings.newsletterNotify,
+        eventNotify: field === 'eventNotify' ? value : currentSettings.eventNotify,
+      };
+      
+      await updateNotificationSettings(updatedSettings);
+      setNotificationSettings(updatedSettings);
+    } catch (err) {
+      alert(err.message || '알림 설정 변경에 실패했습니다.');
+      console.error('알림 설정 변경 오류:', err);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleEdit = (field) => {
     setEditingField(field);
@@ -612,6 +659,78 @@ export function MyPage({ userId, onNavigate }) {
         </div>
       </div>
 
+      {/* 알림 설정 섹션 */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Bell className="w-6 h-6 text-gray-600" />
+          <h2 className="text-xl font-bold text-gray-900">알림 수신 설정</h2>
+        </div>
+
+        {loadingSettings ? (
+          <div className="py-4 text-center">
+            <p className="text-gray-600">로딩 중...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* 콘텐츠 알림 */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-200">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-900">새로운 콘텐츠 알림</label>
+                <p className="text-xs text-gray-500 mt-1">구독한 채널의 새 콘텐츠 알림을 받습니다</p>
+              </div>
+              <button
+                onClick={() => handleNotificationSettingChange('contentNotify', !notificationSettings?.contentNotify)}
+                disabled={savingSettings}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  notificationSettings?.contentNotify ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notificationSettings?.contentNotify ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 뉴스레터 알림 */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-200">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-900">뉴스레터 알림</label>
+                <p className="text-xs text-gray-500 mt-1">뉴스레터 및 업데이트 알림을 받습니다</p>
+              </div>
+              <button
+                onClick={() => handleNotificationSettingChange('newsletterNotify', !notificationSettings?.newsletterNotify)}
+                disabled={savingSettings}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  notificationSettings?.newsletterNotify ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notificationSettings?.newsletterNotify ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 이벤트 알림 (백엔드 미구현 - 비활성화) */}
+            <div className="flex items-center justify-between py-3 opacity-50">
+              <div className="flex-1">
+                <label className="text-sm font-medium text-gray-900">이벤트 알림</label>
+                <p className="text-xs text-gray-500 mt-1">이벤트 및 프로모션 알림을 받습니다</p>
+              </div>
+              <button
+                disabled
+                className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 cursor-not-allowed"
+              >
+                <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-1" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 기타 메뉴 */}
       <div className="grid md:grid-cols-2 gap-6">
         <button
@@ -638,6 +757,14 @@ export function MyPage({ userId, onNavigate }) {
           <h3 className="text-xl font-bold text-gray-900 mb-2">크리에이터 신청 이력</h3>
           <p className="text-gray-600">신청 내역 및 승인 상태 확인</p>
         </button>
+          <button
+              onClick={() => onNavigate('my-coupons', {})}
+              className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow text-left"
+          >
+              <Ticket className="w-8 h-8 text-orange-600 mb-3" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">다운받은 쿠폰</h3>
+              <p className="text-gray-600">사용가능한 쿠폰 보기</p>
+          </button>
       </div>
 
       {/* 회원 탈퇴 섹션 */}

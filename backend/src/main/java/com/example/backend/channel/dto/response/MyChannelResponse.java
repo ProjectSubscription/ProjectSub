@@ -11,6 +11,7 @@ public class MyChannelResponse {
     private Long channelId;
     private String title;
     private String description;
+    private String thumbnailUrl;
     private ChannelCategory category;
     private int subscriberCount;
     private boolean active;

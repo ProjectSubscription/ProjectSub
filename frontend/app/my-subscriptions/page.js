@@ -1,6 +1,6 @@
 'use client';
 
-import { MySubscriptionsPage } from '@/components/pages/UserPages';
+import { MySubscriptionsPage } from '@/components/subscription/MySubscriptionsPage';
 import { useRouter } from 'next/navigation';
 
 export default function MySubscriptions() {
@@ -9,6 +9,7 @@ export default function MySubscriptions() {
   const handleNavigate = (page, params) => {
     const routeMap = {
       'channel-detail': (params) => `/channels/${params?.channelId || ''}`,
+      'content-detail': (params) => `/contents/${params?.contentId || ''}`,
     };
 
     const route = routeMap[page];
@@ -19,5 +20,5 @@ export default function MySubscriptions() {
     }
   };
 
-  return <MySubscriptionsPage userId="user-1" onNavigate={handleNavigate} />;
+  return <MySubscriptionsPage onNavigate={handleNavigate} />;
 }

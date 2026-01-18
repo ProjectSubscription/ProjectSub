@@ -70,6 +70,11 @@ public class Content {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    /** 게시 여부 (발행 완료 여부) */
+    @Column(name = "is_published", nullable = false)
+    @Builder.Default
+    private Boolean isPublished = false;
+
     /** Soft Delete */
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
@@ -91,6 +96,10 @@ public class Content {
             Integer price,
             LocalDateTime publishedAt
     ) {
+        // 즉시 발행인지 확인 (publishedAt이 현재 시점 이하이면 즉시 발행)
+        boolean isImmediatePublish = publishedAt != null && 
+                (publishedAt.isBefore(LocalDateTime.now()) || publishedAt.isEqual(LocalDateTime.now()));
+        
         return Content.builder()
                 .channel(channel)
                 .title(title)
@@ -101,6 +110,7 @@ public class Content {
                 .mediaUrl(mediaUrl)
                 .price(price)
                 .publishedAt(publishedAt)
+                .isPublished(isImmediatePublish) // 즉시 발행이면 true, 예약 발행이면 false
                 .viewCount(0L)
                 .likeCount(0L)
                 .isDeleted(false)
@@ -154,13 +164,17 @@ public class Content {
     }
 
     /**
-     * 게시 여부 확인 (publishedAt이 현재 시점 이전인지 확인)
+     * 게시 여부 확인 (isPublished 필드 값 반환)
      */
     public boolean isPublished() {
-        if (publishedAt == null) {
-            return false; // 임시저장
-        }
-        return publishedAt.isBefore(LocalDateTime.now()) || publishedAt.isEqual(LocalDateTime.now());
+        return Boolean.TRUE.equals(this.isPublished);
+    }
+
+    /**
+     * 콘텐츠 발행 처리 (예약 발행 시점이 되었을 때 호출)
+     */
+    public void publish() {
+        this.isPublished = true;
     }
 
     /**

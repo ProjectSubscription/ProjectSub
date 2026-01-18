@@ -8,6 +8,7 @@ export default function HomePageRoute() {
 
   const handleNavigate = (page, params) => {
     const routeMap = {
+      'channels': '/channels',
       'channel-detail': (params) => `/channels/${params?.channelId || ''}`,
       'content-detail': (params) => `/contents/${params?.contentId || ''}`,
     };

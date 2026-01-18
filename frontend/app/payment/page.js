@@ -8,12 +8,20 @@ export default function Payment() {
   const searchParams = useSearchParams();
   const type = searchParams.get('type') || 'subscription';
   const planId = searchParams.get('planId');
+  const channelId = searchParams.get('channelId');
   const contentId = searchParams.get('contentId');
-  const itemId = planId || contentId || 'plan-1';
+  const itemId = planId || contentId;
 
   const handleNavigate = (page, params) => {
     const routeMap = {
-      'payment-success': (params) => `/payment/success?amount=${params?.amount || 0}`,
+      'payment-success': (params) => {
+        const query = new URLSearchParams();
+        if (params?.amount) query.set('amount', params.amount.toString());
+        if (params?.type) query.set('type', params.type);
+        if (params?.subscriptionId) query.set('subscriptionId', params.subscriptionId.toString());
+        if (params?.contentId) query.set('contentId', params.contentId.toString());
+        return `/payment/success?${query.toString()}`;
+      },
       'checkout': (params) => {
         const query = new URLSearchParams();
         if (params?.orderCode) query.set('orderCode', params.orderCode);
@@ -31,5 +39,10 @@ export default function Payment() {
     }
   };
 
-  return <PaymentPage type={type} itemId={itemId} onNavigate={handleNavigate} />;
+  return <PaymentPage 
+    type={type} 
+    itemId={itemId} 
+    channelId={channelId}
+    onNavigate={handleNavigate} 
+  />;
 }
