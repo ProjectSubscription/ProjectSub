@@ -6,6 +6,8 @@ import com.example.backend.broadcast.newsletter.dto.response.NewsletterResponseD
 import com.example.backend.broadcast.newsletter.entity.Newsletter;
 import com.example.backend.broadcast.newsletter.entity.NewsletterStatus;
 import com.example.backend.broadcast.newsletter.repository.NewsletterRepository;
+import com.example.backend.global.exception.BusinessException;
+import com.example.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -46,11 +48,11 @@ public class NewsletterService {
         log.info("뉴스레터 상세조회 - id={}", id);
 
         Newsletter newsletter = newsletterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("뉴스레터가 존재하지 않습니다.")); //todo: ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NEWSLETTER_NOT_FOUND));
 
         if (newsletter.isDeleted() || !newsletter.isPublished()) {
-            log.info("뉴스레터 발행중이지 않습니다 - isPublished={}", newsletter.isPublished());
-            throw new RuntimeException("해당 뉴스레터가 발행중이지 않습니다."); //todo: ErrorCode 추가
+            log.error("뉴스레터 발행중이지 않습니다 - isPublished={}", newsletter.isPublished());
+            throw new BusinessException(ErrorCode.NEWSLETTER_NOT_PUBLISHED);
         }
 
         return NewsletterResponseDTO.create(newsletter);
@@ -62,13 +64,12 @@ public class NewsletterService {
         log.info("뉴스레터 관리자 상세조회 - id={}", id);
 
         Newsletter newsletter = newsletterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("뉴스레터가 존재하지 않습니다.")); //todo: ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NEWSLETTER_NOT_FOUND));
 
         if (newsletter.isDeleted()) {
-            log.info("뉴스레터가 삭제되었습니다");
-            throw new RuntimeException("삭제된 뉴스레터입니다."); //todo: ErrorCode 추가
+            log.error("이미 삭제된 뉴스레터입니다.");
+            throw new BusinessException(ErrorCode.NEWSLETTER_ALREADY_DELETED);
         }
-
         return NewsletterResponseDTO.create(newsletter);
     }
 
@@ -91,11 +92,11 @@ public class NewsletterService {
         log.info("뉴스레터 수정 start - title={}", dto.getTitle());
 
         Newsletter newsletter = newsletterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("뉴스레터가 존재하지 않습니다.")); //todo: ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NEWSLETTER_NOT_FOUND));
 
         if (newsletter.isDeleted() || newsletter.isPublished()) {
-            log.info("발행 전에만 수정가능합니다. - isPublished={}", newsletter.isPublished());
-            throw new RuntimeException("발행 전에만 수정가능합니다.");
+            log.error("발행 전에만 수정가능합니다. - isPublished={}", newsletter.isPublished());
+            throw new BusinessException(ErrorCode.NEWSLETTER_UPDATE_FORBIDDEN);
         }
 
         newsletter.update(dto);
@@ -108,16 +109,18 @@ public class NewsletterService {
         log.info("뉴스레터 발행 start - id={}", id);
 
         Newsletter newsletter = newsletterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("뉴스레터가 존재하지 않습니다.")); //todo: ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NEWSLETTER_NOT_FOUND));
 
         // 중복 발행 방지
         if (newsletter.getStatus() == NewsletterStatus.PUBLISHED) {
-            throw new RuntimeException("이미 발행된 뉴스레터입니다."); //todo: ErrorCode
+            log.error("이미 발행된 뉴스레터입니다. - status={}", newsletter.getStatus());
+            throw new BusinessException(ErrorCode.NEWSLETTER_ALREADY_PUBLISHED);
         }
 
         // 소프트 삭제처리 된 뉴스레터는 재발행 불가
         if (newsletter.isDeleted()) {
-            throw new RuntimeException("삭제된 뉴스레터는 재발행할 수 없습니다."); //todo: ErrorCode
+            log.error("이미 삭제된 뉴스레터입니다. isDeleted={}", newsletter.isDeleted());
+            throw new BusinessException(ErrorCode.NEWSLETTER_ALREADY_DELETED);
         }
 
         newsletter.publish();
@@ -133,7 +136,7 @@ public class NewsletterService {
         log.info("뉴스레터 보관(숨김) start - id={}", id);
 
         Newsletter newsletter = newsletterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("뉴스레터가 존재하지 않습니다.")); //todo: ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NEWSLETTER_NOT_FOUND));
 
         newsletter.archive();
 
@@ -146,7 +149,7 @@ public class NewsletterService {
         log.info("뉴스레터 소프트 삭제 - id={}", id);
 
         Newsletter newsletter = newsletterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("뉴스레터가 존재하지 않습니다.")); //todo: ErrorCode 추가
+                .orElseThrow(() -> new BusinessException(ErrorCode.NEWSLETTER_NOT_FOUND));
 
         newsletter.softDelete();
 
