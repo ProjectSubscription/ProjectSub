@@ -35,11 +35,17 @@ export function CategoryChannels({ categories, selectedCategory, onCategoryChang
               className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer"
             >
               <div className="flex gap-4 p-4">
-                <img
-                  src={channel.thumbnailUrl}
-                  alt={channel.name}
-                  className="w-24 h-24 rounded-lg object-cover"
-                />
+                {channel.thumbnailUrl ? (
+                  <img
+                    src={channel.thumbnailUrl}
+                    alt={channel.name}
+                    className="w-24 h-24 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold">
+                    {channel.name?.slice(0, 1) || '?'}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-gray-900 mb-1 truncate">
                     {channel.name}

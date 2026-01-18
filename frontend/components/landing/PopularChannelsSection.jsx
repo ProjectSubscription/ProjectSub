@@ -28,11 +28,17 @@ export function PopularChannelsSection({ channels, onNavigate, isAuthenticated =
               className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
             >
               <div className="relative aspect-video">
-                <img
-                  src={channel.thumbnailUrl}
-                  alt={channel.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                {channel.thumbnailUrl ? (
+                  <img
+                    src={channel.thumbnailUrl}
+                    alt={channel.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold">
+                    {channel.name?.slice(0, 1) || '?'}
+                  </div>
+                )}
                 <div className="absolute top-3 right-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                   {channel.category}
                 </div>

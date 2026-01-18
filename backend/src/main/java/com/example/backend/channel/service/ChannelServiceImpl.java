@@ -15,8 +15,17 @@ import com.example.backend.subscription.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +54,7 @@ public class ChannelServiceImpl implements ChannelService {
                 creatorId,
                 request.getTitle(),
                 request.getDescription(),
+                request.getThumbnailUrl(),
                 request.getCategory()
         );
 
@@ -73,8 +83,56 @@ public class ChannelServiceImpl implements ChannelService {
         channel.update(
                 request.getTitle(),
                 request.getDescription(),
+                request.getThumbnailUrl(),
                 request.getCategory()
         );
+    }
+
+    @Override
+    public String updateChannelThumbnail(Long channelId, Long creatorId, MultipartFile file) {
+        if (channelId == null || creatorId == null || file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        channelValidator.validateOwner(creatorId, channelId);
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHANNEL_NOT_FOUND));
+
+        if (!channel.isActive()) {
+            throw new BusinessException(ErrorCode.CHANNEL_INACTIVE);
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+        }
+        String normalizedExtension = extension.toLowerCase();
+        String contentType = file.getContentType();
+        boolean isImageContentType = contentType != null && contentType.startsWith("image/");
+        boolean isAllowedExtension = normalizedExtension.matches("\\.(jpg|jpeg|png|gif|webp|svg|heic|heif)");
+        if (!isImageContentType && !isAllowedExtension) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        String fileName = "channel-" + channelId + "-" + UUID.randomUUID() + extension;
+        Path uploadDir = Paths.get(System.getProperty("user.dir"), "uploads", "channels")
+                .toAbsolutePath();
+        try {
+            Files.createDirectories(uploadDir);
+            Path targetPath = uploadDir.resolve(fileName);
+            file.transferTo(targetPath);
+        } catch (IOException ex) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST);
+        }
+
+        String storedUrl = "/uploads/channels/" + fileName;
+        String resolvedUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path(storedUrl)
+                .toUriString();
+        channel.updateThumbnail(resolvedUrl);
+        return resolvedUrl;
     }
 
     //채널 비활성화
@@ -137,6 +195,7 @@ public class ChannelServiceImpl implements ChannelService {
         return new ChannelDetailResponse(
                 channel.getTitle(),
                 channel.getDescription(),
+                channel.getThumbnailUrl(),
                 subscriberCount,
                 subscribed
         );
@@ -171,6 +230,7 @@ public class ChannelServiceImpl implements ChannelService {
         return new ChannelDetailResponse(
                 channel.getTitle(),
                 channel.getDescription(),
+                channel.getThumbnailUrl(),
                 subscriberCount,
                 subscribed
         );
@@ -197,8 +257,16 @@ public class ChannelServiceImpl implements ChannelService {
         }
 
         Page<Channel> channels;
+        boolean isPopularSort = pageable.getSort().getOrderFor("subscriberCount") != null;
 
-        if (category == null) {
+        if (isPopularSort) {
+            Pageable noSortPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            channels = channelRepository.findActiveChannelsOrderBySubscriberCount(
+                    category,
+                    SubscriptionStatus.ACTIVE,
+                    noSortPageable
+            );
+        } else if (category == null) {
             channels = channelRepository.findByIsActiveTrue(pageable);
         } else {
             channels = channelRepository.findByCategoryAndIsActiveTrue(category, pageable);
@@ -209,6 +277,7 @@ public class ChannelServiceImpl implements ChannelService {
                         channel.getId(),
                         channel.getTitle(),
                         channel.getDescription(),
+                        channel.getThumbnailUrl(),
                         channel.getCategory(),
                         channel.getSubscriberCount()
                 )

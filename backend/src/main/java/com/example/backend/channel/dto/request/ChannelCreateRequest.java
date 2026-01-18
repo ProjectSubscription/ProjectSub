@@ -14,13 +14,16 @@ public class ChannelCreateRequest {
 
     private String description;
 
+    private String thumbnailUrl;
+
     private ChannelCategory category;
 
-    public static ChannelCreateRequest create(String title, String description,
+    public static ChannelCreateRequest create(String title, String description, String thumbnailUrl,
                                               ChannelCategory category) {
         return ChannelCreateRequest.builder()
                 .title(title)
                 .description(description)
+                .thumbnailUrl(thumbnailUrl)
                 .category(category)
                 .build();
     }
