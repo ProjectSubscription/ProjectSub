@@ -1,21 +1,37 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getMyCoupons, getAvailableCoupons } from '@/app/lib/api';
 import MyCouponCard from '@/components/coupon/MyCouponCard';
 import CouponCard from '@/components/coupon/CouponCard';
 
 export default function MyCoupons() {
+  const searchParams = useSearchParams();
   const [coupons, setCoupons] = useState([]);
   const [downloadableCoupons, setDownloadableCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all'); // all, available, expired, used, downloadable
+  const [filter, setFilter] = useState(() => {
+    // URL 쿼리 파라미터에서 filter 값 읽기
+    const filterParam = searchParams?.get('filter');
+    return filterParam && ['all', 'available', 'expired', 'used', 'downloadable'].includes(filterParam) 
+      ? filterParam 
+      : 'all';
+  }); // all, available, expired, used, downloadable
 
   useEffect(() => {
     loadCoupons();
     loadDownloadableCoupons();
   }, []);
+
+  // URL 쿼리 파라미터 변경 시 filter 업데이트
+  useEffect(() => {
+    const filterParam = searchParams?.get('filter');
+    if (filterParam && ['all', 'available', 'expired', 'used', 'downloadable'].includes(filterParam)) {
+      setFilter(filterParam);
+    }
+  }, [searchParams]);
 
   const loadCoupons = async () => {
     try {
