@@ -6,23 +6,21 @@ import {
   Search, 
   Bell, 
   ChevronDown,
-  Menu,
-  Home,
   Tv,
   CreditCard,
-  Settings,
   LogOut,
   LayoutDashboard,
   Video,
   DollarSign,
   Users,
   FileText,
-  Mail
+  Mail,
+  Tag
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/NotificationDropdown';
 import { getUnreadNotificationCount, subscribeNotifications } from '@/app/lib/api';
 
-export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggleSidebar }) {
+export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -198,14 +196,6 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
         <div className="flex items-center justify-between h-16">
           {/* Logo & Menu */}
           <div className="flex items-center gap-4">
-            {currentUser && onToggleSidebar && (
-              <button
-                onClick={onToggleSidebar}
-                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
             <button
               onClick={() => onNavigate(currentUser ? 'home' : 'landing')}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -308,15 +298,18 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                           </p>
                         </div>
 
-                        {/* 일반 유저 메뉴 (ROLE_USER가 있으면 표시, 크리에이터도 볼 수 있음) */}
-                        {hasRole(currentUser.roles, 'ROLE_USER') && !hasRole(currentUser.roles, 'ROLE_ADMIN') && (
+                        {/* 일반 유저 메뉴 (모든 사용자가 볼 수 있음, ADMIN은 제외) */}
+                        {!hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
+                            <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                              사용자
+                            </div>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
                                 onNavigate('mypage');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <User className="w-4 h-4" />
                               마이페이지
@@ -326,7 +319,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                                 setShowUserMenu(false);
                                 onNavigate('my-subscriptions');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <CreditCard className="w-4 h-4" />
                               내 구독
@@ -360,12 +353,15 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                         {/* 크리에이터 메뉴 (ROLE_CREATOR가 있으면 표시) */}
                         {hasRole(currentUser.roles, 'ROLE_CREATOR') && (
                           <>
+                            <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                              크리에이터
+                            </div>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
                                 onNavigate('creator-dashboard');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <LayoutDashboard className="w-4 h-4" />
                               대시보드
@@ -373,9 +369,19 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
+                                onNavigate('creator-channel');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <Tv className="w-4 h-4" />
+                              채널 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
                                 onNavigate('creator-content');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <Video className="w-4 h-4" />
                               콘텐츠 관리
@@ -383,12 +389,32 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
+                                onNavigate('my-subscriptions');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              구독 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
                                 onNavigate('creator-settlement');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <DollarSign className="w-4 h-4" />
                               정산 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('admin-payments');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <FileText className="w-4 h-4" />
+                              결제내역
                             </button>
                           </>
                         )}
@@ -396,12 +422,15 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                         {/* 관리자 메뉴 (ROLE_ADMIN이 있으면 표시) */}
                         {hasRole(currentUser.roles, 'ROLE_ADMIN') && (
                           <>
+                            <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase">
+                              관리자
+                            </div>
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
                                 onNavigate('admin-applications');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <Users className="w-4 h-4" />
                               판매자 신청 관리
@@ -421,10 +450,30 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout, onToggl
                                 setShowUserMenu(false);
                                 onNavigate('admin-settlements');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <FileText className="w-4 h-4" />
                               정산 관리
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('admin-payments');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              결제 내역
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowUserMenu(false);
+                                onNavigate('admin-coupons');
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
+                            >
+                              <Tag className="w-4 h-4" />
+                              쿠폰 관리
                             </button>
                           </>
                         )}
