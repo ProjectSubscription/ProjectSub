@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { VideoPlayer } from '@/components/content/VideoPlayer';
 import { ContentInfo } from '@/components/content/ContentInfo';
 import { ReviewSection } from '@/components/content/ReviewSection';
 import { ContentSidebar } from '@/components/content/ContentSidebar';
 import CouponList from '@/components/coupon/CouponList';
-import { getContent, getContentCoupons, getChannel, getFeaturedContents, likeContent, unlikeContent } from '@/app/lib/api';
-import { mockReviews } from '@/app/mockData';
+import { getContent, getContentCoupons, getChannel, getFeaturedContents, likeContent, unlikeContent, createReview, getReviews } from '@/app/lib/api';
+import { useUser } from '@/components/contexts/UserContext';
 
 export function ContentDetailPage({ contentId, onNavigate }) {
+  const { currentUser } = useUser();
   const [isLiked, setIsLiked] = React.useState(false);
   const [showReviewForm, setShowReviewForm] = React.useState(false);
   const [rating, setRating] = React.useState(5);
   const [review, setReview] = React.useState('');
+  const [reviews, setReviews] = React.useState([]);
   const [coupons, setCoupons] = React.useState([]);
   const [content, setContent] = React.useState(null);
   const [channel, setChannel] = React.useState(null);
@@ -71,6 +72,15 @@ export function ContentDetailPage({ contentId, onNavigate }) {
           console.warn('쿠폰 목록 조회 실패:', err);
           setCoupons([]);
         }
+
+        // 리뷰 목록 조회
+        try {
+          const reviewsData = await getReviews(id);
+          setReviews(reviewsData || []);
+        } catch (err) {
+          console.warn('리뷰 목록 조회 실패:', err);
+          setReviews([]);
+        }
       } catch (err) {
         console.error('콘텐츠 로딩 실패:', err);
         setError(err.message || '콘텐츠를 불러오는데 실패했습니다.');
@@ -128,6 +138,17 @@ export function ContentDetailPage({ contentId, onNavigate }) {
     }
   };
 
+  // 리뷰 목록 새로고침 함수
+  const fetchReviews = async () => {
+    try {
+      const id = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
+      const reviewsData = await getReviews(id);
+      setReviews(reviewsData || []);
+    } catch (err) {
+      console.error('리뷰 목록 조회 실패:', err);
+    }
+  };
+
   const handleSubmitReview = async (e) => {
     e.preventDefault();
 
@@ -137,31 +158,35 @@ export function ContentDetailPage({ contentId, onNavigate }) {
       return;
     }
 
+    if (!review.trim()) {
+      alert('리뷰 내용을 입력해주세요.');
+      return;
+    }
+
     try {
-      // Note: memberId is now handled by backend session/token, but we keep it here if needed or remove it
-      // The backend controller uses @AuthenticationPrincipal, so memberId in body might be ignored or optional
-      await axios.post(`http://localhost:8080/api/contents/${contentId}/reviews`, {
-        contentId: contentId,
-        memberId: currentUser.id,
+      // contentId를 숫자로 변환
+      const id = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
+      
+      // 백엔드에서 memberId는 세션(@AuthenticationPrincipal)에서 가져오므로
+      // request body에는 rating과 comment만 전달
+      // contentId는 URL path variable로 전달됨
+      await createReview(id, {
         rating: rating,
-        comment: review
+        comment: review.trim()
       });
+
       alert('리뷰가 등록되었습니다!');
       setShowReviewForm(false);
       setReview('');
       setRating(5);
-      fetchReviews(); // Refresh reviews list
+      
+      // 리뷰 목록 새로고침
+      await fetchReviews();
     } catch (error) {
-      console.error('Failed to submit review:', error);
-      alert('리뷰 등록에 실패했습니다.');
+      console.error('리뷰 등록 실패:', error);
+      alert(error.message || '리뷰 등록에 실패했습니다.');
     }
   };
-
-  const contentReviews = mockReviews.filter(r => {
-    const rId = r.contentId || r.id;
-    const cId = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
-    return rId === cId;
-  });
 
   if (loading) {
     return <div className="text-center py-12">로딩 중...</div>;
