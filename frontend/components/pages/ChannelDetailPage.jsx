@@ -82,7 +82,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
           setIsSubscribed(channelData.subscribed);
         } else {
           const hasActiveSubscription = (mySubscriptions || []).some(
-            (sub: any) => sub.channelId === Number(channelId) && sub.status === 'ACTIVE'
+            sub) => sub.channelId === Number(channelId) && sub.status === 'ACTIVE'
           );
           setIsSubscribed(Boolean(hasActiveSubscription));
         }
