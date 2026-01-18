@@ -14,7 +14,7 @@ export function ContentInfo({ content, isLiked, onLikeToggle, onPurchase, hasAcc
                 <span className="text-2xl font-bold text-blue-600">
                   {content.price.toLocaleString()}원
                 </span>
-                {content.accessType === 'PARTIAL' && (
+                {content.accessType === 'PARTIAL' && content.previewRatio && (
                   <span className="text-sm text-gray-500">
                     (미리보기 {content.previewRatio}%)
                   </span>
@@ -103,7 +103,7 @@ export function ContentInfo({ content, isLiked, onLikeToggle, onPurchase, hasAcc
               단일 구매
             </span>
           )}
-          {content.accessType === 'PARTIAL' && !hasAccess && (
+          {content.accessType === 'PARTIAL' && !hasAccess && content.previewRatio && (
             <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-medium">
               미리보기 {content.previewRatio}%
             </span>

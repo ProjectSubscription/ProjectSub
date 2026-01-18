@@ -5,8 +5,8 @@ export function NewContent({ contents, onNavigate }) {
   const handleContentClick = (content) => {
     // contentId를 사용하여 콘텐츠 상세 페이지로 이동
     const contentId = content.contentId || content.id;
-    if (contentId) {
-      window.location.href = `/contents/${contentId}`;
+    if (contentId && onNavigate) {
+      onNavigate('content-detail', { contentId });
     }
   };
 

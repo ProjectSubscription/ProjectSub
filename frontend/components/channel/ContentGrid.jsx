@@ -5,15 +5,18 @@ export function ContentGrid({ contents, isSubscribed, onNavigate }) {
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {contents.map((content) => {
-        const canAccess = content.accessType === 'FREE' || isSubscribed;
+        // 접근 권한: 무료 또는 구독자 전용 콘텐츠는 구독 시 접근 가능
+        // 실제 콘텐츠 접근 권한 (상세 페이지는 모두 접근 가능)
+        const canAccess = content.accessType === 'FREE' || 
+                         (content.accessType === 'SUBSCRIBER_ONLY' && isSubscribed) ||
+                         content.accessType === 'SINGLE_PURCHASE' ||
+                         content.accessType === 'PARTIAL';
         
         return (
           <div
             key={content.id}
-            onClick={() => canAccess && onNavigate('content-detail', { contentId: content.id })}
-            className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all ${
-              canAccess ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'
-            }`}
+            onClick={() => onNavigate('content-detail', { contentId: content.id })}
+            className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer"
           >
             <div className="relative aspect-video">
               <img

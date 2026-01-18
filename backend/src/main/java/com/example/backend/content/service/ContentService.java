@@ -204,11 +204,16 @@ public class ContentService {
         // 접근 권한 검증
         // SUBSCRIBER_ONLY, SINGLE_PURCHASE, PARTIAL 타입은 페이지 접근은 허용하되
         // 실제 콘텐츠 접근은 hasAccess로 제어
+        // validateAccess는 예외를 던질 수 있지만, 페이지 접근은 허용하기 위해 예외를 무시함
         try {
             validateAccess(content, userRole, userId);
         } catch (IllegalArgumentException e) {
             // SUBSCRIBER_ONLY, SINGLE_PURCHASE, PARTIAL 타입은 페이지 접근은 허용
             // 예외를 무시하고 계속 진행 (hasAccess로 접근 권한 제어)
+            // 예외가 발생해도 페이지는 접근 가능하도록 함
+        } catch (Exception e) {
+            // 다른 예외도 무시하고 계속 진행 (페이지 접근 허용)
+            // 예외가 발생해도 페이지는 접근 가능하도록 함
         }
 
         // 조회수 증가 (로그인한 사용자의 최초 조회 시만)
@@ -238,19 +243,31 @@ public class ContentService {
                 : false;
 
         // 접근 권한 여부 확인 (구매/구독 완료 여부)
+        // 콘텐츠가 속한 채널의 구독 내역과 그 콘텐츠 단건 구매 내역을 확인하여 접근 권한 부여
         Boolean hasAccess = false;
         if (content.getAccessType() == AccessType.FREE) {
             hasAccess = true; // 무료 콘텐츠는 항상 접근 가능
         } else if (userId != null) {
+            Long channelId = content.getChannel().getId();
+            
+            // 1. 채널 구독 내역 확인
+            boolean hasActiveSubscription = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
+                    userId, channelId, SubscriptionStatus.ACTIVE);
+            
+            // 2. 콘텐츠 단건 구매 내역 확인
+            boolean hasPurchasedContent = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
+                    userId, contentId, OrderType.CONTENT, OrderStatus.PAID);
+            
+            // 접근 타입에 따라 접근 권한 결정
             if (content.getAccessType() == AccessType.SUBSCRIBER_ONLY) {
-                // 구독자만 접근 가능: 해당 채널에 대한 활성 구독이 있는지 확인
-                hasAccess = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
-                        userId, content.getChannel().getId(), SubscriptionStatus.ACTIVE);
-            } else if (content.getAccessType() == AccessType.SINGLE_PURCHASE ||
-                       content.getAccessType() == AccessType.PARTIAL) {
-                // 구매한 사용자만 접근 가능: 해당 콘텐츠를 구매했는지 확인
-                hasAccess = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
-                        userId, contentId, OrderType.CONTENT, OrderStatus.PAID);
+                // 구독자만 접근 가능: 채널 구독 내역 확인
+                hasAccess = hasActiveSubscription;
+            } else if (content.getAccessType() == AccessType.SINGLE_PURCHASE) {
+                // 단건 구매 콘텐츠: 구매 내역 또는 구독 내역 확인 (구독자도 접근 가능)
+                hasAccess = hasPurchasedContent || hasActiveSubscription;
+            } else if (content.getAccessType() == AccessType.PARTIAL) {
+                // 미리보기 콘텐츠: 구매 내역 또는 구독 내역 확인 (구독자도 접근 가능)
+                hasAccess = hasPurchasedContent || hasActiveSubscription;
             }
         }
 

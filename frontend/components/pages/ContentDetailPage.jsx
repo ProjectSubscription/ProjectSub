@@ -47,7 +47,11 @@ export function ContentDetailPage({ contentId, onNavigate }) {
             try {
               const featuredContents = await getFeaturedContents(contentData.channelId);
               // 현재 콘텐츠 제외
-              const filtered = featuredContents.filter(c => c.contentId !== contentData.contentId);
+              const filtered = featuredContents.filter(c => {
+                const cId = c.contentId || c.id;
+                const currentId = contentData.contentId || contentData.id;
+                return cId !== currentId;
+              });
               setRelatedContents(filtered.slice(0, 3));
             } catch (err) {
               console.warn('관련 콘텐츠 조회 실패:', err);
@@ -85,7 +89,6 @@ export function ContentDetailPage({ contentId, onNavigate }) {
     content.accessType === 'FREE' || 
     (content.hasAccess === true)
   );
-  
   const hasAccess = hasFullAccess;
 
   const handleLikeToggle = async () => {
@@ -132,7 +135,11 @@ export function ContentDetailPage({ contentId, onNavigate }) {
     setRating(5);
   };
 
-  const contentReviews = mockReviews.filter(r => r.contentId === contentId);
+  const contentReviews = mockReviews.filter(r => {
+    const rId = r.contentId || r.id;
+    const cId = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
+    return rId === cId;
+  });
 
   if (loading) {
     return <div className="text-center py-12">로딩 중...</div>;
@@ -162,19 +169,19 @@ export function ContentDetailPage({ contentId, onNavigate }) {
     ...content,
     description: content.body || '콘텐츠 설명이 없습니다.',
     createdAt: content.createdAt ? new Date(content.createdAt).toLocaleDateString('ko-KR') : '',
-    hasAccess: content.hasAccess, // hasAccess 필드 유지
+    hasAccess: content.hasAccess,
   };
 
   const channelForSidebar = channel ? {
     id: channel.id,
-    name: channel.title,
+    name: channel.title || channel.name,
     creatorName: channel.creatorId ? `크리에이터 ${channel.creatorId}` : '크리에이터',
     thumbnailUrl: '/placeholder-channel.jpg',
     subscriberCount: channel.subscriberCount || 0,
   } : null;
 
   const relatedContentsForSidebar = relatedContents.map(c => ({
-    id: c.contentId,
+    id: c.contentId || c.id,
     title: c.title,
     thumbnailUrl: c.mediaUrl || '/placeholder-content.jpg',
     viewCount: c.viewCount || 0,
