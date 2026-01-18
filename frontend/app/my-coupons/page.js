@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getMyCoupons } from '@/app/lib/api';
+import { getMyCoupons, getAvailableCoupons } from '@/app/lib/api';
 import MyCouponCard from '@/components/coupon/MyCouponCard';
+import CouponCard from '@/components/coupon/CouponCard';
 
 export default function MyCoupons() {
   const [coupons, setCoupons] = useState([]);
+  const [downloadableCoupons, setDownloadableCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all'); // all, available, expired, used
+  const [filter, setFilter] = useState('all'); // all, available, expired, used, downloadable
 
   useEffect(() => {
     loadCoupons();
+    loadDownloadableCoupons();
   }, []);
 
   const loadCoupons = async () => {
@@ -28,7 +31,19 @@ export default function MyCoupons() {
     }
   };
 
-  // 쿠폰 필터링
+  const loadDownloadableCoupons = async () => {
+    try {
+      const data = await getAvailableCoupons();
+      // 이미 다운받은 쿠폰(isIssued === true) 제외
+      const filtered = (data || []).filter(coupon => !coupon.isIssued);
+      setDownloadableCoupons(filtered);
+    } catch (err) {
+      console.error('다운로드 가능한 쿠폰 목록 조회 오류:', err);
+      // 다운로드 가능한 쿠폰 조회 실패는 에러로 표시하지 않음 (비로그인 사용자도 접근 가능)
+    }
+  };
+
+  // 쿠폰 필터링 (다운로드 가능 탭은 별도 처리)
   const filteredCoupons = coupons.filter(coupon => {
     const isUsed = coupon.usedAt !== null && coupon.usedAt !== undefined;
     const isExpired = coupon.expiredAt && new Date(coupon.expiredAt) < new Date();
@@ -58,6 +73,15 @@ export default function MyCoupons() {
       return isExpired && c.usedAt === null;
     }).length,
     used: coupons.filter(c => c.usedAt !== null && c.usedAt !== undefined).length,
+    downloadable: downloadableCoupons.length,
+  };
+
+  // 다운로드 가능한 쿠폰 발급 성공 시 콜백
+  const handleDownloadSuccess = () => {
+    // 다운로드 가능한 쿠폰 목록 새로고침
+    loadDownloadableCoupons();
+    // 보유 쿠폰 목록도 새로고침
+    loadCoupons();
   };
 
   if (loading) {
@@ -87,7 +111,7 @@ export default function MyCoupons() {
       )}
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-sm text-gray-600 mb-1">전체</p>
           <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -103,6 +127,10 @@ export default function MyCoupons() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-sm text-gray-600 mb-1">사용 완료</p>
           <p className="text-2xl font-bold text-gray-600">{stats.used}</p>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <p className="text-sm text-gray-600 mb-1">다운로드 가능</p>
+          <p className="text-2xl font-bold text-blue-600">{stats.downloadable}</p>
         </div>
       </div>
 
@@ -148,10 +176,52 @@ export default function MyCoupons() {
         >
           사용 완료
         </button>
+        <button
+          onClick={() => setFilter('downloadable')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'downloadable'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+          }`}
+        >
+          다운로드 가능
+        </button>
       </div>
 
       {/* 쿠폰 목록 */}
-      {filteredCoupons.length === 0 ? (
+      {filter === 'downloadable' ? (
+        // 다운로드 가능한 쿠폰 목록
+        downloadableCoupons.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v13m0-13V6a2 2 0 112 2h-2m0 0V5.5A2.5 2.5 0 109.5 8H12m-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+              />
+            </svg>
+            <h3 className="mt-4 text-lg font-medium text-gray-900">쿠폰이 없습니다</h3>
+            <p className="mt-2 text-sm text-gray-500">다운로드 가능한 쿠폰이 없습니다.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {downloadableCoupons.map((coupon) => (
+              <CouponCard
+                key={coupon.id}
+                coupon={coupon}
+                onIssueSuccess={handleDownloadSuccess}
+              />
+            ))}
+          </div>
+        )
+      ) : filteredCoupons.length === 0 ? (
+        // 보유 쿠폰 목록 (빈 상태)
         <div className="text-center py-12 bg-white rounded-xl shadow-sm">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"
@@ -174,10 +244,13 @@ export default function MyCoupons() {
               ? '사용 가능한 쿠폰이 없습니다.'
               : filter === 'expired'
               ? '만료된 쿠폰이 없습니다.'
-              : '사용 완료된 쿠폰이 없습니다.'}
+              : filter === 'used'
+              ? '사용 완료된 쿠폰이 없습니다.'
+              : '쿠폰이 없습니다.'}
           </p>
         </div>
       ) : (
+        // 보유 쿠폰 목록
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCoupons.map((coupon) => (
             <MyCouponCard key={coupon.id} coupon={coupon} />
