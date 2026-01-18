@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import {
   TrendingUp,
@@ -13,8 +15,9 @@ import {
 import { PageRoute } from '@/app/types';
 import { getMyCreatorInfo } from '@/app/lib/api';
 
-export function CreatorDashboard({ creatorId, onNavigate }) {
+export function CreatorDashboard({ onNavigate }) {
   const [myPageData, setMyPageData] = React.useState(null);
+  const [creatorId, setCreatorId] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
 
@@ -24,6 +27,9 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
         setLoading(true);
         setError('');
         const data = await getMyCreatorInfo();
+        // API에서 받아온 크리에이터 정보에서 id 추출
+        const id = data?.id || data?.creatorId;
+        setCreatorId(id);
         setMyPageData(data);
       } catch (err) {
         setError(err.message || '크리에이터 마이페이지 정보를 불러오는 중 오류가 발생했습니다.');
