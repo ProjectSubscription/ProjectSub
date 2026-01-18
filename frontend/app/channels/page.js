@@ -1,6 +1,6 @@
 'use client';
 
-import { HomePage } from '@/components/pages/HomePage';
+import { ChannelListPage } from '@/components/pages/ChannelListPage';
 import { useRouter } from 'next/navigation';
 
 export default function ChannelsPage() {
@@ -21,5 +21,5 @@ export default function ChannelsPage() {
     }
   };
 
-  return <HomePage onNavigate={handleNavigate} />;
+  return <ChannelListPage onNavigate={handleNavigate} />;
 }
