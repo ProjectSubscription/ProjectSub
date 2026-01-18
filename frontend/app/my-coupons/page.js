@@ -216,8 +216,60 @@ export default function MyCoupons() {
                 key={coupon.id}
                 coupon={coupon}
                 onIssueSuccess={handleDownloadSuccess}
+                hideCode={true}
               />
             ))}
+          </div>
+        )
+      ) : filter === 'all' ? (
+        // 전체 탭: 보유 쿠폰 + 다운로드 가능한 쿠폰 모두 표시
+        filteredCoupons.length === 0 && downloadableCoupons.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v13m0-13V6a2 2 0 112 2h-2m0 0V5.5A2.5 2.5 0 109.5 8H12m-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+              />
+            </svg>
+            <h3 className="mt-4 text-lg font-medium text-gray-900">쿠폰이 없습니다</h3>
+            <p className="mt-2 text-sm text-gray-500">다운받은 쿠폰이 없습니다.</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* 보유 쿠폰 섹션 */}
+            {filteredCoupons.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">보유 쿠폰</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredCoupons.map((coupon) => (
+                    <MyCouponCard key={coupon.id} coupon={coupon} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* 다운로드 가능한 쿠폰 섹션 */}
+            {downloadableCoupons.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">다운로드 가능한 쿠폰</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {downloadableCoupons.map((coupon) => (
+                    <CouponCard
+                      key={coupon.id}
+                      coupon={coupon}
+                      onIssueSuccess={handleDownloadSuccess}
+                      hideCode={true}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )
       ) : filteredCoupons.length === 0 ? (
@@ -238,9 +290,7 @@ export default function MyCoupons() {
           </svg>
           <h3 className="mt-4 text-lg font-medium text-gray-900">쿠폰이 없습니다</h3>
           <p className="mt-2 text-sm text-gray-500">
-            {filter === 'all'
-              ? '다운받은 쿠폰이 없습니다.'
-              : filter === 'available'
+            {filter === 'available'
               ? '사용 가능한 쿠폰이 없습니다.'
               : filter === 'expired'
               ? '만료된 쿠폰이 없습니다.'

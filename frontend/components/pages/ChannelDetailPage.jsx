@@ -150,6 +150,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
           <h2 className="text-xl font-bold text-gray-900 mb-4">다운로드 가능한 쿠폰</h2>
           <CouponList
             coupons={coupons}
+            hideCode={true}
             onRefresh={async () => {
               try {
                 const numericChannelId = Number(channelId);

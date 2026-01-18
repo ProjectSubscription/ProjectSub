@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createAdminCoupon, getAdminCoupons } from '@/app/lib/api';
+import { createAdminCoupon, getAdminCoupons, getSubscriptionPlans, getContents } from '@/app/lib/api';
 
 const DISCOUNT_TYPES = [
   { value: 'RATE', label: '비율 할인 (%)' },
@@ -36,6 +36,10 @@ export default function AdminCouponsPage() {
   const [targetId, setTargetId] = useState('');
   const [channelId, setChannelId] = useState('');
 
+  // 적용 대상 목록 (구독 상품 또는 콘텐츠)
+  const [targetOptions, setTargetOptions] = useState([]);
+  const [targetOptionsLoading, setTargetOptionsLoading] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -64,6 +68,47 @@ export default function AdminCouponsPage() {
   useEffect(() => {
     loadCoupons();
   }, []);
+
+  // 적용 대상 목록 로드 (targetType과 channelId가 모두 있을 때)
+  useEffect(() => {
+    const loadTargetOptions = async () => {
+      if (!targetType || !channelId) {
+        setTargetOptions([]);
+        setTargetId('');
+        return;
+      }
+
+      setTargetOptionsLoading(true);
+      try {
+        if (targetType === 'SUBSCRIPTION') {
+          const plans = await getSubscriptionPlans(Number(channelId));
+          const list = Array.isArray(plans) ? plans : plans?.content || [];
+          setTargetOptions(
+            list.map((plan) => ({
+              id: plan.planId,
+              label: `${plan.planType === 'MONTHLY' ? '월간' : '연간'} 구독 (${plan.price?.toLocaleString()}원)`,
+            }))
+          );
+        } else if (targetType === 'CONTENT') {
+          const contents = await getContents({ channelId: Number(channelId) });
+          const list = Array.isArray(contents) ? contents : contents?.content || [];
+          setTargetOptions(
+            list.map((content) => ({
+              id: content.contentId || content.id,
+              label: content.title || '제목 없음',
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('적용 대상 목록 조회 오류:', err);
+        setTargetOptions([]);
+      } finally {
+        setTargetOptionsLoading(false);
+      }
+    };
+
+    loadTargetOptions();
+  }, [targetType, channelId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -119,6 +164,7 @@ export default function AdminCouponsPage() {
       setTargetType('');
       setTargetId('');
       setChannelId('');
+      setTargetOptions([]);
       // 목록 새로고침
       await loadCoupons();
     } catch (err) {
@@ -239,7 +285,10 @@ export default function AdminCouponsPage() {
               type="number"
               min={1}
               value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
+              onChange={(e) => {
+                setChannelId(e.target.value);
+                setTargetId(''); // 채널 ID 변경 시 선택 초기화
+              }}
               placeholder="특정 채널에 연결할 쿠폰인 경우 채널 ID 입력"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isSubmitting}
@@ -264,7 +313,10 @@ export default function AdminCouponsPage() {
               <div>
                 <select
                   value={targetType}
-                  onChange={(e) => setTargetType(e.target.value)}
+                  onChange={(e) => {
+                    setTargetType(e.target.value);
+                    setTargetId(''); // 타입 변경 시 선택 초기화
+                  }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={isSubmitting}
                 >
@@ -277,15 +329,39 @@ export default function AdminCouponsPage() {
                 </select>
               </div>
               <div>
-                <input
-                  type="number"
-                  min={1}
-                  value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
-                  placeholder="특정 상품 ID (선택)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isSubmitting || !targetType}
-                />
+                {targetType && channelId ? (
+                  <select
+                    value={targetId}
+                    onChange={(e) => setTargetId(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmitting || targetOptionsLoading}
+                  >
+                    <option value="">전체 {targetType === 'SUBSCRIPTION' ? '구독 상품' : '콘텐츠'}에 적용</option>
+                    {targetOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="number"
+                    min={1}
+                    value={targetId}
+                    onChange={(e) => setTargetId(e.target.value)}
+                    placeholder={targetType ? '채널 ID를 먼저 입력해주세요' : '적용 대상을 먼저 선택해주세요'}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    disabled={true}
+                  />
+                )}
+                {targetOptionsLoading && (
+                  <p className="mt-1 text-xs text-gray-500">목록을 불러오는 중...</p>
+                )}
+                {targetType && channelId && !targetOptionsLoading && targetOptions.length === 0 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    해당 채널에 {targetType === 'SUBSCRIPTION' ? '구독 상품' : '콘텐츠'}가 없습니다.
+                  </p>
+                )}
               </div>
             </div>
           </div>
