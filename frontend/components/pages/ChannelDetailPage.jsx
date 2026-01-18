@@ -7,8 +7,8 @@ import { ChannelTabs } from '@/components/channel/ChannelTabs';
 import { ContentGrid } from '@/components/channel/ContentGrid';
 import { ChannelAbout } from '@/components/channel/ChannelAbout';
 import CouponList from '@/components/coupon/CouponList';
-import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons } from '@/app/lib/api';
-import { mockChannels, mockContents, mockReviews } from '@/app/mockData';
+import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons, getContents } from '@/app/lib/api';
+import { mockReviews } from '@/app/mockData';
 
 const DEFAULT_CHANNEL_THUMBNAIL_URL =
   'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&auto=format&fit=crop&q=60';
@@ -87,10 +87,27 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
           setIsSubscribed(Boolean(hasActiveSubscription));
         }
 
-        // 임시로 mockContents 사용 (콘텐츠 API 연동 필요 시 수정)
-        // channelId가 숫자 경로로 바뀌었기 때문에, mock 데이터(채널 id가 'channel-1')와는 매칭되지 않을 수 있음
-        const contents = mockContents.filter(c => String(c.channelId) === String(channelId));
-        setChannelContents(contents);
+        // 채널의 콘텐츠 목록 조회
+        try {
+          const contentsResponse = await getContents({ channelId: numericChannelId });
+          const contents = contentsResponse?.content || [];
+          
+          // 콘텐츠 데이터를 ContentGrid 컴포넌트가 기대하는 형식으로 변환
+          const normalizedContents = contents.map(c => ({
+            id: c.contentId || c.id,
+            title: c.title,
+            thumbnailUrl: c.mediaUrl || '/placeholder-content.jpg',
+            description: c.body || '',
+            viewCount: c.viewCount || 0,
+            likeCount: c.likeCount || 0,
+            accessType: c.accessType || 'FREE',
+          }));
+          
+          setChannelContents(normalizedContents);
+        } catch (err) {
+          console.warn('채널 콘텐츠 조회 실패:', err);
+          setChannelContents([]);
+        }
       } catch (err) {
         console.error('데이터 로딩 실패:', err);
         setError(err.message);
