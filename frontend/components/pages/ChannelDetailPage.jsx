@@ -91,6 +91,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
           const contentsResponse = await getContents({ channelId: numericChannelId });
           const contents = contentsResponse?.content || [];
           
+          // 백엔드에서 이미 발행된 콘텐츠만 필터링해서 반환하므로, 프론트엔드에서는 추가 필터링 불필요
           // 콘텐츠 데이터를 ContentGrid 컴포넌트가 기대하는 형식으로 변환
           const normalizedContents = contents.map(c => ({
             id: c.contentId || c.id,
@@ -100,6 +101,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
             viewCount: c.viewCount || 0,
             likeCount: c.likeCount || 0,
             accessType: c.accessType || 'FREE',
+            publishedAt: c.publishedAt, // publishedAt 포함
           }));
           
           setChannelContents(normalizedContents);

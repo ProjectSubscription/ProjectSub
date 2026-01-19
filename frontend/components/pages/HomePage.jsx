@@ -72,7 +72,16 @@ export function HomePage({ onNavigate }) {
           page: 0
         });
         const items = response?.content ?? [];
-        if (!cancelled) setNewContents(items);
+        
+        // 발행된 콘텐츠만 필터링 (publishedAt이 null이 아니고 현재 시점 이전인 것만)
+        const now = new Date();
+        const publishedItems = items.filter(content => {
+          if (!content.publishedAt) return false;
+          const publishedAt = new Date(content.publishedAt);
+          return publishedAt <= now;
+        });
+        
+        if (!cancelled) setNewContents(publishedItems);
       } catch (e) {
         if (!cancelled) {
           setNewContents([]);
