@@ -23,7 +23,7 @@ public class CouponValidationService {
     private final CouponTargetRepository couponTargetRepository;
     private final MemberCouponUseRepository memberCouponUseRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public CouponValidateResponse validateCoupon(
             Long memberId,
             Long couponId,
