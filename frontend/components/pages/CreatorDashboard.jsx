@@ -2,15 +2,10 @@
 
 import React from 'react';
 import {
-  TrendingUp,
   DollarSign,
   Users,
   Video,
-  Eye,
-  Heart,
-  Calendar,
-  ArrowUp,
-  ArrowDown
+  Eye
 } from 'lucide-react';
 import { PageRoute } from '@/app/types';
 import { getMyCreatorInfo } from '@/app/lib/api';
@@ -75,32 +70,24 @@ export function CreatorDashboard({ onNavigate }) {
     {
       label: '총 구독자',
       value: (myPageData.totalSubscribers || 0).toLocaleString(),
-      change: '+12.5%',
-      trend: 'up',
       icon: Users,
       color: 'blue'
     },
     {
       label: '이번 달 예상 수익',
       value: `${(myPageData.thisMonthExpectedRevenue || 0).toLocaleString()}원`,
-      change: '+8.3%',
-      trend: 'up',
       icon: DollarSign,
       color: 'green'
     },
     {
       label: '총 콘텐츠',
       value: (myPageData.totalContentCount || 0).toString(),
-      change: '+3',
-      trend: 'up',
       icon: Video,
       color: 'purple'
     },
     {
       label: '총 조회수',
       value: (myPageData.totalViewCount || 0).toLocaleString(),
-      change: '+15.2%',
-      trend: 'up',
       icon: Eye,
       color: 'orange'
     }
@@ -129,19 +116,9 @@ export function CreatorDashboard({ onNavigate }) {
 
           return (
             <div key={stat.label} className="bg-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center mb-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClasses[stat.color]}`}>
                   <Icon className="w-6 h-6" />
-                </div>
-                <div className={`flex items-center gap-1 text-sm font-medium ${
-                  stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {stat.trend === 'up' ? (
-                    <ArrowUp className="w-4 h-4" />
-                  ) : (
-                    <ArrowDown className="w-4 h-4" />
-                  )}
-                  <span>{stat.change}</span>
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
@@ -151,46 +128,11 @@ export function CreatorDashboard({ onNavigate }) {
         })}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <button
-          onClick={() => onNavigate('creator-content-new', {})}
-          className="bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl p-6 hover:from-blue-600 hover:to-purple-700 transition-all text-left"
-        >
-          <Video className="w-8 h-8 mb-3" />
-          <h3 className="text-xl font-bold mb-2">새 콘텐츠 업로드</h3>
-          <p className="text-blue-100 text-sm">새로운 콘텐츠를 만들고 공유하세요</p>
-        </button>
-        <button
-          onClick={() => onNavigate('creator-settlement', {})}
-          className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
-        >
-          <DollarSign className="w-8 h-8 text-green-600 mb-3" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">정산 확인</h3>
-          <p className="text-gray-600 text-sm">수익 내역을 확인하세요</p>
-        </button>
-        <button
-          onClick={() => onNavigate('creator-channel', {})}
-          className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
-        >
-          <Users className="w-8 h-8 text-blue-600 mb-3" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">채널 관리</h3>
-          <p className="text-gray-600 text-sm">채널 정보를 수정하세요</p>
-        </button>
-      </div>
-
       {/* Charts Row */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
         <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900">최근 3개월 수익</h3>
-            <select className="text-sm border border-gray-300 rounded-lg px-3 py-1.5">
-              <option>최근 3개월</option>
-              <option>최근 6개월</option>
-              <option>올해</option>
-            </select>
-          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-6">최근 3개월 수익</h3>
           <div className="space-y-3">
             {myPageData.recentThreeMonthsRevenue && myPageData.recentThreeMonthsRevenue.length > 0 ? (
               myPageData.recentThreeMonthsRevenue.map((revenue, index) => (
@@ -263,43 +205,6 @@ export function CreatorDashboard({ onNavigate }) {
               ))}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 mb-6">최근 활동</h3>
-        <div className="space-y-4">
-          <div className="flex items-start gap-4 pb-4 border-b border-gray-100">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Heart className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-900 font-medium">새로운 좋아요 +25</p>
-              <p className="text-sm text-gray-500">캐릭터 드로잉 실전 테크닉</p>
-            </div>
-            <span className="text-sm text-gray-500">2시간 전</span>
-          </div>
-          <div className="flex items-start gap-4 pb-4 border-b border-gray-100">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Users className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-900 font-medium">새 구독자 +12</p>
-              <p className="text-sm text-gray-500">디지털 아트 마스터클래스</p>
-            </div>
-            <span className="text-sm text-gray-500">5시간 전</span>
-          </div>
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Video className="w-5 h-5 text-purple-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-gray-900 font-medium">콘텐츠 발행 완료</p>
-              <p className="text-sm text-gray-500">색감 마스터하기 - 고급편</p>
-            </div>
-            <span className="text-sm text-gray-500">1일 전</span>
-          </div>
         </div>
       </div>
     </div>
