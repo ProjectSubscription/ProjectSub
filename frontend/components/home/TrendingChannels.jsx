@@ -45,7 +45,7 @@ export function TrendingChannels({ channels, onNavigate }) {
                   TOP {index + 1}
                 </div>
               )}
-              <div className="absolute top-3 right-3 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-sm">
+              <div className="absolute top-3 right-3 text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
                 {channel.category}
               </div>
             </div>
