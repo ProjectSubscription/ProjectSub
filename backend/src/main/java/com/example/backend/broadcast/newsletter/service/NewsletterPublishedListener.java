@@ -30,10 +30,7 @@ public class NewsletterPublishedListener {
     public void handle(NewsletterPublishedEvent event) {
 
         // 모든 활동중인 회원들 List<Long> 으로 가져오기
-        List<Long> activeMemberIds = memberService.findAllRegisteredMembers()
-                .stream()
-                .map(Member::getId)
-                .toList(); //todo: 메서드 요청하기 ( 활동중, memberId만 )
+        List<Long> activeMemberIds = memberService.findAllRegisteredMemberIds();
 
         // 뉴스레터 알림 켜져있는 회원들만 다시 List<Long>으로 가져오기
         List<Long> targetMemberIds = notificationSettingService.getTargetMemberIds(activeMemberIds, NotificationType.NEWS_LETTER);

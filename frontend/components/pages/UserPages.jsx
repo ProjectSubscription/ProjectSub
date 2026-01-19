@@ -714,17 +714,24 @@ export function MyPage({ userId, onNavigate }) {
               </button>
             </div>
 
-            {/* 이벤트 알림 (백엔드 미구현 - 비활성화) */}
-            <div className="flex items-center justify-between py-3 opacity-50">
+            {/* 이벤트 알림 */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-200">
               <div className="flex-1">
                 <label className="text-sm font-medium text-gray-900">이벤트 알림</label>
                 <p className="text-xs text-gray-500 mt-1">이벤트 및 프로모션 알림을 받습니다</p>
               </div>
               <button
-                disabled
-                className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 cursor-not-allowed"
+                onClick={() => handleNotificationSettingChange('eventNotify', !notificationSettings?.eventNotify)}
+                disabled={savingSettings}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  notificationSettings?.eventNotify ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
               >
-                <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-1" />
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notificationSettings?.eventNotify ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
               </button>
             </div>
           </div>

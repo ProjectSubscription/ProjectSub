@@ -1,5 +1,6 @@
 package com.example.backend.coupon.service;
 
+import com.example.backend.coupon.dto.event.CouponCreatedEvent;
 import com.example.backend.coupon.dto.request.CouponCreateRequest;
 import com.example.backend.coupon.dto.request.CouponUpdateRequest;
 import com.example.backend.coupon.dto.response.CouponListResponse;
@@ -17,6 +18,7 @@ import com.example.backend.member.entity.Member;
 import com.example.backend.member.entity.Role;
 import com.example.backend.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class CouponAdminService {
     private final CouponCodeGenerator couponCodeGenerator;
     private final MemberRepository memberRepository;
     private final MemberCouponRepository memberCouponRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     @Transactional
     public CouponResponse createCoupon(Long memberId, CouponCreateRequest request) {
@@ -78,6 +81,11 @@ public class CouponAdminService {
                 couponTargetRepository.save(target);
             });
         }
+
+        // 쿠폰 생성 이벤트 발행 -> 쿠폰 생성 리스너 호출
+        applicationEventPublisher.publishEvent(
+                CouponCreatedEvent.create(savedCoupon.getId(), savedCoupon.getChannelId())
+        );
 
         return CouponResponse.fromEntity(savedCoupon);
     }
