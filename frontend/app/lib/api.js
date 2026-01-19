@@ -561,6 +561,20 @@ export async function getReviews(contentId) {
 }
 
 /**
+ * 채널 최근 리뷰 조회
+ */
+export async function getChannelRecentReviews(channelId, limit = 3) {
+  return apiGet(`/api/channels/${channelId}/reviews`, { limit });
+}
+
+/**
+ * 채널 리뷰 요약 조회
+ */
+export async function getChannelReviewSummary(channelId) {
+  return apiGet(`/api/channels/${channelId}/reviews/summary`);
+}
+
+/**
  * 댓글 작성
  */
 export async function createComment(contentId, data) {

@@ -6,7 +6,7 @@ import { TrendingChannels } from '@/components/home/TrendingChannels';
 import { NewContent } from '@/components/home/NewContent';
 import { CategoryChannels } from '@/components/home/CategoryChannels';
 import { TopReviews } from '@/components/home/TopReviews';
-import { getChannels, getContents, getChannelCategories, getTopReviews } from '@/app/lib/api';
+import { getChannels, getContents, getChannelCategories, getTopReviews, getReviews } from '@/app/lib/api';
 
 function toChannelCard(dto, categoryNameById) {
   // 백엔드 ChannelListResponse: { channelId, title, description, category, subscriberCount }
@@ -19,6 +19,46 @@ function toChannelCard(dto, categoryNameById) {
     thumbnailUrl: dto?.thumbnailUrl ?? null,
     creatorName: '', // 백엔드 목록 응답에 creatorName/thumbnail이 없어 임시값
   };
+}
+
+async function summarizeChannelReviews(channelId, maxContents = 10) {
+  const contentsResponse = await getContents({ channelId, size: maxContents, page: 0 });
+  const contents = contentsResponse?.content || [];
+  const contentIds = contents
+    .map((content) => content.contentId || content.id)
+    .filter((id) => id !== undefined && id !== null);
+
+  if (contentIds.length === 0) {
+    return { averageRating: 0, reviewCount: 0 };
+  }
+
+  const reviewLists = await Promise.all(
+    contentIds.map((contentId) =>
+      getReviews(contentId).catch(() => [])
+    )
+  );
+  const reviews = reviewLists.flat();
+  const reviewCount = reviews.length;
+  const averageRating = reviewCount
+    ? reviews.reduce((sum, review) => sum + (review?.rating ?? 0), 0) / reviewCount
+    : 0;
+
+  return { averageRating, reviewCount };
+}
+
+async function attachReviewSummary(channels) {
+  const summaries = await Promise.all(
+    channels.map(async (channel) => {
+      try {
+        const summary = await summarizeChannelReviews(channel.id);
+        return { ...channel, ...summary };
+      } catch {
+        return { ...channel, averageRating: 0, reviewCount: 0 };
+      }
+    })
+  );
+
+  return summaries;
 }
 
 export function HomePage({ onNavigate }) {
@@ -110,7 +150,8 @@ export function HomePage({ onNavigate }) {
         const items = (page?.content ?? [])
           .map((dto) => toChannelCard(dto, categoryNameById))
           .filter((c) => c.id != null);
-        if (!cancelled) setTrendingChannels(items);
+        const enriched = await attachReviewSummary(items);
+        if (!cancelled) setTrendingChannels(enriched);
       } catch (e) {
         // 인기 섹션은 실패해도 전체 화면을 막지 않음
         if (!cancelled) setTrendingChannels([]);
