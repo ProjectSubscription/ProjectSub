@@ -494,10 +494,56 @@ export async function deleteContent(id) {
 }
 
 /**
- * 콘텐츠 조회
+ * 콘텐츠 조회 (인증 없이도 조회 가능)
  */
 export async function getContent(id) {
-  return apiGet(`/api/contents/${id}`);
+  // 콘텐츠 조회: 항상 인증 정보를 포함하여 요청
+  // 백엔드에서 인증 정보가 없어도 무료 콘텐츠는 접근 가능하며,
+  // 인증 정보가 있으면 구매/구독 여부를 확인하여 hasAccess를 제대로 반환함
+  // 따라서 항상 인증 정보를 포함하여 요청하는 것이 올바름
+  try {
+    return await apiGet(`/api/contents/${id}`);
+  } catch (error) {
+    // 인증 에러가 발생한 경우에도 무료 콘텐츠는 조회 가능하므로 재시도
+    // 인증 없이 요청하여 무료 콘텐츠인지 확인
+    const url = `${API_BASE_URL}/api/contents/${id}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'omit', // 인증 없이 조회
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      if (response.status !== 401) {
+        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      // 401 에러는 무시하고 계속 진행 (무료 콘텐츠일 수 있음)
+    }
+    
+    // 204 No Content는 빈 응답
+    if (response.status === 204) {
+      return null;
+    }
+    
+    // 응답 본문을 텍스트로 먼저 읽어서 비어있는지 확인
+    const text = await response.text();
+    
+    // 빈 응답인 경우 null 반환
+    if (!text || text.trim() === '') {
+      return null;
+    }
+    
+    // JSON 파싱 시도
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.warn('JSON 파싱 실패, 빈 응답으로 처리:', parseError);
+      return null;
+    }
+  }
 }
 
 /**
@@ -505,6 +551,20 @@ export async function getContent(id) {
  */
 export async function getContents(params = {}) {
   return apiGet('/api/contents', params);
+}
+
+// ==================== 주문 (ORDER) ====================
+
+/**
+ * 내 주문 목록 조회
+ */
+export async function getMyOrders(memberId) {
+  return apiRequest(`/api/orders/member/${memberId}`, {
+    method: 'GET',
+    headers: {
+      'User-Id': memberId.toString(),
+    },
+  });
 }
 
 // ==================== 결제 (PAYMENT) ====================

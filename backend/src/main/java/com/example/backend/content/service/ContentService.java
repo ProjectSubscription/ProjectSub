@@ -176,8 +176,16 @@ public class ContentService {
                 ? request.getPrice() 
                 : content.getPrice();
 
+        // FREE로 변경하는 경우 가격을 0으로 강제 설정
+        if (accessType == AccessType.FREE) {
+            price = 0;
+        }
+
         validateContent(contentType, accessType, body, mediaUrl, previewRatio, price);
 
+        // FREE로 변경하는 경우 가격을 0으로 설정하여 업데이트
+        Integer finalPrice = (accessType == AccessType.FREE) ? 0 : price;
+        
         content.update(
                 request.getTitle(),
                 request.getContentType(),
@@ -185,7 +193,7 @@ public class ContentService {
                 request.getPreviewRatio(),
                 request.getBody(),
                 request.getMediaUrl(),
-                request.getPrice(),
+                finalPrice,
                 request.getPublishedAt()
         );
 
