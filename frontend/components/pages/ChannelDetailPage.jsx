@@ -7,11 +7,11 @@ import { ChannelTabs } from '@/components/channel/ChannelTabs';
 import { ContentGrid } from '@/components/channel/ContentGrid';
 import { ChannelAbout } from '@/components/channel/ChannelAbout';
 import CouponList from '@/components/coupon/CouponList';
-import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons, getContents, cancelSubscription } from '@/app/lib/api';
+import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons, getContents, getReviews, cancelSubscription } from '@/app/lib/api';
 import { mockReviews } from '@/app/mockData';
 
 function normalizeChannelDetail(channelId, dto) {
-  // 백엔드 ChannelDetailResponse: { channelName, channelDescription, subscriberCount, subscribed }
+  // 백엔드 ChannelDetailResponse: { creatorId, creatorName, channelName, channelDescription, subscriberCount, subscribed }
   // UI에서 기대하는 형태로 최소 매핑
   const name = dto?.channelName ?? dto?.name ?? dto?.title ?? '';
   const description = dto?.channelDescription ?? dto?.description ?? '';
@@ -20,12 +20,13 @@ function normalizeChannelDetail(channelId, dto) {
 
   return {
     id: Number(channelId),
+    creatorId: dto?.creatorId ?? null,
+    creatorName: dto?.creatorName ?? dto?.creatorNickname ?? '',
     name,
     description,
     subscriberCount: dto?.subscriberCount ?? 0,
     // 백엔드 상세 응답에 category/creatorName/thumbnail이 없어 임시값 사용
     category: '',
-    creatorName: '',
     thumbnailUrl,
   };
 }
@@ -37,6 +38,8 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
   const [channel, setChannel] = React.useState(null);
   const [plans, setPlans] = React.useState([]);
   const [channelContents, setChannelContents] = React.useState([]);
+  const [channelReviews, setChannelReviews] = React.useState([]);
+  const [reviewSummary, setReviewSummary] = React.useState({ averageRating: 0, reviewCount: 0 });
   const [coupons, setCoupons] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
@@ -74,12 +77,12 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
         console.log('쿠폰 개수:', couponsData?.length || 0);
         console.log('쿠폰 타입:', Array.isArray(couponsData) ? '배열' : typeof couponsData);
         setCoupons(Array.isArray(couponsData) ? couponsData : []);
-        
+
         // 구독 상태 확인:
         // 1) 백엔드 상세 응답(subscribed)이 있으면 우선 사용
         // 2) 없으면 내 구독 목록으로 fallback
         let activeSubscription = null;
-        
+
         if (typeof channelData?.subscribed === 'boolean') {
           setIsSubscribed(channelData.subscribed);
           // 구독 중인 경우 구독 정보 찾기
@@ -94,7 +97,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
           );
           setIsSubscribed(Boolean(activeSubscription));
         }
-        
+
         // 현재 구독 정보 저장
         setCurrentSubscription(activeSubscription);
 
@@ -117,9 +120,65 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
           }));
           
           setChannelContents(normalizedContents);
+
+          const contentIds = normalizedContents
+            .map((content) => content.id)
+            .filter((id) => id !== undefined && id !== null);
+
+          const reviewTargets = contentIds.slice(0, 10);
+          const reviewResponses = await Promise.all(
+            reviewTargets.map((contentId) =>
+              getReviews(contentId).catch((err) => {
+                console.warn('리뷰 목록 조회 실패:', err);
+                return [];
+              })
+            )
+          );
+
+          const allReviews = reviewResponses.flat().map((review) => ({
+            id: review?.id,
+            userName: review?.nickname || '익명',
+            rating: review?.rating ?? 0,
+            comment: review?.comment || '',
+            createdAt: review?.createdAt || null,
+          }));
+
+          const reviewCount = allReviews.length;
+          const averageRating = reviewCount
+            ? allReviews.reduce((sum, review) => sum + (review.rating || 0), 0) / reviewCount
+            : 0;
+
+          const recentReviews = allReviews
+            .map((review) => {
+              const parsedDate = review.createdAt ? new Date(review.createdAt) : null;
+              return {
+                ...review,
+                createdAtLabel: parsedDate && !Number.isNaN(parsedDate.getTime())
+                  ? parsedDate.toLocaleDateString('ko-KR')
+                  : '',
+                createdAtSort: parsedDate ? parsedDate.getTime() : 0,
+              };
+            })
+            .sort((a, b) => b.createdAtSort - a.createdAtSort)
+            .slice(0, 3)
+            .map((review) => ({
+              id: review.id,
+              userName: review.userName,
+              rating: review.rating,
+              comment: review.comment,
+              createdAt: review.createdAtLabel,
+            }));
+
+          setChannelReviews(recentReviews);
+          setReviewSummary({
+            averageRating,
+            reviewCount,
+          });
         } catch (err) {
           console.warn('채널 콘텐츠 조회 실패:', err);
           setChannelContents([]);
+          setChannelReviews([]);
+          setReviewSummary({ averageRating: 0, reviewCount: 0 });
         }
       } catch (err) {
         console.error('데이터 로딩 실패:', err);
@@ -148,7 +207,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
 
       // 현재 구독의 플랜 정보 찾기
       const subscriptionPlanId = currentSubscription.planId;
-      const currentPlan = (plans || []).find(plan => 
+      const currentPlan = (plans || []).find(plan =>
         (plan.planId || plan.id) === subscriptionPlanId
       );
       const planType = currentPlan?.planType || currentPlan?.duration; // 'MONTHLY' or 'YEARLY'
@@ -199,18 +258,18 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
       try {
         const subscriptionId = currentSubscription.subscriptionId || currentSubscription.id;
         await cancelSubscription(subscriptionId);
-        
+
         // 구독 상태 업데이트
         setIsSubscribed(false);
         setCurrentSubscription(null);
-        
+
         // 구독 목록 다시 로드하여 최신 상태 반영
         const updatedSubscriptions = await getMySubscriptions();
         const updatedActiveSubscription = (updatedSubscriptions?.content || updatedSubscriptions || []).find(
           (sub) => sub.channelId === Number(channelId) && sub.status === 'ACTIVE'
         );
         setCurrentSubscription(updatedActiveSubscription);
-        
+
         // 연간 구독이고 3일 이후 취소한 경우 만료일 연장 안내
         if (daysSinceStart > 3 && (planType === 'YEARLY' || planType === '연간 구독')) {
           alert('구독 취소가 승인되었습니다.\n구독 시작일로부터 1개월 후까지 구독이 유지된 후 취소됩니다.');
@@ -246,7 +305,14 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
       <ChannelHeader
         channel={channel}
         isSubscribed={isSubscribed}
+        averageRating={reviewSummary.averageRating}
+        reviewCount={reviewSummary.reviewCount}
         onSubscribeToggle={handleSubscribeToggle}
+        onCreatorClick={() => {
+          if (channel?.creatorId) {
+            onNavigate('creator-detail', { creatorId: channel.creatorId });
+          }
+        }}
       />
 
       {/* 쿠폰 목록 - 크리에이터 정보와 구독 상품 사이 */}
@@ -296,7 +362,8 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
         <ChannelAbout
           channel={channel}
           contentCount={channelContents.length}
-          reviews={mockReviews}
+          reviews={channelReviews}
+          averageRating={reviewSummary.averageRating}
         />
       )}
     </div>

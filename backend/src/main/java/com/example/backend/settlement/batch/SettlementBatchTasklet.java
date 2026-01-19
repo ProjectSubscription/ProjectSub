@@ -7,9 +7,10 @@ import com.example.backend.creator.repository.CreatorRepository;
 import com.example.backend.order.entity.OrderType;
 import com.example.backend.payment.entity.Payment;
 import com.example.backend.payment.entity.PaymentStatus;
-import com.example.backend.payment.service.PaymentService;
+import com.example.backend.payment.repository.PaymentRepository;
 import com.example.backend.settlement.entity.Settlement;
 import com.example.backend.settlement.entity.SettlementDetail;
+import com.example.backend.settlement.entity.SettlementStatus;
 import com.example.backend.settlement.repository.SettlementDetailRepository;
 import com.example.backend.settlement.repository.SettlementRepository;
 import com.example.backend.settlement.service.SettlementPayoutService;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettlementBatchTasklet implements Tasklet {
 
-    private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
     private final CreatorRepository creatorRepository;
     private final ChannelRepository channelRepository;
     private final SettlementRepository settlementRepository;
@@ -61,8 +62,8 @@ public class SettlementBatchTasklet implements Tasklet {
         
         log.info("정산 기간: {} ~ {} ({}월)", startDateTime, endDateTime, settlementPeriod);
 
-        // 전월 PAID 결제 내역 조회 (Creator별로 그룹화) - PaymentService를 통해 접근
-        List<Payment> paidPayments = paymentService.findPaidPaymentsInPeriod(
+        // 전월 PAID 결제 내역 조회 (Creator별로 그룹화) - PaymentRepository를 통해 직접 접근
+        List<Payment> paidPayments = paymentRepository.findPaidPaymentsInPeriod(
                 PaymentStatus.PAID,
                 startDateTime, 
                 endDateTime
@@ -86,23 +87,65 @@ public class SettlementBatchTasklet implements Tasklet {
                     return creatorId;
                 }));
 
+        // Creator 그룹화 결과 로그 (Creator를 찾을 수 없는 경우 제외)
+        long validCreatorCount = paymentsByCreator.entrySet().stream()
+                .filter(entry -> entry.getKey() != -1L)
+                .count();
+        log.info("정산 대상 크리에이터 수: {}명", validCreatorCount);
+        
+        // 각 Creator별 결제 건수 로그
+        paymentsByCreator.entrySet().stream()
+                .filter(entry -> entry.getKey() != -1L)
+                .forEach(entry -> {
+                    log.info("Creator ID {}: 결제 건수 {}건", entry.getKey(), entry.getValue().size());
+                });
+
         // Creator별로 정산 처리
         int settlementCount = 0;
+        int skippedCount = 0;
         for (Map.Entry<Long, List<Payment>> entry : paymentsByCreator.entrySet()) {
             Long creatorId = entry.getKey();
             if (creatorId == -1L) {
+                skippedCount++;
+                log.warn("Creator를 찾을 수 없는 Payment가 있어 스킵합니다. Payment 건수: {}", entry.getValue().size());
                 continue; // Creator를 찾을 수 없는 경우 스킵
             }
 
             List<Payment> creatorPayments = entry.getValue();
             
+            log.info("Creator ID {} 정산 처리 시작 - 결제 건수: {}건", creatorId, creatorPayments.size());
+            
             // 이미 해당 기간의 정산이 존재하는지 확인
-            Optional<Settlement> existingSettlement = settlementRepository
+            Optional<Settlement> existingSettlementOpt = settlementRepository
                     .findByCreatorIdAndSettlementPeriod(creatorId, settlementPeriod);
             
-            if (existingSettlement.isPresent()) {
-                log.info("Creator ID {}의 {}월 정산이 이미 존재합니다. 스킵합니다.", creatorId, settlementPeriod);
-                continue;
+            if (existingSettlementOpt.isPresent()) {
+                Settlement existingSettlement = existingSettlementOpt.get();
+                
+                // READY 상태인 정산은 지급 처리 수행
+                if (existingSettlement.getStatus() == SettlementStatus.READY) {
+                    log.info("Creator ID {}의 {}월 정산이 READY 상태입니다. 지급 처리를 수행합니다.", creatorId, settlementPeriod);
+                    Creator creator = creatorRepository.findById(creatorId)
+                            .orElseThrow(() -> new RuntimeException("Creator를 찾을 수 없습니다: " + creatorId));
+                    
+                    boolean payoutSuccess = settlementPayoutService.processPayout(existingSettlement, creator);
+                    if (!payoutSuccess) {
+                        log.warn("Creator ID {}의 정산금 지급 실패 - 재시도 스케줄러에서 자동 재시도됩니다.", creatorId);
+                    } else {
+                        log.info("Creator ID {}의 {}월 정산 지급 처리 완료", creatorId, settlementPeriod);
+                        settlementCount++;
+                    }
+                    
+                    // EntityManager 플러시 (메모리 관리)
+                    entityManager.flush();
+                    entityManager.clear();
+                    continue;
+                } else {
+                    skippedCount++;
+                    log.info("Creator ID {}의 {}월 정산이 이미 존재하며 상태는 {}입니다. 스킵합니다.", 
+                            creatorId, settlementPeriod, existingSettlement.getStatus());
+                    continue;
+                }
             }
 
             Creator creator = creatorRepository.findById(creatorId)
@@ -114,6 +157,7 @@ public class SettlementBatchTasklet implements Tasklet {
                     .sum();
 
             if (totalSalesAmount == 0) {
+                skippedCount++;
                 log.info("Creator ID {}의 매출이 0원입니다. 정산을 생성하지 않습니다.", creatorId);
                 continue;
             }
@@ -141,14 +185,24 @@ public class SettlementBatchTasklet implements Tasklet {
                 log.warn("Creator ID {}의 정산금 지급 실패 - 재시도 스케줄러에서 자동 재시도됩니다.", creatorId);
             }
             
+            // processPayout에서 변경된 상태를 반영하기 위해 settlement를 다시 조회
+            // EntityManager.clear() 전에 최신 상태를 확보
+            Settlement updatedSettlement = settlementRepository.findById(settlement.getId())
+                    .orElse(settlement);
+            log.info("정산 상태 업데이트 확인 - Settlement ID: {}, Status: {}", 
+                    updatedSettlement.getId(), updatedSettlement.getStatus());
+            
             settlementCount++;
+            log.info("Creator ID {} 정산 처리 완료 ({}/{}명) - 최종 상태: {}", 
+                    creatorId, settlementCount, validCreatorCount, updatedSettlement.getStatus());
             
             // EntityManager 플러시 (메모리 관리)
             entityManager.flush();
             entityManager.clear();
         }
 
-        log.info("정산 배치 완료: {}명의 크리에이터 정산 처리", settlementCount);
+        log.info("정산 배치 완료: 총 {}명의 크리에이터 중 {}명 정산 처리 완료, {}명 스킵됨", 
+                validCreatorCount, settlementCount, skippedCount);
         return RepeatStatus.FINISHED;
     }
 

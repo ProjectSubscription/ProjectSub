@@ -8,6 +8,8 @@ import com.example.backend.channel.entity.Channel;
 import com.example.backend.channel.entity.ChannelCategory;
 import com.example.backend.channel.repository.ChannelRepository;
 import com.example.backend.channel.validator.ChannelValidator;
+import com.example.backend.creator.entity.Creator;
+import com.example.backend.creator.repository.CreatorRepository;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.subscription.entity.SubscriptionStatus;
@@ -35,6 +37,7 @@ public class ChannelServiceImpl implements ChannelService {
     private final ChannelRepository channelRepository;
     private final ChannelValidator channelValidator;
     private final SubscriptionRepository subscriptionRepository;
+    private final CreatorRepository creatorRepository;
 
     //채널 생성
     @Override
@@ -192,7 +195,12 @@ public class ChannelServiceImpl implements ChannelService {
                 .findByChannelIdAndStatus(channelId, SubscriptionStatus.ACTIVE)
                 .size();
 
+        Creator creator = creatorRepository.findById(channel.getCreatorId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
+
         return new ChannelDetailResponse(
+                creator.getId(),
+                creator.getMember().getNickname(),
                 channel.getTitle(),
                 channel.getDescription(),
                 channel.getThumbnailUrl(),
@@ -227,7 +235,12 @@ public class ChannelServiceImpl implements ChannelService {
                 .findByChannelIdAndStatus(channel.getId(), SubscriptionStatus.ACTIVE)
                 .size();
 
+        Creator creator = creatorRepository.findById(channel.getCreatorId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
+
         return new ChannelDetailResponse(
+                creator.getId(),
+                creator.getMember().getNickname(),
                 channel.getTitle(),
                 channel.getDescription(),
                 channel.getThumbnailUrl(),

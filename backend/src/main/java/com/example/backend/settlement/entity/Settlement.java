@@ -99,5 +99,15 @@ public class Settlement extends CreatedAtEntity {
     public boolean isMaxRetryExceeded(int maxRetryCount) {
         return this.retryCount >= maxRetryCount;
     }
+
+    /**
+     * 정산 금액 업데이트 (결제 추가 시 매출 금액 증가)
+     * @param additionalAmount 추가되는 결제 금액
+     */
+    public void addSalesAmount(Long additionalAmount) {
+        this.totalSalesAmount += additionalAmount;
+        this.platformFeeAmount = (long) (this.totalSalesAmount * 0.1);
+        this.payoutAmount = this.totalSalesAmount - this.platformFeeAmount;
+    }
 }
 

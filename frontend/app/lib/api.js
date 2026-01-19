@@ -561,6 +561,20 @@ export async function getReviews(contentId) {
 }
 
 /**
+ * 채널 최근 리뷰 조회
+ */
+export async function getChannelRecentReviews(channelId, limit = 3) {
+  return apiGet(`/api/channels/${channelId}/reviews`, { limit });
+}
+
+/**
+ * 채널 리뷰 요약 조회
+ */
+export async function getChannelReviewSummary(channelId) {
+  return apiGet(`/api/channels/${channelId}/reviews/summary`);
+}
+
+/**
  * 댓글 작성
  */
 export async function createComment(contentId, data) {
@@ -586,6 +600,20 @@ export async function createReviewComment(reviewId, data) {
  */
 export async function getReviewComments(reviewId) {
   return apiGet(`/api/reviews/${reviewId}/comments`);
+}
+
+/**
+ * 리뷰 추천 토글 (추천/추천 취소)
+ */
+export async function toggleReviewLike(contentId, reviewId) {
+  return apiPost(`/api/contents/${contentId}/reviews/${reviewId}/like`);
+}
+
+/**
+ * 가장 추천이 많은 리뷰 조회 (콘텐츠 정보 포함)
+ */
+export async function getTopReviews(limit = 5) {
+  return apiGet(`/api/reviews/top?limit=${limit}`);
 }
 
 /**

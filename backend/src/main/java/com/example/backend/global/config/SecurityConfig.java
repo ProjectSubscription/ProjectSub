@@ -76,12 +76,25 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/contents/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/channels/*/plans").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/channels/*/plans/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/top").permitAll() // 인기 리뷰 조회는 공개
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/*/comments").permitAll() // 댓글 조회는 공개
+                        .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll() // 댓글 조회는 공개
+                        
+                        // 리뷰 및 댓글 관련 엔드포인트 (인증된 사용자만 접근 가능)
+                        // 더 구체적인 패턴을 먼저 설정해야 함 (Spring Security는 먼저 매칭되는 규칙 적용)
+                        .requestMatchers(HttpMethod.POST, "/api/contents/*/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/contents/*/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/contents/*/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/*/comments").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/comments/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/comments/**").authenticated()
 
                         // Role 기반 접근제어
                         .requestMatchers(HttpMethod.POST, "/api/channels/**").hasAnyRole("CREATOR", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/channels/**").hasAnyRole("CREATOR", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/channels/**").hasAnyRole("CREATOR", "ADMIN")
 
+                        // 콘텐츠 생성/수정/삭제는 CREATOR/ADMIN만 (리뷰 관련은 위에서 이미 처리됨)
                         .requestMatchers(HttpMethod.POST, "/api/contents/**").hasAnyRole("CREATOR", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/contents/**").hasAnyRole("CREATOR", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/contents/**").hasAnyRole("CREATOR", "ADMIN")

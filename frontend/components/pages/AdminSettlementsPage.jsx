@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   DollarSign,
   Calendar,
@@ -19,8 +20,12 @@ import {
   retrySettlement,
   runSettlementBatch
 } from '@/app/lib/api';
+import { useUser } from '@/components/contexts/UserContext';
 
 export default function AdminSettlementsPage() {
+  const { currentUser } = useUser();
+  const router = useRouter();
+  
   const [settlements, setSettlements] = React.useState([]);
   const [statistics, setStatistics] = React.useState(null);
   const [selectedSettlement, setSelectedSettlement] = React.useState(null);
@@ -37,6 +42,38 @@ export default function AdminSettlementsPage() {
   const [currentPage, setCurrentPage] = React.useState(0);
   const [totalPages, setTotalPages] = React.useState(0);
   const [totalElements, setTotalElements] = React.useState(0);
+
+  // 관리자 권한 체크 함수
+  const hasAdminRole = () => {
+    if (!currentUser || !currentUser.roles) return false;
+    const roles = currentUser.roles;
+    return Array.isArray(roles) && (
+      roles.includes('ROLE_ADMIN') || 
+      roles.includes('ADMIN')
+    );
+  };
+
+  // 관리자 권한 체크 (페이지 접근 시)
+  React.useEffect(() => {
+    if (currentUser && !hasAdminRole()) {
+      // 관리자가 아닌 경우 접근 거부
+      alert('관리자만 접근할 수 있는 페이지입니다.');
+      router.push('/home');
+    }
+  }, [currentUser, router]);
+
+  // 관리자가 아닌 경우 화면 렌더링 방지
+  if (!currentUser || !hasAdminRole()) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">접근 권한이 없습니다</h2>
+          <p className="text-gray-600">관리자만 접근할 수 있는 페이지입니다.</p>
+        </div>
+      </div>
+    );
+  }
 
   // 데이터 로드
   React.useEffect(() => {
@@ -68,6 +105,13 @@ export default function AdminSettlementsPage() {
       setTotalPages(settlementsData.totalPages || 0);
       setTotalElements(settlementsData.totalElements || 0);
     } catch (err) {
+      // 403 Forbidden 에러 처리
+      if (err.response?.status === 403 || err.status === 403) {
+        setError('관리자 권한이 필요합니다.');
+        alert('관리자만 접근할 수 있는 페이지입니다.');
+        router.push('/home');
+        return;
+      }
       setError(err.message || '데이터를 불러오는 중 오류가 발생했습니다.');
       console.error('데이터 로드 오류:', err);
     } finally {
@@ -455,7 +499,7 @@ export default function AdminSettlementsPage() {
                 <div>
                   <p className="text-sm text-gray-600 mb-1">크리에이터</p>
                   <p className="font-medium text-gray-900">
-                    {selectedSettlement.details?.[0]?.creatorNickname || '크리에이터 정보 없음'}
+                    {selectedSettlement.creatorNickname || '크리에이터 정보 없음'}
                   </p>
                 </div>
 
