@@ -44,7 +44,7 @@ public class Order {
     private Long originalAmount;
     private Long discountAmount;
 
-    // 쿠폰 적용 시 사용된 MemberCoupon ID
+    // 쿠폰 사용 시 member_coupons 테이블의 ID
     private Long memberCouponId;
 
     @Enumerated(EnumType.STRING)

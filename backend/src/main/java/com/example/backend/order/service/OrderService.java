@@ -86,8 +86,10 @@ public class OrderService {
         // 주문 코드 생성 (UUID 기반)
         String orderCode = generateOrderCode();
 
+        // 쿠폰 ID (member_coupons 테이블의 ID)
+        Long memberCouponId = request.getCouponId();
+
         // 주문 타입에 따라 주문 생성
-        Long memberCouponId = request.getMemberCouponId();
         Order order;
         if (request.getOrderType() == OrderType.SUBSCRIPTION) {
             // SUBSCRIPTION 타입: planId 저장
