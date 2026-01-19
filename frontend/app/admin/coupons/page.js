@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createAdminCoupon, getAdminCoupons } from '@/app/lib/api';
+import { createAdminCoupon, getAdminCoupons, getSubscriptionPlans, getContents } from '@/app/lib/api';
 
 const DISCOUNT_TYPES = [
   { value: 'RATE', label: '비율 할인 (%)' },
@@ -18,6 +18,14 @@ const TARGET_TYPES = [
   { value: 'CONTENT', label: '콘텐츠 단건 구매' },
 ];
 
+// 쿠폰 상태 판단 함수
+const getCouponStatus = (expiredAt) => {
+  if (!expiredAt) return null;
+  const now = new Date();
+  const expiredDate = new Date(expiredAt);
+  return now <= expiredDate ? 'active' : 'expired';
+};
+
 export default function AdminCouponsPage() {
   const [discountType, setDiscountType] = useState('RATE');
   const [discountValue, setDiscountValue] = useState('');
@@ -27,6 +35,10 @@ export default function AdminCouponsPage() {
   const [targetType, setTargetType] = useState('');
   const [targetId, setTargetId] = useState('');
   const [channelId, setChannelId] = useState('');
+
+  // 적용 대상 목록 (구독 상품 또는 콘텐츠)
+  const [targetOptions, setTargetOptions] = useState([]);
+  const [targetOptionsLoading, setTargetOptionsLoading] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -56,6 +68,47 @@ export default function AdminCouponsPage() {
   useEffect(() => {
     loadCoupons();
   }, []);
+
+  // 적용 대상 목록 로드 (targetType과 channelId가 모두 있을 때)
+  useEffect(() => {
+    const loadTargetOptions = async () => {
+      if (!targetType || !channelId) {
+        setTargetOptions([]);
+        setTargetId('');
+        return;
+      }
+
+      setTargetOptionsLoading(true);
+      try {
+        if (targetType === 'SUBSCRIPTION') {
+          const plans = await getSubscriptionPlans(Number(channelId));
+          const list = Array.isArray(plans) ? plans : plans?.content || [];
+          setTargetOptions(
+            list.map((plan) => ({
+              id: plan.planId,
+              label: `${plan.planType === 'MONTHLY' ? '월간' : '연간'} 구독 (${plan.price?.toLocaleString()}원)`,
+            }))
+          );
+        } else if (targetType === 'CONTENT') {
+          const contents = await getContents({ channelId: Number(channelId) });
+          const list = Array.isArray(contents) ? contents : contents?.content || [];
+          setTargetOptions(
+            list.map((content) => ({
+              id: content.contentId || content.id,
+              label: content.title || '제목 없음',
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('적용 대상 목록 조회 오류:', err);
+        setTargetOptions([]);
+      } finally {
+        setTargetOptionsLoading(false);
+      }
+    };
+
+    loadTargetOptions();
+  }, [targetType, channelId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -111,6 +164,7 @@ export default function AdminCouponsPage() {
       setTargetType('');
       setTargetId('');
       setChannelId('');
+      setTargetOptions([]);
       // 목록 새로고침
       await loadCoupons();
     } catch (err) {
@@ -231,7 +285,10 @@ export default function AdminCouponsPage() {
               type="number"
               min={1}
               value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
+              onChange={(e) => {
+                setChannelId(e.target.value);
+                setTargetId(''); // 채널 ID 변경 시 선택 초기화
+              }}
               placeholder="특정 채널에 연결할 쿠폰인 경우 채널 ID 입력"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isSubmitting}
@@ -256,7 +313,10 @@ export default function AdminCouponsPage() {
               <div>
                 <select
                   value={targetType}
-                  onChange={(e) => setTargetType(e.target.value)}
+                  onChange={(e) => {
+                    setTargetType(e.target.value);
+                    setTargetId(''); // 타입 변경 시 선택 초기화
+                  }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={isSubmitting}
                 >
@@ -269,15 +329,39 @@ export default function AdminCouponsPage() {
                 </select>
               </div>
               <div>
-                <input
-                  type="number"
-                  min={1}
-                  value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
-                  placeholder="특정 상품 ID (선택)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isSubmitting || !targetType}
-                />
+                {targetType && channelId ? (
+                  <select
+                    value={targetId}
+                    onChange={(e) => setTargetId(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmitting || targetOptionsLoading}
+                  >
+                    <option value="">전체 {targetType === 'SUBSCRIPTION' ? '구독 상품' : '콘텐츠'}에 적용</option>
+                    {targetOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="number"
+                    min={1}
+                    value={targetId}
+                    onChange={(e) => setTargetId(e.target.value)}
+                    placeholder={targetType ? '채널 ID를 먼저 입력해주세요' : '적용 대상을 먼저 선택해주세요'}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    disabled={true}
+                  />
+                )}
+                {targetOptionsLoading && (
+                  <p className="mt-1 text-xs text-gray-500">목록을 불러오는 중...</p>
+                )}
+                {targetType && channelId && !targetOptionsLoading && targetOptions.length === 0 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    해당 채널에 {targetType === 'SUBSCRIPTION' ? '구독 상품' : '콘텐츠'}가 없습니다.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -332,31 +416,50 @@ export default function AdminCouponsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     만료 일시
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    상태
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {coupons.map((coupon) => (
-                  <tr key={coupon.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-mono text-sm text-gray-900">
-                      {coupon.code}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {coupon.discountType === 'RATE'
-                        ? `비율 ${coupon.discountValue}%`
-                        : `금액 ${coupon.discountValue?.toLocaleString()}원`}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">
-                      {coupon.refundType === 'EXPIRE_ON_REFUND'
-                        ? '환불 시 쿠폰 소멸'
-                        : '환불 시 쿠폰 복원'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {coupon.expiredAt
-                        ? new Date(coupon.expiredAt).toLocaleString('ko-KR')
-                        : '-'}
-                    </td>
-                  </tr>
-                ))}
+                {coupons.map((coupon) => {
+                  const status = getCouponStatus(coupon.expiredAt);
+                  return (
+                    <tr key={coupon.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-mono text-sm text-gray-900">
+                        {coupon.code}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {coupon.discountType === 'RATE'
+                          ? `비율 ${coupon.discountValue}%`
+                          : `금액 ${coupon.discountValue?.toLocaleString()}원`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {coupon.refundType === 'EXPIRE_ON_REFUND'
+                          ? '환불 시 쿠폰 소멸'
+                          : '환불 시 쿠폰 복원'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {coupon.expiredAt
+                          ? new Date(coupon.expiredAt).toLocaleString('ko-KR')
+                          : '-'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {status === 'active' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            활성
+                          </span>
+                        ) : status === 'expired' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            만료
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
