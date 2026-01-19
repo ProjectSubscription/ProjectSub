@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createAdminCoupon, getAdminCoupons, getSubscriptionPlans, getContents } from '@/app/lib/api';
+import { createAdminCoupon, getAdminCoupons, getSubscriptionPlans, getContents, getChannel, getContent } from '@/app/lib/api';
 
 const DISCOUNT_TYPES = [
   { value: 'RATE', label: '비율 할인 (%)' },
@@ -72,19 +72,22 @@ export default function AdminCouponsPage() {
     }
   };
 
-  // 쿠폰별 구독 상품 이름 로드 (채널별로 한 번만 호출하도록 최적화)
+  // 쿠폰별 구독 상품/콘텐츠 이름 로드 (채널별로 한 번만 호출하도록 최적화)
   const loadSubscriptionPlanNames = async (couponList) => {
     const planNamesMap = {};
     const channelPlansCache = {}; // 채널별 구독 상품 목록 캐시
+    const channelNamesCache = {}; // 채널별 채널 이름 캐시
+    const contentCache = {}; // 콘텐츠 정보 캐시
     
-    // 구독 상품 타겟이 있는 쿠폰들만 처리
+    // 구독 상품 또는 콘텐츠 타겟이 있는 쿠폰들 처리
     for (const coupon of couponList) {
       if (coupon.targets && Array.isArray(coupon.targets) && coupon.targets.length > 0) {
         const target = coupon.targets[0]; // 첫 번째 target 사용
         console.log(`쿠폰 ${coupon.id}의 target:`, target);
         
-        // 구독 상품인 경우 구독 상품 이름 가져오기
         const targetType = target.targetType?.toUpperCase?.() || target.targetType;
+        
+        // 구독 상품인 경우
         if (targetType === 'SUBSCRIPTION' && target.targetId && coupon.channelId) {
           try {
             // 채널별 구독 상품 목록을 캐시에서 가져오거나 새로 로드
@@ -97,6 +100,19 @@ export default function AdminCouponsPage() {
               console.log(`채널 ${coupon.channelId}의 구독 상품 목록:`, plans);
             }
             
+            // 채널 이름을 캐시에서 가져오거나 새로 로드
+            let channelName = channelNamesCache[coupon.channelId];
+            if (!channelName) {
+              try {
+                const channelData = await getChannel(coupon.channelId);
+                channelName = channelData.channelName || channelData.title || `채널 ${coupon.channelId}`;
+                channelNamesCache[coupon.channelId] = channelName;
+              } catch (channelErr) {
+                console.error(`채널 ${coupon.channelId} 정보 조회 오류:`, channelErr);
+                channelName = `채널 ${coupon.channelId}`;
+              }
+            }
+            
             // targetId와 planId를 숫자로 비교
             const targetIdNum = Number(target.targetId);
             const plan = plans.find(p => {
@@ -105,11 +121,53 @@ export default function AdminCouponsPage() {
             });
             if (plan) {
               const planTypeName = plan.planType === 'MONTHLY' ? '월간' : '연간';
-              planNamesMap[coupon.id] = `${planTypeName} 구독`;
-            } else {
+              planNamesMap[coupon.id] = {
+                channelName: channelName,
+                planType: planTypeName
+              };
             }
           } catch (err) {
             console.error(`쿠폰 ${coupon.id}의 구독 상품 정보 조회 오류:`, err);
+          }
+        }
+        // 콘텐츠 단건 구매인 경우
+        else if (targetType === 'CONTENT' && target.targetId) {
+          try {
+            const contentId = Number(target.targetId);
+            
+            // 콘텐츠 정보를 캐시에서 가져오거나 새로 로드
+            let content = contentCache[contentId];
+            if (!content) {
+              console.log(`콘텐츠 ${contentId} 정보 로드 중...`);
+              content = await getContent(contentId);
+              contentCache[contentId] = content;
+              console.log(`콘텐츠 ${contentId} 정보:`, content);
+            }
+            
+            // 채널 이름을 가져오기 (콘텐츠에 channelId가 있는 경우)
+            let channelName = '';
+            if (content.channelId) {
+              const channelId = Number(content.channelId);
+              channelName = channelNamesCache[channelId];
+              if (!channelName) {
+                try {
+                  const channelData = await getChannel(channelId);
+                  channelName = channelData.channelName || channelData.title || `채널 ${channelId}`;
+                  channelNamesCache[channelId] = channelName;
+                } catch (channelErr) {
+                  console.error(`채널 ${channelId} 정보 조회 오류:`, channelErr);
+                  channelName = `채널 ${channelId}`;
+                }
+              }
+            }
+            
+            const contentTitle = content.title || content.contentTitle || `콘텐츠 ${contentId}`;
+            planNamesMap[coupon.id] = {
+              channelName: channelName,
+              contentTitle: contentTitle
+            };
+          } catch (err) {
+            console.error(`쿠폰 ${coupon.id}의 콘텐츠 정보 조회 오류:`, err);
           }
         }
       }
@@ -510,7 +568,7 @@ export default function AdminCouponsPage() {
                     targetTypeLabel = '전체';
                   }
                   
-                  const planName = subscriptionPlanNames[coupon.id];
+                  const planInfo = subscriptionPlanNames[coupon.id];
                   
                   return (
                     <tr key={coupon.id} className="hover:bg-gray-50">
@@ -529,7 +587,19 @@ export default function AdminCouponsPage() {
                         {targetTypeLabel}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700">
-                        {planName || '-'}
+                        {planInfo ? (
+                          <span>
+                            {planInfo.planType ? (
+                              // 구독 상품인 경우
+                              `${planInfo.channelName} - ${planInfo.planType} 구독`
+                            ) : (
+                              // 콘텐츠 단건 구매인 경우
+                              planInfo.channelName 
+                                ? `${planInfo.channelName} - ${planInfo.contentTitle}`
+                                : planInfo.contentTitle
+                            )}
+                          </span>
+                        ) : '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700">
                         {coupon.refundType === 'EXPIRE_ON_REFUND'
