@@ -121,26 +121,62 @@ export function ContentInfo({ content, isLiked, onLikeToggle, onPurchase, hasAcc
               </svg>
               <h3 className="text-xl font-bold text-gray-900">콘텐츠</h3>
             </div>
-            <div className="prose max-w-none">
-              <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {(() => {
-                  const body = content.body || '';
-                  const showPreview = content.accessType === 'PARTIAL' && !hasAccess;
-                  if (showPreview && content.previewRatio) {
-                    const previewLength = Math.floor(body.length * (content.previewRatio / 100));
-                    return body.substring(0, previewLength) + '...';
-                  }
-                  return body;
-                })()}
-              </div>
-              {content.accessType === 'PARTIAL' && !hasAccess && (
-                <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                  <p className="text-sm text-orange-800">
-                    이 콘텐츠는 미리보기입니다. 전체 내용을 보시려면 구매가 필요합니다.
-                  </p>
+            {(() => {
+              // PARTIAL 타입이고 접근 권한이 없을 때만 미리보기 표시
+              // PARTIAL이 아니고 접근 권한이 없으면 내용을 가림
+              const showPreview = content.accessType === 'PARTIAL' && !hasAccess;
+              const showContent = hasAccess || showPreview;
+              
+              if (!showContent) {
+                // 접근 권한이 없고 PARTIAL이 아닌 경우 내용을 가림
+                return (
+                  <div className="bg-gray-100 rounded-lg p-12 text-center">
+                    <div className="text-gray-500 mb-4">
+                      <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-700 mb-2">콘텐츠가 잠겨있습니다</h4>
+                    <p className="text-gray-600 mb-6">
+                      {content.accessType === 'SUBSCRIBER_ONLY'
+                        ? '이 콘텐츠를 보려면 채널 구독이 필요합니다.'
+                        : '이 콘텐츠를 구매하시면 볼 수 있습니다.'}
+                    </p>
+                    {onPurchase && (
+                      <button
+                        onClick={onPurchase}
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        {content.accessType === 'SUBSCRIBER_ONLY' ? '구독하러 가기' : '구매하기'}
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+              
+              // 접근 권한이 있거나 PARTIAL 미리보기인 경우 내용 표시
+              const body = content.body || '';
+              let displayText = body;
+              if (showPreview && content.previewRatio) {
+                const previewLength = Math.floor(body.length * (content.previewRatio / 100));
+                displayText = body.substring(0, previewLength) + '...';
+              }
+              
+              return (
+                <div className="prose max-w-none">
+                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {displayText}
+                  </div>
+                  {showPreview && (
+                    <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                      <p className="text-sm text-orange-800">
+                        이 콘텐츠는 미리보기입니다. 전체 내용을 보시려면 구매가 필요합니다.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}
