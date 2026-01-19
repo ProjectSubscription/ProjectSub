@@ -61,6 +61,10 @@ public class SecurityConfig {
                         // 회원가입/프로필완성(회원가입 단계)은 비로그인 허용
                         .requestMatchers(HttpMethod.POST, "/api/members/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/oauth/complete-profile").permitAll()
+
+                        // 비밀번호 찾기/비밀번호 재설정 비로그인 허용
+                        .requestMatchers(HttpMethod.POST, "api/members/reset-password/request").permitAll()
+                        .requestMatchers(HttpMethod.POST, "api/members/reset-password").permitAll()
                         
                         // 로그인 API는 비로그인 허용
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
