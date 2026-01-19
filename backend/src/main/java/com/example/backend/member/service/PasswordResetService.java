@@ -8,12 +8,13 @@ import com.example.backend.member.repository.PasswordResetTokenRedisRepository;
 import com.example.backend.member.repository.PasswordTokenIndexRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Slf4j
@@ -24,17 +25,17 @@ public class PasswordResetService {
     //todo: 상수 env 파일로 옮기기, AWS SES
     private final JavaMailSender mailSender;  // 이메일 발송용
 
+    @Value("${PASSWORD_RESET_LINK}")
+    private String resetLink;
+    private final Duration TTL = Duration.ofMinutes(15);
     private final PasswordResetTokenRedisRepository tokenRedisRepository;
     private final PasswordTokenIndexRepository passwordTokenIndexRepository;
+
     /**
      * 비밀번호 재설정 이메일 발송
      */
     public void sendPasswordResetEmail(Member member) {
         log.info("### sendPasswordResetEmail called. memberId={}", member.getId());
-        /**
-         * 문제: 토큰은 이미 레디스에 저장됐는데 이메일은 안 감
-         * 영향도: 낮음 (15분 후 자동 만료되고, 사용자가 재요청하면 됨)
-         */
 
         //1. 기존 토큰 삭제 (존재 시)
         Long memberId = member.getId();
@@ -51,13 +52,14 @@ public class PasswordResetService {
         String token = UUID.randomUUID().toString();
         PasswordResetTokenInfo resetToken = new PasswordResetTokenInfo(memberId);
         log.info("### Redis save start. token={}", token);
-        tokenRedisRepository.save(token, resetToken);
+        tokenRedisRepository.save(token, resetToken, TTL);
         log.info("### Redis save end");
-        passwordTokenIndexRepository.save(memberId, token, tokenRedisRepository.getTTL());
+        passwordTokenIndexRepository.save(memberId, token, TTL);
 
         // 3. 이메일 발송
-        String resetLink = "http://localhost:3000/password-reset?token=" + token;
-        sendEmail(member.getEmail(), resetLink);
+        //String resetLink = "http://localhost:3000/password-reset?token=" + token;
+        String resetLinkWithToken = resetLink + "?token" + token;
+        sendEmail(member.getEmail(), resetLinkWithToken);
 
         log.info("비밀번호 재설정 이메일 발송: {}", member.getEmail());
 

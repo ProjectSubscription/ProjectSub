@@ -11,7 +11,6 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class PasswordResetTokenRedisRepository {
     //Redis에 보조 인덱스를 둬서 유니크 제약
-    private final Duration TTL = Duration.ofMinutes(15);
     private final String PREFIX = "password-reset:";
     private final RedisTemplate<String, PasswordResetTokenInfo> redisTemplate;
 
@@ -19,11 +18,7 @@ public class PasswordResetTokenRedisRepository {
         return PREFIX + token;
     }
 
-    public Duration getTTL() {
-        return TTL;
-    }
-
-    public void save(String token, PasswordResetTokenInfo passwordResetTokenInfo) {
+    public void save(String token, PasswordResetTokenInfo passwordResetTokenInfo,Duration TTL) {
         redisTemplate.opsForValue().set( key(token), passwordResetTokenInfo, TTL);
     }
 
