@@ -44,7 +44,8 @@ public class ContentService {
     private final OrderRepository orderRepository;
 
     /**
-     * 콘텐츠 등록 (임시저장 - publishedAt이 null)
+     * 콘텐츠 등록 (임시저장 / 즉시 발행 / 예약 발행)
+     * publishedAt이 null이면 임시저장, 현재 시간 이하면 즉시 발행, 미래면 예약 발행
      */
     public ContentResponseDTO createContent(ContentCreateRequestDTO request) {
         Channel channel = channelRepository.findById(request.getChannelId())
@@ -54,7 +55,10 @@ public class ContentService {
                 request.getBody(), request.getMediaUrl(),
                 request.getPreviewRatio(), request.getPrice());
 
-        // 임시저장만 처리 (publishedAt은 null)
+        // publishedAt을 요청에서 받은 값으로 사용
+        // null이면 임시저장, 값이 있으면 해당 시간에 발행
+        LocalDateTime publishedAt = request.getPublishedAt();
+        
         Content content = Content.create(
                 channel,
                 request.getTitle(),
@@ -64,9 +68,17 @@ public class ContentService {
                 request.getBody(),
                 request.getMediaUrl(),
                 request.getPrice(),
-                null); // 임시저장이므로 null
+                publishedAt);
 
-        return ContentResponseDTO.from(contentRepository.save(content));
+        Content savedContent = contentRepository.save(content);
+
+        // 즉시 발행인 경우 알림 이벤트 발행
+        if (savedContent.isPublished()) {
+            applicationEventPublisher.publishEvent(
+                    ContentPublishedEvent.create(savedContent.getId(), channel.getCreatorId()));
+        }
+
+        return ContentResponseDTO.from(savedContent);
     }
 
     /**
@@ -248,26 +260,36 @@ public class ContentService {
         if (content.getAccessType() == AccessType.FREE) {
             hasAccess = true; // 무료 콘텐츠는 항상 접근 가능
         } else if (userId != null) {
-            Long channelId = content.getChannel().getId();
+            // 크리에이터는 자신의 콘텐츠에 항상 접근 가능
+            if ("CREATOR".equals(userRole) || "ROLE_CREATOR".equals(userRole)) {
+                if (content.getChannel().getCreatorId().equals(userId)) {
+                    hasAccess = true; // 크리에이터가 자신의 콘텐츠인 경우 항상 접근 가능
+                }
+            }
             
-            // 1. 채널 구독 내역 확인
-            boolean hasActiveSubscription = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
-                    userId, channelId, SubscriptionStatus.ACTIVE);
-            
-            // 2. 콘텐츠 단건 구매 내역 확인
-            boolean hasPurchasedContent = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
-                    userId, contentId, OrderType.CONTENT, OrderStatus.PAID);
-            
-            // 접근 타입에 따라 접근 권한 결정
-            if (content.getAccessType() == AccessType.SUBSCRIBER_ONLY) {
-                // 구독자만 접근 가능: 채널 구독 내역 확인
-                hasAccess = hasActiveSubscription;
-            } else if (content.getAccessType() == AccessType.SINGLE_PURCHASE) {
-                // 단건 구매 콘텐츠: 구매 내역 또는 구독 내역 확인 (구독자도 접근 가능)
-                hasAccess = hasPurchasedContent || hasActiveSubscription;
-            } else if (content.getAccessType() == AccessType.PARTIAL) {
-                // 미리보기 콘텐츠: 구매 내역 또는 구독 내역 확인 (구독자도 접근 가능)
-                hasAccess = hasPurchasedContent || hasActiveSubscription;
+            // 크리에이터가 아닌 경우 또는 타인의 콘텐츠인 경우 구매/구독 내역 확인
+            if (!hasAccess) {
+                Long channelId = content.getChannel().getId();
+                
+                // 1. 채널 구독 내역 확인
+                boolean hasActiveSubscription = subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(
+                        userId, channelId, SubscriptionStatus.ACTIVE);
+                
+                // 2. 콘텐츠 단건 구매 내역 확인
+                boolean hasPurchasedContent = orderRepository.existsByMemberIdAndContentIdAndOrderTypeAndStatus(
+                        userId, contentId, OrderType.CONTENT, OrderStatus.PAID);
+                
+                // 접근 타입에 따라 접근 권한 결정
+                if (content.getAccessType() == AccessType.SUBSCRIBER_ONLY) {
+                    // 구독자만 접근 가능: 채널 구독 내역 확인
+                    hasAccess = hasActiveSubscription;
+                } else if (content.getAccessType() == AccessType.SINGLE_PURCHASE) {
+                    // 단건 구매 콘텐츠: 구매 내역 또는 구독 내역 확인 (구독자도 접근 가능)
+                    hasAccess = hasPurchasedContent || hasActiveSubscription;
+                } else if (content.getAccessType() == AccessType.PARTIAL) {
+                    // 미리보기 콘텐츠: 구매 내역 또는 구독 내역 확인 (구독자도 접근 가능)
+                    hasAccess = hasPurchasedContent || hasActiveSubscription;
+                }
             }
         }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Lock, Heart } from 'lucide-react';
 
 export function ContentGrid({ contents, isSubscribed, onNavigate }) {
+  // 백엔드에서 이미 발행된 콘텐츠만 필터링해서 반환하므로, 프론트엔드에서는 추가 필터링 불필요
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {contents.map((content) => {

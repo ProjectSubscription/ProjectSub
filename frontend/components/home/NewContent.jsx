@@ -22,7 +22,15 @@ export function NewContent({ contents, onNavigate }) {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {contents.map((content) => {
+        {contents
+          .filter(content => {
+            // 발행된 콘텐츠만 표시 (publishedAt이 null이 아니고 현재 시점 이전인 것만)
+            if (!content.publishedAt) return false;
+            const publishedAt = new Date(content.publishedAt);
+            const now = new Date();
+            return publishedAt <= now;
+          })
+          .map((content) => {
           const contentId = content.contentId || content.id;
           const thumbnailUrl = content.mediaUrl || content.thumbnailUrl || '/placeholder-content.jpg';
           
