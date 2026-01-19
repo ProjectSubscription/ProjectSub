@@ -30,6 +30,34 @@ jobs:
             MYSQL_USER=${{ secrets.MYSQL_USER }}
             MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
 
+            # Mail
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+
+            # Redis
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            
+            # Password Reset Link
+            PASSWORD_RESET_LINK=${{ secrets.PASSWORD_RESET_LINK }}
+
+            # OAuth2
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+
+            KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+
+            NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
+            NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
+
+            # Toss Payments
+            TOSS_PAYMENTS_SECRET_KEY=${{ secrets.TOSS_PAYMENTS_SECRET_KEY }}
+            TOSS_PAYMENTS_BASE_URL=${{ secrets.TOSS_PAYMENTS_BASE_URL }}
+
             # API URL
             NEXT_PUBLIC_API_URL=http://52.79.142.181:8080
             EOF
