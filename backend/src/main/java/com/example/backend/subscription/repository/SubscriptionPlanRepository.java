@@ -13,4 +13,7 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
 
     @Query("SELECT sp FROM SubscriptionPlan sp WHERE sp.channelId = :channelId AND sp.isActive = true ORDER BY sp.planType")
     List<SubscriptionPlan> findActivePlans(@Param("channelId") Long channelId);
+
+    @Query("SELECT sp FROM SubscriptionPlan sp WHERE sp.channelId = :channelId ORDER BY sp.planType")
+    List<SubscriptionPlan> findAllPlans(@Param("channelId") Long channelId);
 }

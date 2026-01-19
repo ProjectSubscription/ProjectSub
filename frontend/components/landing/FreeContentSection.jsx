@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { Play } from 'lucide-react';
 
-export function FreeContentSection({ contents, onNavigate }) {
+export function FreeContentSection({ contents, onNavigate, isAuthenticated = false }) {
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,7 +15,12 @@ export function FreeContentSection({ contents, onNavigate }) {
           {contents.map((content) => (
             <div
               key={content.id}
-              onClick={() => onNavigate('login')}
+              onClick={() =>
+                onNavigate(
+                  isAuthenticated ? 'content-detail' : 'login',
+                  isAuthenticated ? { contentId: content.id } : undefined
+                )
+              }
               className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer"
             >
               <div className="relative aspect-video">

@@ -9,6 +9,7 @@ import com.example.backend.member.repository.MemberRepository;
 import com.example.backend.member.dto.request.MemberRequest;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.entity.Role;
+import com.example.backend.notification.service.NotificationSettingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,23 +27,25 @@ import static org.springframework.util.StringUtils.hasText;
 @Slf4j
 public class MemberService {
 
-    //todo: 상수 env 파일로 옮기기
     private final PasswordResetService passwordResetService;
     private final MemberRepository memberRepository;
 
 
     private final CreatorService creatorService;
+    private final NotificationSettingService notificationSettingService;
     private final PasswordEncoder passwordEncoder;
 
 
     public MemberService(@Lazy CreatorService creatorService,
                          MemberRepository memberRepository,
                          PasswordEncoder passwordEncoder,
-                         PasswordResetService passwordResetService) { //todo : 개선 여지 있음
+                         PasswordResetService passwordResetService,
+                         NotificationSettingService  notificationSettingService) {
         this.creatorService = creatorService;
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordResetService = passwordResetService;
+        this.notificationSettingService = notificationSettingService;
     }
 
     //유저 회원가입
@@ -98,6 +101,9 @@ public class MemberService {
         member.completeProfile(nickname, birthYear, gender);
 
         memberRepository.save(member);
+
+        //알림설정
+        notificationSettingService.createNotificationSetting(member.getId());
         log.info("oauth 회원 추가 정보 입력 성공 nickname={}", nickname);
         log.info("oauth 회원 임시 가입 완료");
 
@@ -129,6 +135,9 @@ public class MemberService {
 
         Member savedMember = memberRepository.save(member);
         savedMember.finishSignup();
+        
+        //알림설정
+        notificationSettingService.createNotificationSetting(member.getId());
         log.info("회원가입 완료: email={}, nickname={}, provider={}",
                 savedMember.getEmail(),
                 savedMember.getNickname(),
@@ -143,12 +152,6 @@ public class MemberService {
             throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
         });
         return member;
-    }
-
-    @Transactional(readOnly = true)
-    public List<Member> findAllRegisteredMembers() {
-        List<Member> members = memberRepository.findAll();
-        return members;
     }
 
     @Transactional(readOnly = true)
@@ -177,6 +180,12 @@ public class MemberService {
         return member;
     }
 
+    @Transactional(readOnly = true)
+    public List<Member> findAllRegisteredMembers() {
+        List<Member> members = memberRepository.findAll();
+        return members;
+    }
+
     //탈퇴 유저 포함 전체 조회
     @Transactional(readOnly = true)
     public List<Member> findAllIncludingDeletedMembers() {
@@ -185,6 +194,15 @@ public class MemberService {
         List<Member> members = memberRepository.findAllIncludingDeleted();
         log.info("탈퇴 회원 포함 전체 조회 성공");
         return members;
+    }
+
+    //가입중인 유저id 값 전체 조회
+    @Transactional(readOnly = true)
+    public List<Long> findAllRegisteredMemberIds() {
+        log.info("회원 id 값 전체 조회");
+        List<Long> memberIds =  memberRepository.findAllIds();
+
+        return memberIds;
     }
 
     public Member changePassword(Long memberId, String currentPassword, String newPassword) {
@@ -215,7 +233,6 @@ public class MemberService {
         log.info("생년 변경 시도 memberId = {}", memberId);
         Member member = findRegisteredMemberById(memberId);
 
-        //todo: 관리자 문의 요청으로 해결 할 수 있도록 처리 개선 여지있음
         member.changeBirthYear(newBirthYear);
         log.info("생년 입력 완료 memberId = {}", memberId);
         return member;
@@ -240,6 +257,7 @@ public class MemberService {
                 .orElse(null);
 
         if (member != null) {
+            log.info("이메일 로직");
             passwordResetService.sendPasswordResetEmail(member);
         }
 
@@ -250,7 +268,10 @@ public class MemberService {
     //비밀번호 찾기 -> 재설정
     public void passwordReset(String token, String newPassword) {
         log.info("새 비밀번호로 변경 중");
-        passwordResetService.resetPassword(token, newPassword, passwordEncoder);
+        Long memberId = passwordResetService.validateAndConsumeToken(token);
+        Member member = findRegisteredMemberById(memberId);
+        member.resetPassword(newPassword, passwordEncoder);
+        log.info("비밀번호 변경 완료.");
     }
 
     //입력 비밀번호 검증

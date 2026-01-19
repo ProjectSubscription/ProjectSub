@@ -67,7 +67,47 @@ public enum ErrorCode {
     NICKNAME_REQUIRED(HttpStatus.BAD_REQUEST, "닉네임 입력이 필요합니다"),
     //토큰
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
-    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다.");
+    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다."),
+    INVALID_OR_EXPIRED_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
+
+    /* ===== COUPON ===== */
+    COUPON_CODE_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 쿠폰 코드입니다."),
+    INVALID_COUPON_PERIOD(HttpStatus.BAD_REQUEST, "쿠폰 시작/종료 날짜가 올바르지 않습니다."),
+    INVALID_COUPON_DISCOUNT_VALUE(HttpStatus.BAD_REQUEST, "쿠폰 할인 값이 유효하지 않습니다."),
+    COUPON_NOT_FOUND(HttpStatus.NOT_FOUND, "쿠폰을 찾을 수 없습니다."),
+    COUPON_ALREADY_ISSUED(HttpStatus.CONFLICT, "이미 발급받은 쿠폰입니다."),
+    COUPON_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 쿠폰입니다."),
+    COUPON_ALREADY_USED(HttpStatus.BAD_REQUEST, "이미 사용된 쿠폰입니다."),
+    COUPON_NOT_OWNED(HttpStatus.BAD_REQUEST, "보유하지 않은 쿠폰입니다."),
+    COUPON_NOT_APPLICABLE_TO_TARGET(HttpStatus.BAD_REQUEST, "해당 결제 대상에 적용할 수 없는 쿠폰입니다."),
+
+    /* ===== NEWSLETTER ===== */
+    NEWSLETTER_NOT_FOUND(HttpStatus.NOT_FOUND,"뉴스레터를 찾을 수 없습니다."),
+    NEWSLETTER_ALREADY_PUBLISHED(HttpStatus.BAD_REQUEST,"이미 발행된 뉴스레터입니다."),
+    NEWSLETTER_NOT_PUBLISHED(HttpStatus.BAD_REQUEST, "발행되지 않은 뉴스레터입니다."),
+    NEWSLETTER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 뉴스레터입니다."),
+    NEWSLETTER_UPDATE_FORBIDDEN(HttpStatus.BAD_REQUEST, "발행된 뉴스레터는 수정할 수 없습니다."),
+    NEWSLETTER_ARCHIVED(HttpStatus.BAD_REQUEST, "보관 처리된 뉴스레터입니다."),
+
+    /* ===== Notification ===== */
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
+    NOTIFICATION_MEMBER_MISMATCH(HttpStatus.FORBIDDEN, "해당 알림에 대한 접근 권한이 없습니다."),
+
+    /* ===== Notification Setting ===== */
+    NOTIFICATION_SETTING_NOT_FOUND(HttpStatus.NOT_FOUND, "알림 설정 정보를 찾을 수 없습니다."),
+    NOTIFICATION_SETTING_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 회원의 알림 설정이 존재합니다."),
+    INVALID_NOTIFICATION_TYPE(HttpStatus.BAD_REQUEST, "유효하지 않은 알림 타입입니다."),
+
+    /* ===== Content Review ===== */
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 콘텐츠에 대한 리뷰를 작성했습니다."),
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
+    REVIEW_ACCESS_DENIED(HttpStatus.FORBIDDEN, "리뷰를 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다."),
+    CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다."),
+
+    /* ===== Content Review Comment ===== */
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
+    COMMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "댓글을 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다.");
+
 
     private final HttpStatus status;
     private final String message;

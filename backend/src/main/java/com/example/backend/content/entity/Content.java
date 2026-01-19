@@ -97,8 +97,10 @@ public class Content {
             LocalDateTime publishedAt
     ) {
         // 즉시 발행인지 확인 (publishedAt이 현재 시점 이하이면 즉시 발행)
+        // 네트워크 지연 등을 고려하여 5초 여유를 둠
+        LocalDateTime now = LocalDateTime.now();
         boolean isImmediatePublish = publishedAt != null && 
-                (publishedAt.isBefore(LocalDateTime.now()) || publishedAt.isEqual(LocalDateTime.now()));
+                (publishedAt.isBefore(now.plusSeconds(5)) || publishedAt.isEqual(now));
         
         return Content.builder()
                 .channel(channel)

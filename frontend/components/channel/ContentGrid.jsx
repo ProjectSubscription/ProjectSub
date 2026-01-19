@@ -2,18 +2,22 @@ import React from 'react';
 import { Play, Lock, Heart } from 'lucide-react';
 
 export function ContentGrid({ contents, isSubscribed, onNavigate }) {
+  // 백엔드에서 이미 발행된 콘텐츠만 필터링해서 반환하므로, 프론트엔드에서는 추가 필터링 불필요
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {contents.map((content) => {
-        const canAccess = content.accessType === 'FREE' || isSubscribed;
+        // 접근 권한: 무료 또는 구독자 전용 콘텐츠는 구독 시 접근 가능
+        // 실제 콘텐츠 접근 권한 (상세 페이지는 모두 접근 가능)
+        const canAccess = content.accessType === 'FREE' || 
+                         (content.accessType === 'SUBSCRIBER_ONLY' && isSubscribed) ||
+                         content.accessType === 'SINGLE_PURCHASE' ||
+                         content.accessType === 'PARTIAL';
         
         return (
           <div
             key={content.id}
-            onClick={() => canAccess && onNavigate('content-detail', { contentId: content.id })}
-            className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all ${
-              canAccess ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'
-            }`}
+            onClick={() => onNavigate('content-detail', { contentId: content.id })}
+            className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer"
           >
             <div className="relative aspect-video">
               <img
@@ -39,19 +43,13 @@ export function ContentGrid({ contents, isSubscribed, onNavigate }) {
                 </div>
               )}
               <div className="absolute top-3 left-3">
-                {content.accessType === 'FREE' && (
+                {content.accessType === 'FREE' ? (
                   <span className="bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
                     무료
                   </span>
-                )}
-                {content.accessType === 'SUBSCRIPTION' && (
-                  <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    구독자 전용
-                  </span>
-                )}
-                {content.accessType === 'PAID' && (
+                ) : (
                   <span className="bg-purple-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    {content.price?.toLocaleString()}원
+                    유료
                   </span>
                 )}
               </div>

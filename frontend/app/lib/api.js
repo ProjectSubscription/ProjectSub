@@ -8,7 +8,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 /**
  * API 요청 헬퍼 함수
  */
-async function apiRequest(endpoint, options = {}) {
+export async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   const defaultOptions = {
     credentials: 'include', // 쿠키 포함 (세션 기반 인증)
@@ -64,7 +64,11 @@ async function apiRequest(endpoint, options = {}) {
  * GET 요청
  */
 export async function apiGet(endpoint, params = {}) {
-  const queryString = new URLSearchParams(params).toString();
+  // undefined/null 파라미터는 쿼리에 포함되지 않도록 제거
+  const filteredParams = Object.fromEntries(
+    Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null)
+  );
+  const queryString = new URLSearchParams(filteredParams).toString();
   const url = queryString ? `${endpoint}?${queryString}` : endpoint;
   return apiRequest(url, { method: 'GET' });
 }
@@ -277,6 +281,59 @@ export async function getMyCreatorInfo() {
   return apiGet('/api/creators/me');
 }
 
+// ==================== 정산 (SETTLEMENT) ====================
+
+/**
+ * 내 정산 목록 조회
+ */
+export async function getMySettlements() {
+  return apiGet('/api/creators/me/settlements');
+}
+
+/**
+ * 정산 상세 조회
+ */
+export async function getSettlementDetail(settlementId) {
+  return apiGet(`/api/creators/me/settlements/${settlementId}`);
+}
+
+// ==================== 관리자 정산 (ADMIN SETTLEMENT) ====================
+
+/**
+ * 관리자용: 전체 정산 목록 조회
+ */
+export async function getAdminSettlements(params = {}) {
+  return apiGet('/api/admin/settlements', params);
+}
+
+/**
+ * 관리자용: 정산 상세 조회
+ */
+export async function getAdminSettlementDetail(settlementId) {
+  return apiGet(`/api/admin/settlements/${settlementId}`);
+}
+
+/**
+ * 관리자용: 정산 통계 조회
+ */
+export async function getSettlementStatistics() {
+  return apiGet('/api/admin/settlements/statistics');
+}
+
+/**
+ * 관리자용: 정산 재시도
+ */
+export async function retrySettlement(settlementId) {
+  return apiPost(`/api/admin/settlements/${settlementId}/retry`);
+}
+
+/**
+ * 관리자용: 정산 배치 수동 실행
+ */
+export async function runSettlementBatch() {
+  return apiPost('/api/admin/settlements/batch');
+}
+
 // ==================== 채널 (CHANNEL) ====================
 
 /**
@@ -294,6 +351,54 @@ export async function updateChannel(id, data) {
 }
 
 /**
+ * 채널 이미지 업로드
+ */
+export async function uploadChannelThumbnail(channelId, file) {
+  const url = `${API_BASE_URL}/api/channels/${channelId}/thumbnail`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorText = '';
+    let errorData = null;
+
+    try {
+      errorText = await response.text();
+      if (errorText && errorText.trim()) {
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText };
+        }
+      }
+    } catch (readErr) {
+      console.warn('에러 응답 본문 읽기 실패:', readErr);
+    }
+
+    const errorMessage = errorData?.message || errorData?.error || `HTTP error! status: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.warn('JSON 파싱 실패, 빈 응답으로 처리:', error);
+    return null;
+  }
+}
+
+/**
  * 채널 조회
  */
 export async function getChannel(id) {
@@ -301,10 +406,24 @@ export async function getChannel(id) {
 }
 
 /**
+ * 내 채널 조회 (크리에이터)
+ */
+export async function getMyChannel() {
+  return apiGet('/api/channels/my');
+}
+
+/**
  * 채널 목록
  */
 export async function getChannels(params = {}) {
   return apiGet('/api/channels', params);
+}
+
+/**
+ * 채널 카테고리 목록
+ */
+export async function getChannelCategories() {
+  return apiGet('/api/channels/categories');
 }
 
 // ==================== 구독 (SUBSCRIPTION) ====================
@@ -321,6 +440,13 @@ export async function createSubscriptionPlan(channelId, data) {
  */
 export async function getSubscriptionPlans(channelId) {
   return apiGet(`/api/channels/${channelId}/plans`);
+}
+
+/**
+ * 구독 상품 수정
+ */
+export async function updateSubscriptionPlan(channelId, planId, data) {
+  return apiPut(`/api/channels/${channelId}/plans/${planId}`, data);
 }
 
 /**
@@ -449,6 +575,20 @@ export async function getComments(contentId) {
 }
 
 /**
+ * 리뷰 댓글 작성
+ */
+export async function createReviewComment(reviewId, data) {
+  return apiPost(`/api/reviews/${reviewId}/comments`, data);
+}
+
+/**
+ * 리뷰 댓글 조회
+ */
+export async function getReviewComments(reviewId) {
+  return apiGet(`/api/reviews/${reviewId}/comments`);
+}
+
+/**
  * 댓글 수정
  */
 export async function updateComment(id, data) {
@@ -533,7 +673,7 @@ export async function getTopSales(params = {}) {
  * 쿠폰 등록
  */
 export async function registerCoupon(data) {
-  return apiPost('/api/coupons/register', data);
+  return apiPost('/api/coupons/issue', data);
 }
 
 /**
@@ -555,6 +695,59 @@ export async function getAvailableCoupons() {
  */
 export async function getExpiredCoupons() {
   return apiGet('/api/coupons/me/expired');
+}
+
+/**
+ * 채널별 다운로드 가능한 쿠폰 목록 조회
+ * GET /api/channels/{channelId}/coupons
+ */
+export async function getChannelCoupons(channelId) {
+  return apiGet(`/api/channels/${channelId}/coupons`);
+}
+
+/**
+ * 컨텐츠별 다운로드 가능한 쿠폰 목록 조회
+ * GET /api/contents/{contentId}/coupons
+ */
+export async function getContentCoupons(contentId) {
+  return apiGet(`/api/contents/${contentId}/coupons`);
+}
+
+/**
+ * 쿠폰 발급 (다운로드)
+ * POST /api/coupons/{couponId}/issue
+ */
+export async function issueCoupon(couponId) {
+  return apiPost(`/api/coupons/${couponId}/issue`);
+}
+
+/**
+ * 쿠폰 검증
+ * POST /api/coupons/{couponId}/validate
+ */
+export async function validateCoupon(couponId, paymentType, targetId) {
+  return apiPost(`/api/coupons/${couponId}/validate`, {
+    paymentType,
+    targetId,
+  });
+}
+
+// ==================== 관리자 쿠폰 관리 ====================
+
+/**
+ * 관리자 쿠폰 생성
+ * POST /api/admin/coupons
+ */
+export async function createAdminCoupon(data) {
+  return apiPost('/api/admin/coupons', data);
+}
+
+/**
+ * 관리자 쿠폰 목록 조회
+ * GET /api/admin/coupons
+ */
+export async function getAdminCoupons(params = {}) {
+  return apiGet('/api/admin/coupons', params);
 }
 
 // ==================== 마이페이지 ====================
@@ -650,6 +843,20 @@ export async function unlikeContent(contentId) {
   return apiDelete(`/api/contents/${contentId}/like`);
 }
 
+/**
+ * 최근 본 콘텐츠 조회
+ */
+export async function getRecentViewedContents(params = {}) {
+  return apiGet('/api/contents/recent-viewed', params);
+}
+
+/**
+ * 채널의 대표 콘텐츠 조회
+ */
+export async function getFeaturedContents(channelId) {
+  return apiGet(`/api/contents/channels/${channelId}/featured`);
+}
+
 // ==================== 정산 ====================
 
 /**
@@ -724,4 +931,113 @@ export async function updateNotificationSettings(data) {
 export function subscribeNotifications() {
   // Next.js API Route를 통해 프록시 (쿠키 자동 포함)
   return new EventSource('/api/notifications/subscribe');
+}
+
+// ==================== 뉴스레터 API ====================
+
+/**
+ * 발행된 뉴스레터 목록 조회 (일반 사용자용)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getNewsletters(page = 0, size = 20) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/newsletters?${params.toString()}`);
+}
+
+/**
+ * 뉴스레터 상세 조회 (일반 사용자용 - 발행된 것만)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function getNewsletter(id) {
+  return apiGet(`/api/newsletters/${id}`);
+}
+
+/**
+ * 뉴스레터 상세 조회 (관리자용 - 모든 상태 조회 가능)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function getNewsletterForAdmin(id) {
+  return apiGet(`/api/admin/newsletters/${id}`);
+}
+
+/**
+ * 전체 뉴스레터 목록 조회 (관리자용)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getAllNewsletters(page = 0, size = 20) {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/admin/newsletters-all?${params.toString()}`);
+}
+
+/**
+ * 상태별 뉴스레터 목록 조회 (관리자용)
+ * @param {string} status - 상태 (DRAFT, PUBLISHED, ARCHIVED)
+ * @param {number} page - 페이지 번호 (0부터 시작)
+ * @param {number} size - 페이지 크기
+ */
+export async function getNewslettersByStatus(status, page = 0, size = 20) {
+  const params = new URLSearchParams({
+    status: status,
+    page: page.toString(),
+    size: size.toString(),
+    sort: 'publishedAt,desc'
+  });
+  return apiGet(`/api/admin/newsletters?${params.toString()}`);
+}
+
+/**
+ * 뉴스레터 생성 (관리자용)
+ * @param {string} title - 제목
+ * @param {string} content - 내용
+ */
+export async function createNewsletter(title, content) {
+  return apiPost('/api/admin/newsletters', { title, content });
+}
+
+/**
+ * 뉴스레터 수정 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ * @param {string} title - 제목
+ * @param {string} content - 내용
+ */
+export async function updateNewsletter(id, title, content) {
+  return apiPut(`/api/admin/newsletters/${id}`, { title, content });
+}
+
+/**
+ * 뉴스레터 발행 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function publishNewsletter(id) {
+  return apiRequest(`/api/admin/newsletters/${id}/publish`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 뉴스레터 보관 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function archiveNewsletter(id) {
+  return apiRequest(`/api/admin/newsletters/${id}/archive`, {
+    method: 'PATCH',
+  });
+}
+
+/**
+ * 뉴스레터 삭제 (관리자용)
+ * @param {number} id - 뉴스레터 ID
+ */
+export async function deleteNewsletter(id) {
+  return apiDelete(`/api/admin/newsletters/${id}`);
 }

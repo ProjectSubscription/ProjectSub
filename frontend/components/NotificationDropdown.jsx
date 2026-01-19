@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Video, Mail, Calendar, MessageSquare, X, Check, Trash2, Clock, Bell } from 'lucide-react';
+import { Video, Mail, Calendar, MessageSquare, X, Check, Trash2, Clock, Bell, Ticket, Store } from 'lucide-react';
 import { getNotifications, readNotification, deleteNotification } from '@/app/lib/api';
 import { useRouter } from 'next/navigation';
 
@@ -127,7 +127,13 @@ export function NotificationDropdown({ onClose, onNotificationUpdate, onNotifica
       // 이벤트 페이지로 이동 (나중에 구현)
       onClose();
     } else if (notification.type === 'NEWS_LETTER' && notification.targetId) {
-      // 뉴스레터 페이지로 이동 (나중에 구현)
+      router.push(`/newsletters/${notification.targetId}`);
+      onClose();
+    } else if (notification.type === 'CHANNEL' && notification.targetId) {
+      router.push(`/channels/${notification.targetId}`);
+      onClose();
+    } else if (notification.type === 'COUPON_MY_PAGE') {
+      router.push('/my-coupons?filter=downloadable');
       onClose();
     }
   };
@@ -142,6 +148,10 @@ export function NotificationDropdown({ onClose, onNotificationUpdate, onNotifica
         return <Calendar className="w-5 h-5 text-orange-600" />;
       case 'COMMENT':
         return <MessageSquare className="w-5 h-5 text-green-600" />;
+      case 'CHANNEL':
+        return <Store className="w-5 h-5 text-indigo-600" />;
+      case 'COUPON_MY_PAGE':
+        return <Ticket className="w-5 h-5 text-yellow-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
@@ -157,6 +167,10 @@ export function NotificationDropdown({ onClose, onNotificationUpdate, onNotifica
         return '이벤트';
       case 'COMMENT':
         return '댓글';
+      case 'CHANNEL':
+        return '채널';
+      case 'COUPON_MY_PAGE':
+        return '쿠폰';
       default:
         return '알림';
     }

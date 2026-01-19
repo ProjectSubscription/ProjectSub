@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { Play, Star } from 'lucide-react';
 
-export function CategoryRankingSection({ categories, selectedCategory, onCategoryChange, rankingContents, onNavigate }) {
+export function CategoryRankingSection({ categories, selectedCategory, onCategoryChange, rankingContents, onNavigate, isAuthenticated = false }) {
   return (
     <section className="py-20">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -34,7 +36,12 @@ export function CategoryRankingSection({ categories, selectedCategory, onCategor
             {rankingContents.slice(0, 5).map((content, index) => (
               <div
                 key={content.id}
-                onClick={() => onNavigate('login')}
+                onClick={() =>
+                  onNavigate(
+                    isAuthenticated ? 'content-detail' : 'login',
+                    isAuthenticated ? { contentId: content.id } : undefined
+                  )
+                }
                 className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
               >
                 <div className="flex gap-4 p-4">
@@ -81,7 +88,12 @@ export function CategoryRankingSection({ categories, selectedCategory, onCategor
             {rankingContents.slice(5, 10).map((content, index) => (
               <div
                 key={content.id}
-                onClick={() => onNavigate('login')}
+                onClick={() =>
+                  onNavigate(
+                    isAuthenticated ? 'content-detail' : 'login',
+                    isAuthenticated ? { contentId: content.id } : undefined
+                  )
+                }
                 className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
               >
                 <div className="flex gap-4 p-4">

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import {
   TrendingUp,
@@ -13,8 +15,9 @@ import {
 import { PageRoute } from '@/app/types';
 import { getMyCreatorInfo } from '@/app/lib/api';
 
-export function CreatorDashboard({ creatorId, onNavigate }) {
+export function CreatorDashboard({ onNavigate }) {
   const [myPageData, setMyPageData] = React.useState(null);
+  const [creatorId, setCreatorId] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
 
@@ -24,6 +27,9 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
         setLoading(true);
         setError('');
         const data = await getMyCreatorInfo();
+        // API에서 받아온 크리에이터 정보에서 id 추출
+        const id = data?.id || data?.creatorId;
+        setCreatorId(id);
         setMyPageData(data);
       } catch (err) {
         setError(err.message || '크리에이터 마이페이지 정보를 불러오는 중 오류가 발생했습니다.');
@@ -76,7 +82,7 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
     },
     {
       label: '이번 달 예상 수익',
-      value: `${(myPageData.expectedRevenue || 0).toLocaleString()}원`,
+      value: `${(myPageData.thisMonthExpectedRevenue || 0).toLocaleString()}원`,
       change: '+8.3%',
       trend: 'up',
       icon: DollarSign,
@@ -186,26 +192,28 @@ export function CreatorDashboard({ creatorId, onNavigate }) {
             </select>
           </div>
           <div className="space-y-3">
-            {myPageData.monthlyRevenues && myPageData.monthlyRevenues.length > 0 ? (
-              myPageData.monthlyRevenues.map((revenue, index) => (
-                <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+            {myPageData.recentThreeMonthsRevenue && myPageData.recentThreeMonthsRevenue.length > 0 ? (
+              myPageData.recentThreeMonthsRevenue.map((revenue, index) => (
+                <div key={revenue.id || index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                   <div>
-                    <p className="font-medium text-gray-900">{revenue.month || `${index + 1}월`}</p>
-                    {revenue.commission !== undefined && (
+                    <p className="font-medium text-gray-900">{revenue.settlementPeriod || `${index + 1}월`}</p>
+                    {revenue.platformFeeAmount !== undefined && revenue.platformFeeAmount !== null && (
                       <p className="text-sm text-gray-500">
-                        수수료: {revenue.commission.toLocaleString()}원
+                        수수료: {revenue.platformFeeAmount.toLocaleString()}원
                       </p>
                     )}
                   </div>
                   <div className="text-right">
-                    {revenue.netAmount !== undefined && (
+                    {revenue.payoutAmount !== undefined && revenue.payoutAmount !== null && (
                       <p className="font-bold text-gray-900">
-                        {revenue.netAmount.toLocaleString()}원
+                        {revenue.payoutAmount.toLocaleString()}원
                       </p>
                     )}
                     {revenue.status && (
                       <p className="text-xs text-gray-500">
-                        {revenue.status === 'COMPLETED' ? '정산 완료' : '정산 예정'}
+                        {revenue.status === 'COMPLETED' ? '정산 완료' : 
+                         revenue.status === 'READY' ? '정산 대기' : 
+                         revenue.status === 'FAILED' ? '정산 실패' : '정산 예정'}
                       </p>
                     )}
                   </div>

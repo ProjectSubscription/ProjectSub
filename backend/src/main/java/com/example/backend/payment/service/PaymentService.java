@@ -9,13 +9,14 @@ import com.example.backend.payment.entity.Payment;
 import com.example.backend.payment.entity.PaymentStatus;
 import com.example.backend.payment.entity.PgProvider;
 import com.example.backend.payment.repository.PaymentRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -186,6 +187,22 @@ public class PaymentService {
                 .payments(paymentHistories)
                 .totalCount(totalCount)
                 .build();
+    }
+
+    /**
+     * 특정 기간 내 PAID 상태인 결제 내역 조회 (정산용)
+     * @param status 결제 상태
+     * @param startDateTime 시작 일시
+     * @param endDateTime 종료 일시
+     * @return 결제 내역 목록
+     */
+    @Transactional(readOnly = true)
+    public List<Payment> findPaidPaymentsInPeriod(
+            PaymentStatus status,
+            LocalDateTime startDateTime,
+            LocalDateTime endDateTime
+    ) {
+        return paymentRepository.findPaidPaymentsInPeriod(status, startDateTime, endDateTime);
     }
 
     /**

@@ -1,5 +1,8 @@
 import React from 'react';
-import { CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell } from 'lucide-react';
+import {
+    CreditCard, Calendar, CheckCircle, Clock, X, FileText, Eye, Settings, Lock, User, Edit2, AlertTriangle, Bell,
+    Ticket
+} from 'lucide-react';
 import { PageRoute } from '@/app/types';
 import { mockUserSubscriptions, mockChannels, mockSubscriptionPlans } from '@/app/mockData';
 import { getMyApplication, getApplicationDetail, getMyInfo, changePassword, changeNickname, changeBirthYear, deleteMember, getNotificationSettings, updateNotificationSettings } from '@/app/lib/api';
@@ -44,7 +47,8 @@ export function MySubscriptionsPage({ userId, onNavigate }) {
             <p className="text-sm text-gray-600">만료 예정</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">
-            {userSubs.filter(s => s.status === 'ACTIVE' && 
+            {userSubs.filter(s => s.status === 'ACTIVE' &&
+                // eslint-disable-next-line react-hooks/purity
               new Date(s.endDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             ).length}
           </p>
@@ -689,31 +693,45 @@ export function MyPage({ userId, onNavigate }) {
               </button>
             </div>
 
-            {/* 뉴스레터 알림 (백엔드 미구현 - 비활성화) */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-200 opacity-50">
+            {/* 뉴스레터 알림 */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-200">
               <div className="flex-1">
                 <label className="text-sm font-medium text-gray-900">뉴스레터 알림</label>
                 <p className="text-xs text-gray-500 mt-1">뉴스레터 및 업데이트 알림을 받습니다</p>
               </div>
               <button
-                disabled
-                className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 cursor-not-allowed"
+                onClick={() => handleNotificationSettingChange('newsletterNotify', !notificationSettings?.newsletterNotify)}
+                disabled={savingSettings}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  notificationSettings?.newsletterNotify ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
               >
-                <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-1" />
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notificationSettings?.newsletterNotify ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
               </button>
             </div>
 
-            {/* 이벤트 알림 (백엔드 미구현 - 비활성화) */}
-            <div className="flex items-center justify-between py-3 opacity-50">
+            {/* 이벤트 알림 */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-200">
               <div className="flex-1">
                 <label className="text-sm font-medium text-gray-900">이벤트 알림</label>
                 <p className="text-xs text-gray-500 mt-1">이벤트 및 프로모션 알림을 받습니다</p>
               </div>
               <button
-                disabled
-                className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 cursor-not-allowed"
+                onClick={() => handleNotificationSettingChange('eventNotify', !notificationSettings?.eventNotify)}
+                disabled={savingSettings}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
+                  notificationSettings?.eventNotify ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
               >
-                <span className="inline-block h-4 w-4 transform rounded-full bg-white translate-x-1" />
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    notificationSettings?.eventNotify ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
               </button>
             </div>
           </div>
@@ -746,6 +764,14 @@ export function MyPage({ userId, onNavigate }) {
           <h3 className="text-xl font-bold text-gray-900 mb-2">크리에이터 신청 이력</h3>
           <p className="text-gray-600">신청 내역 및 승인 상태 확인</p>
         </button>
+          <button
+              onClick={() => onNavigate('my-coupons', {})}
+              className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow text-left"
+          >
+              <Ticket className="w-8 h-8 text-orange-600 mb-3" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">다운받은 쿠폰</h3>
+              <p className="text-gray-600">사용가능한 쿠폰 보기</p>
+          </button>
       </div>
 
       {/* 회원 탈퇴 섹션 */}
