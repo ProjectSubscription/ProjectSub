@@ -66,6 +66,18 @@ public class Subscription {
         this.status = SubscriptionStatus.CANCELED;
     }
 
+    /**
+     * 연간 구독 취소 시: 시작일로부터 1개월 후로 만료일을 설정하고 취소 상태로 변경
+     */
+    public void cancelWithExtendedExpiry() {
+        if (this.status != SubscriptionStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
+        }
+        // 시작일로부터 1개월 후로 만료일 설정
+        this.expiredAt = this.startedAt.plusMonths(1);
+        this.status = SubscriptionStatus.CANCELED;
+    }
+
     public void expire(LocalDateTime now) {
         if (this.status != SubscriptionStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.INVALID_SUBSCRIPTION_STATUS);
