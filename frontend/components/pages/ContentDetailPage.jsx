@@ -249,6 +249,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
 
           <ReviewSection
             reviews={reviews}
+            contentId={contentId}
             hasAccess={hasAccess}
             showReviewForm={showReviewForm}
             onToggleReviewForm={() => {
@@ -266,6 +267,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
             onReviewChange={setReview}
             currentUser={currentUser}
             onNavigate={onNavigate}
+            onReviewUpdate={fetchReviews}
           />
         </div>
 

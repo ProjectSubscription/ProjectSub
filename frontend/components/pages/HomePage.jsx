@@ -5,7 +5,8 @@ import { HeroBanner } from '@/components/home/HeroBanner';
 import { TrendingChannels } from '@/components/home/TrendingChannels';
 import { NewContent } from '@/components/home/NewContent';
 import { CategoryChannels } from '@/components/home/CategoryChannels';
-import { getChannels, getContents, getChannelCategories } from '@/app/lib/api';
+import { TopReviews } from '@/components/home/TopReviews';
+import { getChannels, getContents, getChannelCategories, getTopReviews } from '@/app/lib/api';
 
 function toChannelCard(dto, categoryNameById) {
   // 백엔드 ChannelListResponse: { channelId, title, description, category, subscriberCount }
@@ -28,6 +29,8 @@ export function HomePage({ onNavigate }) {
   const [channelError, setChannelError] = React.useState(null);
   const [newContents, setNewContents] = React.useState([]);
   const [loadingContents, setLoadingContents] = React.useState(true);
+  const [topReviews, setTopReviews] = React.useState([]);
+  const [loadingTopReviews, setLoadingTopReviews] = React.useState(true);
   const [categoryOptions, setCategoryOptions] = React.useState([{ id: 'all', name: '전체' }]);
 
   const categoryNameById = React.useMemo(() => {
@@ -155,6 +158,30 @@ export function HomePage({ onNavigate }) {
     };
   }, [selectedCategory, categoryNameById]);
 
+  // 가장 추천이 많은 리뷰 조회
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const fetchTopReviews = async () => {
+      try {
+        setLoadingTopReviews(true);
+        const reviews = await getTopReviews(5);
+        if (!cancelled) setTopReviews(reviews || []);
+      } catch (e) {
+        if (!cancelled) {
+          setTopReviews([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingTopReviews(false);
+      }
+    };
+
+    fetchTopReviews();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="space-y-12 pb-12">
       <HeroBanner onNavigate={onNavigate} />
@@ -179,6 +206,11 @@ export function HomePage({ onNavigate }) {
         channels={channels}
         onNavigate={onNavigate}
       />
+      {loadingTopReviews ? (
+        <div className="text-center py-8 text-gray-600">인기 후기를 불러오는 중...</div>
+      ) : (
+        <TopReviews reviews={topReviews} onNavigate={onNavigate} />
+      )}
     </div>
   );
 }

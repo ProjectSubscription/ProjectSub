@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, ThumbsUp, CornerDownRight, MessageCircle } from 'lucide-react';
-import { createReviewComment, getReviewComments } from '@/app/lib/api';
+import { createReviewComment, getReviewComments, toggleReviewLike } from '@/app/lib/api';
 
 // Recursive Comment Item Component
 function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
@@ -56,7 +56,7 @@ function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="답글을 입력하세요..."
-              className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900"
               autoFocus
             />
           </div>
@@ -99,10 +99,13 @@ function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
 }
 
 // Review Item Component to handle individual review comments
-function ReviewItem({ review, currentUser, onNavigate }) {
+function ReviewItem({ review, contentId, currentUser, onNavigate, onReviewUpdate }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [isLiked, setIsLiked] = useState(review.isLiked || false);
+  const [likeCount, setLikeCount] = useState(review.likeCount || 0);
+  const [isLiking, setIsLiking] = useState(false);
 
   useEffect(() => {
     if (review.id) {
@@ -173,6 +176,37 @@ function ReviewItem({ review, currentUser, onNavigate }) {
     }
   };
 
+  const handleLikeToggle = async () => {
+    if (!currentUser) {
+      alert('로그인이 필요한 서비스입니다.');
+      onNavigate('login');
+      return;
+    }
+
+    if (isLiking) return; // Prevent duplicate clicks
+
+    try {
+      setIsLiking(true);
+      const id = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
+      
+      const response = await toggleReviewLike(id, review.id);
+      const newIsLiked = response.isLiked;
+      
+      setIsLiked(newIsLiked);
+      setLikeCount(prev => newIsLiked ? prev + 1 : Math.max(0, prev - 1));
+
+      // Notify parent component to update reviews list (optional)
+      if (onReviewUpdate) {
+        onReviewUpdate();
+      }
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+      alert(error.message || '추천 처리에 실패했습니다.');
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm">
       <div className="flex items-start justify-between mb-3">
@@ -202,10 +236,21 @@ function ReviewItem({ review, currentUser, onNavigate }) {
       </div>
       <p className="text-gray-700 mb-4">{review.comment}</p>
       
-      <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
-        <button className="flex items-center gap-1 hover:text-blue-600">
-          <ThumbsUp className="w-4 h-4" />
+      <div className="flex items-center gap-4 mb-4 text-sm">
+        <button
+          onClick={handleLikeToggle}
+          disabled={isLiking}
+          className={`flex items-center gap-1 transition-colors ${
+            isLiked
+              ? 'text-blue-600 font-medium'
+              : 'text-gray-500 hover:text-blue-600'
+          } ${isLiking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <ThumbsUp className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
           <span>도움됨</span>
+          {likeCount > 0 && (
+            <span className="ml-1">({likeCount})</span>
+          )}
         </button>
       </div>
 
@@ -237,7 +282,7 @@ function ReviewItem({ review, currentUser, onNavigate }) {
               onClick={handleInputClick}
               placeholder={currentUser ? "댓글을 입력하세요..." : "로그인이 필요한 서비스입니다."}
               readOnly={!currentUser}
-              className={`w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${!currentUser ? 'bg-gray-100 cursor-pointer' : 'bg-gray-50 focus:bg-white'}`}
+              className={`w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-900 ${!currentUser ? 'bg-gray-100 cursor-pointer' : 'bg-gray-50 focus:bg-white'}`}
             />
           </div>
           <button
@@ -253,7 +298,7 @@ function ReviewItem({ review, currentUser, onNavigate }) {
   );
 }
 
-export function ReviewSection({ reviews, hasAccess, showReviewForm, onToggleReviewForm, onSubmitReview, rating, onRatingChange, review, onReviewChange, currentUser, onNavigate }) {
+export function ReviewSection({ reviews, contentId, hasAccess, showReviewForm, onToggleReviewForm, onSubmitReview, rating, onRatingChange, review, onReviewChange, currentUser, onNavigate, onReviewUpdate }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -305,7 +350,7 @@ export function ReviewSection({ reviews, hasAccess, showReviewForm, onToggleRevi
               value={review}
               onChange={(e) => onReviewChange(e.target.value)}
               placeholder="이 콘텐츠에 대한 의견을 남겨주세요..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900"
               rows={4}
               required
             />
@@ -333,9 +378,11 @@ export function ReviewSection({ reviews, hasAccess, showReviewForm, onToggleRevi
         {reviews.map((rev) => (
           <ReviewItem 
             key={rev.id} 
-            review={rev} 
+            review={rev}
+            contentId={contentId}
             currentUser={currentUser}
             onNavigate={onNavigate}
+            onReviewUpdate={onReviewUpdate}
           />
         ))}
       </div>
