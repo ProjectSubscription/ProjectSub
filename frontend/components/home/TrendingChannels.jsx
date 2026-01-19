@@ -25,6 +25,9 @@ export function TrendingChannels({ channels, onNavigate }) {
           const formattedRating = Number.isFinite(channel.averageRating)
             ? channel.averageRating.toFixed(1)
             : '0.0';
+          const subscriberCount = Number(
+            channel.subscriberCount ?? channel.subscriber_count ?? 0
+          );
 
           return (
             <div
@@ -63,7 +66,7 @@ export function TrendingChannels({ channels, onNavigate }) {
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-1 text-gray-600">
                     <Users className="w-4 h-4" />
-                    <span>{channel.subscriberCount.toLocaleString()} 구독자</span>
+                    <span>{subscriberCount.toLocaleString()} 구독자</span>
                   </div>
                   <div className="flex items-center gap-1 text-yellow-500">
                     <Star className="w-4 h-4 fill-current" />
