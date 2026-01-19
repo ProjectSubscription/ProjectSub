@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users, Star, Bell, BellOff } from 'lucide-react';
 
-export function ChannelHeader({ channel, isSubscribed, onSubscribeToggle }) {
+export function ChannelHeader({ channel, isSubscribed, onSubscribeToggle, onCreatorClick }) {
   const avatarUrl = channel?.thumbnailUrl ?? channel?.profileImageUrl ?? channel?.profileImage ?? '';
   const avatarInitial = channel?.name?.trim()?.slice(0, 1) ?? '?';
 
@@ -23,8 +23,21 @@ export function ChannelHeader({ channel, isSubscribed, onSubscribeToggle }) {
           )}
           <div className="flex-1 text-gray-500">
             <h1 className="text-3xl font-bold mb-2 text-gray-500">{channel.name}</h1>
-            <p className="mb-2">{channel.creatorName}</p>
             <div className="flex flex-wrap items-center gap-4 text-sm">
+              {channel.creatorName ? (
+                <button
+                  type="button"
+                  onClick={onCreatorClick}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:text-gray-900"
+                  aria-label={`크리에이터 ${channel.creatorName} 페이지로 이동`}
+                >
+                  <span className="underline decoration-gray-300 underline-offset-4">
+                    {channel.creatorName}
+                  </span>
+                </button>
+              ) : (
+                <span>{channel.creatorName}</span>
+              )}
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
                 <span>{channel.subscriberCount.toLocaleString()} 구독자</span>
