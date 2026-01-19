@@ -436,10 +436,17 @@ export async function createSubscriptionPlan(channelId, data) {
 }
 
 /**
- * 구독 상품 조회
+ * 구독 상품 조회 (활성화된 상품만)
  */
 export async function getSubscriptionPlans(channelId) {
   return apiGet(`/api/channels/${channelId}/plans`);
+}
+
+/**
+ * 구독 상품 전체 조회 (크리에이터용 - 활성/비활성 모두)
+ */
+export async function getAllSubscriptionPlans(channelId) {
+  return apiGet(`/api/channels/${channelId}/plans/all`);
 }
 
 /**

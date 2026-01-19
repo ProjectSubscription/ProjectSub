@@ -17,7 +17,7 @@ function ClientLayoutContent({ children }) {
     const routeMap = {
       landing: '/',
       login: '/login',
-      home: '/home',
+      home: '/',
       channels: '/channels',
       'channel-detail': (p) => `/channels/${p?.channelId || ''}`,
       'content-detail': (p) => `/contents/${p?.contentId || ''}`,
@@ -34,6 +34,7 @@ function ClientLayoutContent({ children }) {
       'creator-content': '/creator/content',
       'creator-content-new': '/creator/content/new',
       'creator-settlement': '/creator/settlement',
+      'creator-subscription': '/creator/subscription-plans',
       'admin-applications': '/admin/applications',
       'admin-payments': '/admin/payments',
       'admin-settlements': '/admin/settlements',

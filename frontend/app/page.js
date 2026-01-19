@@ -9,7 +9,7 @@ export default function Home() {
   const handleNavigate = (page, params) => {
     const routeMap = {
       'login': '/login',
-      'home': '/home',
+      'home': '/',
       'channels': '/channels',
       'creator-apply': '/creator/apply',
       'channel-detail': (params) => `/channels/${params?.channelId || ''}`,

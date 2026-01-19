@@ -13,6 +13,7 @@ export default function ChannelDetail() {
       'content-detail': (params) => `/contents/${params?.contentId || ''}`,
       'creator-detail': (params) => `/creators/${params?.creatorId || ''}`,
       'payment': (params) => `/payment?type=subscription&planId=${params?.planId || ''}&channelId=${channelId}`,
+      'creator-subscription': '/creator/subscription-plans',
     };
 
     const route = routeMap[page];

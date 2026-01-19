@@ -19,7 +19,7 @@ export default function Login() {
         // 사용자 정보 즉시 새로고침하여 헤더에 반영
         await refreshUser();
         // 로그인 성공 시 홈으로 이동
-        router.push('/home');
+        router.push('/');
       } else {
         throw new Error('로그인에 실패했습니다.');
       }
