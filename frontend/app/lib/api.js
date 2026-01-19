@@ -281,6 +281,59 @@ export async function getMyCreatorInfo() {
   return apiGet('/api/creators/me');
 }
 
+// ==================== 정산 (SETTLEMENT) ====================
+
+/**
+ * 내 정산 목록 조회
+ */
+export async function getMySettlements() {
+  return apiGet('/api/creators/me/settlements');
+}
+
+/**
+ * 정산 상세 조회
+ */
+export async function getSettlementDetail(settlementId) {
+  return apiGet(`/api/creators/me/settlements/${settlementId}`);
+}
+
+// ==================== 관리자 정산 (ADMIN SETTLEMENT) ====================
+
+/**
+ * 관리자용: 전체 정산 목록 조회
+ */
+export async function getAdminSettlements(params = {}) {
+  return apiGet('/api/admin/settlements', params);
+}
+
+/**
+ * 관리자용: 정산 상세 조회
+ */
+export async function getAdminSettlementDetail(settlementId) {
+  return apiGet(`/api/admin/settlements/${settlementId}`);
+}
+
+/**
+ * 관리자용: 정산 통계 조회
+ */
+export async function getSettlementStatistics() {
+  return apiGet('/api/admin/settlements/statistics');
+}
+
+/**
+ * 관리자용: 정산 재시도
+ */
+export async function retrySettlement(settlementId) {
+  return apiPost(`/api/admin/settlements/${settlementId}/retry`);
+}
+
+/**
+ * 관리자용: 정산 배치 수동 실행
+ */
+export async function runSettlementBatch() {
+  return apiPost('/api/admin/settlements/batch');
+}
+
 // ==================== 채널 (CHANNEL) ====================
 
 /**
