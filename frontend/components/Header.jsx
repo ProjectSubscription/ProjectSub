@@ -355,7 +355,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                                 setShowUserMenu(false);
                                 onNavigate('newsletters');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <Mail className="w-4 h-4" />
                               뉴스레터
@@ -466,7 +466,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                                 setShowUserMenu(false);
                                 onNavigate('admin-newsletters');
                               }}
-                              className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-3"
+                              className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >
                               <Mail className="w-4 h-4" />
                               뉴스레터 관리

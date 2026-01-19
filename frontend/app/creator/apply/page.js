@@ -105,7 +105,7 @@ export default function CreatorApply() {
               value={channelName}
               onChange={(e) => setChannelName(e.target.value)}
               placeholder="채널 이름을 입력하세요"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               disabled={isSubmitting}
             />
           </div>
@@ -118,7 +118,7 @@ export default function CreatorApply() {
               value={channelDescription}
               onChange={(e) => setChannelDescription(e.target.value)}
               placeholder="어떤 콘텐츠를 만들 예정인지 설명해주세요"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-900"
               rows={5}
               disabled={isSubmitting}
             />
