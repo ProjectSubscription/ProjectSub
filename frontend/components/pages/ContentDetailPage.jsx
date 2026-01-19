@@ -1,18 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { VideoPlayer } from '@/components/content/VideoPlayer';
 import { ContentInfo } from '@/components/content/ContentInfo';
 import { ReviewSection } from '@/components/content/ReviewSection';
 import { ContentSidebar } from '@/components/content/ContentSidebar';
-import CouponList from '@/components/coupon/CouponList';
-import { getContent, getContentCoupons, getChannel, getFeaturedContents, likeContent, unlikeContent } from '@/app/lib/api';
-import { mockReviews } from '@/app/mockData';
+import { getContent, getChannel, getFeaturedContents, likeContent, unlikeContent, createReview, getReviews } from '@/app/lib/api';
+import { useUser } from '@/components/contexts/UserContext';
 
 export function ContentDetailPage({ contentId, onNavigate }) {
+  const { currentUser } = useUser();
   const [isLiked, setIsLiked] = React.useState(false);
   const [showReviewForm, setShowReviewForm] = React.useState(false);
   const [rating, setRating] = React.useState(5);
   const [review, setReview] = React.useState('');
-  const [coupons, setCoupons] = React.useState([]);
+  const [reviews, setReviews] = React.useState([]);
   const [content, setContent] = React.useState(null);
   const [channel, setChannel] = React.useState(null);
   const [relatedContents, setRelatedContents] = React.useState([]);
@@ -62,13 +62,13 @@ export function ContentDetailPage({ contentId, onNavigate }) {
           }
         }
 
-        // 쿠폰 목록 조회
+        // 리뷰 목록 조회
         try {
-          const couponsData = await getContentCoupons(id);
-          setCoupons(couponsData || []);
+          const reviewsData = await getReviews(id);
+          setReviews(reviewsData || []);
         } catch (err) {
-          console.warn('쿠폰 목록 조회 실패:', err);
-          setCoupons([]);
+          console.warn('리뷰 목록 조회 실패:', err);
+          setReviews([]);
         }
       } catch (err) {
         console.error('콘텐츠 로딩 실패:', err);
@@ -86,7 +86,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
   // 접근 권한 확인
   // 백엔드에서 hasAccess 필드를 제공하므로 이를 사용
   const hasFullAccess = content && (
-    content.accessType === 'FREE' || 
+    content.accessType === 'FREE' ||
     (content.hasAccess === true)
   );
   const hasAccess = hasFullAccess;
@@ -117,7 +117,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
     // contentId는 prop으로 받은 값 또는 content.id 사용
     const id = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
     const finalContentId = content?.id || content?.contentId || id;
-    
+
     if (content.accessType === 'SINGLE_PURCHASE') {
       onNavigate('payment', { type: 'content', contentId: finalContentId });
     } else if (content.accessType === 'SUBSCRIBER_ONLY') {
@@ -127,19 +127,55 @@ export function ContentDetailPage({ contentId, onNavigate }) {
     }
   };
 
-  const handleSubmitReview = (e) => {
-    e.preventDefault();
-    alert('리뷰가 등록되었습니다!');
-    setShowReviewForm(false);
-    setReview('');
-    setRating(5);
+  // 리뷰 목록 새로고침 함수
+  const fetchReviews = async () => {
+    try {
+      const id = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
+      const reviewsData = await getReviews(id);
+      setReviews(reviewsData || []);
+    } catch (err) {
+      console.error('리뷰 목록 조회 실패:', err);
+    }
   };
 
-  const contentReviews = mockReviews.filter(r => {
-    const rId = r.contentId || r.id;
-    const cId = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
-    return rId === cId;
-  });
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+
+    if (!currentUser) {
+      alert('로그인이 필요한 서비스입니다.');
+      onNavigate('login');
+      return;
+    }
+
+    if (!review.trim()) {
+      alert('리뷰 내용을 입력해주세요.');
+      return;
+    }
+
+    try {
+      // contentId를 숫자로 변환
+      const id = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
+      
+      // 백엔드에서 memberId는 세션(@AuthenticationPrincipal)에서 가져오므로
+      // request body에는 rating과 comment만 전달
+      // contentId는 URL path variable로 전달됨
+      await createReview(id, {
+        rating: rating,
+        comment: review.trim()
+      });
+
+      alert('리뷰가 등록되었습니다!');
+      setShowReviewForm(false);
+      setReview('');
+      setRating(5);
+      
+      // 리뷰 목록 새로고침
+      await fetchReviews();
+    } catch (error) {
+      console.error('리뷰 등록 실패:', error);
+      alert(error.message || '리뷰 등록에 실패했습니다.');
+    }
+  };
 
   if (loading) {
     return <div className="text-center py-12">로딩 중...</div>;
@@ -201,24 +237,6 @@ export function ContentDetailPage({ contentId, onNavigate }) {
         />
       )}
 
-      {/* 쿠폰 목록 */}
-      {coupons.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">다운로드 가능한 쿠폰</h2>
-          <CouponList
-            coupons={coupons}
-            onRefresh={async () => {
-              try {
-                const refreshedCoupons = await getContentCoupons(contentId);
-                setCoupons(refreshedCoupons || []);
-              } catch (err) {
-                console.error('쿠폰 목록 새로고침 실패:', err);
-              }
-            }}
-          />
-        </div>
-      )}
-
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <ContentInfo
@@ -230,15 +248,24 @@ export function ContentDetailPage({ contentId, onNavigate }) {
           />
 
           <ReviewSection
-            reviews={contentReviews}
+            reviews={reviews}
             hasAccess={hasAccess}
             showReviewForm={showReviewForm}
-            onToggleReviewForm={() => setShowReviewForm(!showReviewForm)}
+            onToggleReviewForm={() => {
+              if (!currentUser) {
+                alert('로그인이 필요한 서비스입니다.');
+                onNavigate('login');
+                return;
+              }
+              setShowReviewForm(!showReviewForm);
+            }}
             onSubmitReview={handleSubmitReview}
             rating={rating}
             onRatingChange={setRating}
             review={review}
             onReviewChange={setReview}
+            currentUser={currentUser}
+            onNavigate={onNavigate}
           />
         </div>
 

@@ -281,6 +281,59 @@ export async function getMyCreatorInfo() {
   return apiGet('/api/creators/me');
 }
 
+// ==================== 정산 (SETTLEMENT) ====================
+
+/**
+ * 내 정산 목록 조회
+ */
+export async function getMySettlements() {
+  return apiGet('/api/creators/me/settlements');
+}
+
+/**
+ * 정산 상세 조회
+ */
+export async function getSettlementDetail(settlementId) {
+  return apiGet(`/api/creators/me/settlements/${settlementId}`);
+}
+
+// ==================== 관리자 정산 (ADMIN SETTLEMENT) ====================
+
+/**
+ * 관리자용: 전체 정산 목록 조회
+ */
+export async function getAdminSettlements(params = {}) {
+  return apiGet('/api/admin/settlements', params);
+}
+
+/**
+ * 관리자용: 정산 상세 조회
+ */
+export async function getAdminSettlementDetail(settlementId) {
+  return apiGet(`/api/admin/settlements/${settlementId}`);
+}
+
+/**
+ * 관리자용: 정산 통계 조회
+ */
+export async function getSettlementStatistics() {
+  return apiGet('/api/admin/settlements/statistics');
+}
+
+/**
+ * 관리자용: 정산 재시도
+ */
+export async function retrySettlement(settlementId) {
+  return apiPost(`/api/admin/settlements/${settlementId}/retry`);
+}
+
+/**
+ * 관리자용: 정산 배치 수동 실행
+ */
+export async function runSettlementBatch() {
+  return apiPost('/api/admin/settlements/batch');
+}
+
 // ==================== 채널 (CHANNEL) ====================
 
 /**
@@ -298,6 +351,54 @@ export async function updateChannel(id, data) {
 }
 
 /**
+ * 채널 이미지 업로드
+ */
+export async function uploadChannelThumbnail(channelId, file) {
+  const url = `${API_BASE_URL}/api/channels/${channelId}/thumbnail`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let errorText = '';
+    let errorData = null;
+
+    try {
+      errorText = await response.text();
+      if (errorText && errorText.trim()) {
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText };
+        }
+      }
+    } catch (readErr) {
+      console.warn('에러 응답 본문 읽기 실패:', readErr);
+    }
+
+    const errorMessage = errorData?.message || errorData?.error || `HTTP error! status: ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  const text = await response.text();
+  if (!text || text.trim() === '') {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.warn('JSON 파싱 실패, 빈 응답으로 처리:', error);
+    return null;
+  }
+}
+
+/**
  * 채널 조회
  */
 export async function getChannel(id) {
@@ -305,10 +406,24 @@ export async function getChannel(id) {
 }
 
 /**
+ * 내 채널 조회 (크리에이터)
+ */
+export async function getMyChannel() {
+  return apiGet('/api/channels/my');
+}
+
+/**
  * 채널 목록
  */
 export async function getChannels(params = {}) {
   return apiGet('/api/channels', params);
+}
+
+/**
+ * 채널 카테고리 목록
+ */
+export async function getChannelCategories() {
+  return apiGet('/api/channels/categories');
 }
 
 // ==================== 구독 (SUBSCRIPTION) ====================
@@ -460,6 +575,20 @@ export async function getComments(contentId) {
 }
 
 /**
+ * 리뷰 댓글 작성
+ */
+export async function createReviewComment(reviewId, data) {
+  return apiPost(`/api/reviews/${reviewId}/comments`, data);
+}
+
+/**
+ * 리뷰 댓글 조회
+ */
+export async function getReviewComments(reviewId) {
+  return apiGet(`/api/reviews/${reviewId}/comments`);
+}
+
+/**
  * 댓글 수정
  */
 export async function updateComment(id, data) {
@@ -590,6 +719,17 @@ export async function getContentCoupons(contentId) {
  */
 export async function issueCoupon(couponId) {
   return apiPost(`/api/coupons/${couponId}/issue`);
+}
+
+/**
+ * 쿠폰 검증
+ * POST /api/coupons/{couponId}/validate
+ */
+export async function validateCoupon(couponId, paymentType, targetId) {
+  return apiPost(`/api/coupons/${couponId}/validate`, {
+    paymentType,
+    targetId,
+  });
 }
 
 // ==================== 관리자 쿠폰 관리 ====================

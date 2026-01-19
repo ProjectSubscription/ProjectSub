@@ -32,4 +32,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     @Query(value = "select * from members",nativeQuery = true)
     List<Member> findAllIncludingDeleted();
+
+    @Query("select m.id from Member m")
+    List<Long> findAllIds();
+
 }

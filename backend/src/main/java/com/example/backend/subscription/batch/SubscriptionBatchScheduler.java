@@ -1,20 +1,24 @@
 package com.example.backend.subscription.batch;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class SubscriptionBatchScheduler {
     private final JobLauncher jobLauncher;
     private final Job expireSubscriptionsJob;
+
+    public SubscriptionBatchScheduler(JobLauncher jobLauncher, @Qualifier("expiredSubscriptionsJob") Job expireSubscriptionsJob) {
+        this.jobLauncher = jobLauncher;
+        this.expireSubscriptionsJob = expireSubscriptionsJob;
+    }
 
     // 10분마다 실행 (프로덕션용)
     @Scheduled(cron = "0 0/10 * * * *")

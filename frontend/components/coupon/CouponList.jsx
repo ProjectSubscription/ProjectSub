@@ -8,8 +8,9 @@ import CouponCard from './CouponCard';
  * 
  * @param {Array} coupons - 쿠폰 목록
  * @param {Function} onRefresh - 목록 새로고침 콜백
+ * @param {boolean} hideCode - 쿠폰 코드 숨김 여부
  */
-export default function CouponList({ coupons = [], onRefresh }) {
+export default function CouponList({ coupons = [], onRefresh, hideCode = false }) {
   const [localCoupons, setLocalCoupons] = useState(coupons);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function CouponList({ coupons = [], onRefresh }) {
           key={coupon.id}
           coupon={coupon}
           onIssueSuccess={handleIssueSuccess}
+          hideCode={hideCode}
         />
       ))}
     </div>

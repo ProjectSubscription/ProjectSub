@@ -2,8 +2,10 @@ package com.example.backend.channel.controller;
 
 import com.example.backend.channel.dto.request.ChannelCreateRequest;
 import com.example.backend.channel.dto.request.ChannelUpdateRequest;
+import com.example.backend.channel.dto.response.CategoryResponse;
 import com.example.backend.channel.dto.response.ChannelDetailResponse;
 import com.example.backend.channel.dto.response.ChannelListResponse;
+import com.example.backend.channel.dto.response.ChannelThumbnailResponse;
 import com.example.backend.channel.dto.response.MyChannelResponse;
 import com.example.backend.channel.entity.Channel;
 import com.example.backend.channel.entity.ChannelCategory;
@@ -20,6 +22,11 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
+
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -59,6 +66,22 @@ public class ChannelController {
 
         Long resolvedCreatorId = resolveCreatorIdForWrite(userDetails, creatorId);
         channelService.updateChannel(channelId, resolvedCreatorId, request);
+    }
+
+    /**
+     * 채널 이미지 업로드
+     * POST /api/channels/{id}/thumbnail
+     * 권한: 크리에이터(본인 채널)
+     */
+    @PostMapping(value = "/{channelId}/thumbnail", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ChannelThumbnailResponse uploadThumbnail(
+            @PathVariable Long channelId,
+            @RequestPart("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long resolvedCreatorId = resolveCreatorIdForWrite(userDetails, null);
+        String thumbnailUrl = channelService.updateChannelThumbnail(channelId, resolvedCreatorId, file);
+        return new ChannelThumbnailResponse(thumbnailUrl);
     }
 
     /**
@@ -114,6 +137,7 @@ public class ChannelController {
                 channel.getId(),
                 channel.getTitle(),
                 channel.getDescription(),
+                channel.getThumbnailUrl(),
                 channel.getCategory(),
                 channel.getSubscriberCount(),
                 channel.isActive()
@@ -154,6 +178,18 @@ public class ChannelController {
     ) {
         Pageable resolvedPageable = applySort(pageable, sort);
         return channelService.getChannelList(category, resolvedPageable);
+    }
+
+    /**
+     * 채널 카테고리 목록 조회
+     * GET /api/channels/categories
+     * 권한: 공개
+     */
+    @GetMapping("/categories")
+    public List<CategoryResponse> getChannelCategories() {
+        return Arrays.stream(ChannelCategory.values())
+                .map(category -> new CategoryResponse(category.name(), category.getDisplayName()))
+                .toList();
     }
 
     private Pageable applySort(Pageable pageable, String sort) {
