@@ -589,6 +589,20 @@ export async function getReviewComments(reviewId) {
 }
 
 /**
+ * 리뷰 추천 토글 (추천/추천 취소)
+ */
+export async function toggleReviewLike(contentId, reviewId) {
+  return apiPost(`/api/contents/${contentId}/reviews/${reviewId}/like`);
+}
+
+/**
+ * 가장 추천이 많은 리뷰 조회 (콘텐츠 정보 포함)
+ */
+export async function getTopReviews(limit = 5) {
+  return apiGet(`/api/reviews/top?limit=${limit}`);
+}
+
+/**
  * 댓글 수정
  */
 export async function updateComment(id, data) {
