@@ -67,7 +67,7 @@ public class Subscription {
     }
 
     /**
-     * 연간 구독 취소 시: 시작일로부터 1개월 후로 만료일을 설정하고 취소 상태로 변경
+     * 연간 구독 취소 시: 시작일로부터 1개월 후로 만료일을 설정하고 ACTIVE 상태로 유지
      */
     public void cancelWithExtendedExpiry() {
         if (this.status != SubscriptionStatus.ACTIVE) {
@@ -75,7 +75,7 @@ public class Subscription {
         }
         // 시작일로부터 1개월 후로 만료일 설정
         this.expiredAt = this.startedAt.plusMonths(1);
-        this.status = SubscriptionStatus.CANCELED;
+        // status는 ACTIVE로 유지 (CANCELED로 변경하지 않음)
     }
 
     public void expire(LocalDateTime now) {
