@@ -2,7 +2,6 @@ import React from 'react';
 import { LoginMethodToggle } from '@/components/login/LoginMethodToggle';
 import { OAuthButtons } from '@/components/login/OAuthButtons';
 import { EmailLoginForm } from '@/components/login/EmailLoginForm';
-import { DemoAccounts } from '@/components/login/DemoAccounts';
 
 export function LoginPage({ onLogin, onNavigate }) {
   const [loginMethod, setLoginMethod] = React.useState('oauth');
@@ -42,9 +41,6 @@ export function LoginPage({ onLogin, onNavigate }) {
           {loginMethod === 'email' && (
             <EmailLoginForm onSubmit={onLogin} onNavigate={onNavigate} />
           )}
-
-          {/* Demo Accounts */}
-          <DemoAccounts onLogin={onLogin} />
 
           {/* Sign Up */}
           <p className="text-center text-sm text-gray-600 mt-6">
