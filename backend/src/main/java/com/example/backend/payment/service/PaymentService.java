@@ -9,6 +9,7 @@ import com.example.backend.payment.entity.Payment;
 import com.example.backend.payment.entity.PaymentStatus;
 import com.example.backend.payment.entity.PgProvider;
 import com.example.backend.payment.repository.PaymentRepository;
+import com.example.backend.settlement.service.SettlementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ public class PaymentService {
     private final TossPaymentClient tossPaymentClient;
     private final OrderService orderService;
     private final PaymentRepository paymentRepository;
+    private final SettlementService settlementService;
 
     /**
      * 결제 승인 처리
@@ -102,6 +104,15 @@ public class PaymentService {
 
         // 주문 상태를 PAID로 변경
         orderService.markOrderAsPaid(order.getOrderCode());
+
+        // 정산 내역 생성 또는 업데이트
+        try {
+            settlementService.processSettlementForPayment(payment);
+        } catch (Exception e) {
+            // 정산 처리 실패해도 결제는 성공 처리 (로깅만 하고 예외는 전파하지 않음)
+            log.error("결제 완료 후 정산 처리 중 오류 발생 - paymentId: {}, error: {}", 
+                    payment.getId(), e.getMessage(), e);
+        }
 
         log.info("결제 승인 완료: orderCode={}, paymentKey={}, amount={}",
                 order.getOrderCode(), payment.getPaymentKey(), payment.getAmount());

@@ -5,6 +5,7 @@ import com.example.backend.creator.repository.CreatorRepository;
 import com.example.backend.settlement.entity.Settlement;
 import com.example.backend.settlement.entity.SettlementStatus;
 import com.example.backend.settlement.repository.SettlementRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ public class SettlementPayoutService {
 
     private final SettlementRepository settlementRepository;
     private final CreatorRepository creatorRepository;
+    private final EntityManager entityManager;
 
     @Value("${settlement.payout.max-retry-count:3}")
     private int maxRetryCount;
@@ -49,6 +51,7 @@ public class SettlementPayoutService {
             // Settlement 상태를 COMPLETED로 변경
             settlement.markCompleted();
             settlementRepository.save(settlement);
+            entityManager.flush(); // 변경사항을 즉시 DB에 반영
             
             // 크리에이터 정보 조회
             String creatorName = creator.getMember() != null 
@@ -89,6 +92,7 @@ public class SettlementPayoutService {
             }
             
             settlementRepository.save(settlement);
+            entityManager.flush(); // 변경사항을 즉시 DB에 반영
             return false;
         }
     }

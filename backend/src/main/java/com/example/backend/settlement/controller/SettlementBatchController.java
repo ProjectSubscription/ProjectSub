@@ -1,5 +1,7 @@
 package com.example.backend.settlement.controller;
 
+import com.example.backend.global.security.CustomUserDetails;
+import com.example.backend.member.entity.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -7,7 +9,9 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,7 +39,15 @@ public class SettlementBatchController {
      * POST /api/admin/settlements/batch
      */
     @PostMapping("/batch")
-    public ResponseEntity<Map<String, Object>> runSettlementBatch() {
+    public ResponseEntity<Map<String, Object>> runSettlementBatch(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails
+    ) {
+        // 관리자 권한 확인
+        if (customUserDetails == null || !customUserDetails.getRoles().contains(Role.ROLE_ADMIN)) {
+            log.warn("관리자 권한이 없는 사용자가 정산 배치 실행 시도");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
         try {
             log.info("관리자용 정산 배치 수동 실행 요청");
 
