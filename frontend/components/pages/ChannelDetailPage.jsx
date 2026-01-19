@@ -7,8 +7,10 @@ import { ChannelTabs } from '@/components/channel/ChannelTabs';
 import { ContentGrid } from '@/components/channel/ContentGrid';
 import { ChannelAbout } from '@/components/channel/ChannelAbout';
 import CouponList from '@/components/coupon/CouponList';
-import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons, getContents, getReviews, cancelSubscription } from '@/app/lib/api';
+import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons, getContents, cancelSubscription, getMyCreatorInfo, getReviews } from '@/app/lib/api';
 import { mockReviews } from '@/app/mockData';
+import { useUser } from '@/components/contexts/UserContext';
+import { Settings } from 'lucide-react';
 
 function normalizeChannelDetail(channelId, dto) {
   // 백엔드 ChannelDetailResponse: { creatorId, creatorName, channelName, channelDescription, subscriberCount, subscribed }
@@ -43,6 +45,8 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
   const [coupons, setCoupons] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
+  const [isChannelOwner, setIsChannelOwner] = React.useState(false);
+  const { currentUser } = useUser();
 
   // 채널 정보 및 구독 상품 조회
   React.useEffect(() => {
@@ -52,31 +56,39 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
         
         // channelId를 숫자로 변환 (문자열일 수 있음)
         const numericChannelId = Number(channelId);
-        console.log('채널 ID:', channelId, '-> 숫자 변환:', numericChannelId);
-        
         const [channelData, plansData, mySubscriptions, couponsData] = await Promise.all([
           getChannel(numericChannelId),
           getSubscriptionPlans(numericChannelId),
           getMySubscriptions().catch((err) => {
-            console.warn('구독 목록 조회 실패:', err);
             return [];
           }),
           getChannelCoupons(numericChannelId).catch((err) => {
-            console.error('쿠폰 목록 조회 실패:', err);
-            console.error('에러 상세:', err.message, err);
-            console.error('요청 URL:', `/api/channels/${numericChannelId}/coupons`);
             return [];
           })
         ]);
 
         setChannel(normalizeChannelDetail(channelId, channelData));
         setPlans(plansData || []);
-        
-        // 쿠폰 데이터 디버깅
-        console.log('쿠폰 데이터:', couponsData);
-        console.log('쿠폰 개수:', couponsData?.length || 0);
-        console.log('쿠폰 타입:', Array.isArray(couponsData) ? '배열' : typeof couponsData);
         setCoupons(Array.isArray(couponsData) ? couponsData : []);
+
+        // 본인 소유 채널인지 확인
+        try {
+          const hasCreatorRole = currentUser?.roles?.some(r =>
+            r === 'CREATOR' || r === 'ROLE_CREATOR'
+          ) || currentUser?.role === 'CREATOR';
+
+          if (hasCreatorRole) {
+            const creatorInfo = await getMyCreatorInfo();
+            const creatorId = creatorInfo?.creatorId || creatorInfo?.id;
+            const channelCreatorId = channelData?.creatorId || channelData?.creator?.id;
+
+            if (creatorId && channelCreatorId && creatorId === channelCreatorId) {
+              setIsChannelOwner(true);
+            }
+          }
+        } catch (err) {
+          console.warn('크리에이터 정보 조회 실패:', err);
+        }
 
         // 구독 상태 확인:
         // 1) 백엔드 상세 응답(subscribed)이 있으면 우선 사용
@@ -191,7 +203,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
     if (channelId) {
       fetchData();
     }
-  }, [channelId]);
+  }, [channelId, currentUser]);
 
   const handleSubscribe = (planId) => {
     onNavigate('payment', { type: 'subscription', planId, channelId });
@@ -313,6 +325,9 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
             onNavigate('creator-detail', { creatorId: channel.creatorId });
           }
         }}
+        isChannelOwner={isChannelOwner}
+        onManagePlans={() => onNavigate('creator-subscription', {})}
+        hasSubscriptionPlans={plans && plans.length > 0}
       />
 
       {/* 쿠폰 목록 - 크리에이터 정보와 구독 상품 사이 */}

@@ -28,7 +28,11 @@ public class SubscriptionPlanService {
     private final CreatorRepository creatorRepository;
 
     @Transactional
-    public Long createPlan(Long creatorId ,Long channelId, PlanType planType, int price) {
+    public Long createPlan(Long memberId, Long channelId, PlanType planType, int price) {
+        // memberId를 creatorId로 변환
+        Creator creator = creatorRepository.findByMemberId(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CREATOR_NOT_FOUND));
+        Long creatorId = creator.getId();
 
         channelValidator.validateOwner(creatorId, channelId);
         channelValidator.validateChannel(channelId);
