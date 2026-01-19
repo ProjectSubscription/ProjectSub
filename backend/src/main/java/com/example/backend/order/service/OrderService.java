@@ -87,6 +87,7 @@ public class OrderService {
         String orderCode = generateOrderCode();
 
         // 주문 타입에 따라 주문 생성
+        Long memberCouponId = request.getMemberCouponId();
         Order order;
         if (request.getOrderType() == OrderType.SUBSCRIPTION) {
             // SUBSCRIPTION 타입: planId 저장
@@ -95,7 +96,8 @@ public class OrderService {
                     member,
                     subscriptionPlan.getId(),
                     originalAmount,
-                    discountAmount
+                    discountAmount,
+                    memberCouponId
             );
         } else {
             // CONTENT 타입: content 저장
@@ -104,7 +106,8 @@ public class OrderService {
                     member,
                     content,
                     originalAmount,
-                    discountAmount
+                    discountAmount,
+                    memberCouponId
             );
         }
 

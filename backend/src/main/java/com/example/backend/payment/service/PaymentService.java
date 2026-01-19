@@ -1,5 +1,9 @@
 package com.example.backend.payment.service;
 
+import com.example.backend.coupon.entity.MemberCoupon;
+import com.example.backend.coupon.entity.MemberCouponUse;
+import com.example.backend.coupon.repository.MemberCouponRepository;
+import com.example.backend.coupon.repository.MemberCouponUseRepository;
 import com.example.backend.order.entity.Order;
 import com.example.backend.order.entity.OrderStatus;
 import com.example.backend.order.service.OrderService;
@@ -38,6 +42,8 @@ public class PaymentService {
     private final OrderService orderService;
     private final PaymentRepository paymentRepository;
     private final SettlementService settlementService;
+    private final MemberCouponRepository memberCouponRepository;
+    private final MemberCouponUseRepository memberCouponUseRepository;
 
     /**
      * 결제 승인 처리
@@ -104,6 +110,15 @@ public class PaymentService {
 
         // 주문 상태를 PAID로 변경
         orderService.markOrderAsPaid(order.getOrderCode());
+
+        // 쿠폰 사용 처리
+        try {
+            processCouponUsage(order, payment);
+        } catch (Exception e) {
+            // 쿠폰 사용 처리 실패해도 결제는 성공 처리 (로깅만 하고 예외는 전파하지 않음)
+            log.error("결제 완료 후 쿠폰 사용 처리 중 오류 발생 - orderCode: {}, paymentId: {}, error: {}", 
+                    order.getOrderCode(), payment.getId(), e.getMessage(), e);
+        }
 
         // 정산 내역 생성 또는 업데이트
         try {
@@ -214,6 +229,45 @@ public class PaymentService {
             LocalDateTime endDateTime
     ) {
         return paymentRepository.findPaidPaymentsInPeriod(status, startDateTime, endDateTime);
+    }
+
+    /**
+     * 쿠폰 사용 처리
+     * 결제 성공 시 member_coupons.status를 USED로 업데이트하고,
+     * member_coupon_uses 테이블에 사용 이력을 기록합니다.
+     */
+    private void processCouponUsage(Order order, Payment payment) {
+        Long memberCouponId = order.getMemberCouponId();
+        
+        // 쿠폰이 적용되지 않은 주문인 경우 처리하지 않음
+        if (memberCouponId == null) {
+            return;
+        }
+
+        // MemberCoupon 조회
+        MemberCoupon memberCoupon = memberCouponRepository.findById(memberCouponId)
+                .orElseThrow(() -> new IllegalArgumentException("쿠폰을 찾을 수 없습니다. memberCouponId: " + memberCouponId));
+
+        // 이미 사용된 쿠폰인지 확인
+        if (!memberCoupon.isIssued()) {
+            log.warn("이미 사용된 쿠폰입니다. memberCouponId: {}, orderCode: {}", 
+                    memberCouponId, order.getOrderCode());
+            return;
+        }
+
+        // 할인 금액 계산 (원래 가격 - 할인 후 가격)
+        Long discountAmount = order.getOriginalAmount() - order.getDiscountAmount();
+
+        // member_coupons.status를 USED로 업데이트
+        memberCoupon.markUsed();
+        memberCouponRepository.save(memberCoupon);
+
+        // member_coupon_uses 테이블에 사용 이력 기록
+        MemberCouponUse memberCouponUse = MemberCouponUse.used(memberCoupon, payment, discountAmount);
+        memberCouponUseRepository.save(memberCouponUse);
+
+        log.info("쿠폰 사용 처리 완료: memberCouponId={}, paymentId={}, discountAmount={}, orderCode={}",
+                memberCouponId, payment.getId(), discountAmount, order.getOrderCode());
     }
 
     /**

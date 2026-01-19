@@ -44,6 +44,9 @@ public class Order {
     private Long originalAmount;
     private Long discountAmount;
 
+    // 쿠폰 적용 시 사용된 MemberCoupon ID
+    private Long memberCouponId;
+
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
@@ -57,7 +60,8 @@ public class Order {
             Member member,
             Long planId,
             Long originalAmount,
-            Long discountAmount
+            Long discountAmount,
+            Long memberCouponId
     ) {
         return Order.builder()
                 .orderCode(orderCode)
@@ -68,6 +72,7 @@ public class Order {
                 .content(null)
                 .originalAmount(originalAmount)
                 .discountAmount(discountAmount)
+                .memberCouponId(memberCouponId)
                 .status(OrderStatus.CREATED)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -81,7 +86,8 @@ public class Order {
             Member member,
             Content content,
             Long originalAmount,
-            Long discountAmount
+            Long discountAmount,
+            Long memberCouponId
     ) {
         return Order.builder()
                 .orderCode(orderCode)
@@ -92,6 +98,7 @@ public class Order {
                 .content(content)
                 .originalAmount(originalAmount)
                 .discountAmount(discountAmount)
+                .memberCouponId(memberCouponId)
                 .status(OrderStatus.CREATED)
                 .createdAt(LocalDateTime.now())
                 .build();
