@@ -68,6 +68,7 @@ public enum ErrorCode {
     //토큰
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
     TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "만료된 비밀번호 리셋 토큰입니다."),
+    INVALID_OR_EXPIRED_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 리셋 토큰입니다."),
 
     /* ===== COUPON ===== */
     COUPON_CODE_DUPLICATED(HttpStatus.CONFLICT, "이미 사용 중인 쿠폰 코드입니다."),
@@ -106,6 +107,7 @@ public enum ErrorCode {
     /* ===== Content Review Comment ===== */
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
     COMMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "댓글을 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다.");
+
 
     private final HttpStatus status;
     private final String message;
