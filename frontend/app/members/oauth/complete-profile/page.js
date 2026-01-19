@@ -175,19 +175,20 @@ export default function OAuthCompleteProfile() {
               </label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 z-10" />
-                <input
-                  type="number"
+                <select
                   name="birthYear"
                   value={formData.birthYear}
                   onChange={handleChange}
-                  placeholder="예: 1990"
-                  min="1900"
-                  max="2026"
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white ${
                     errors.birthYear ? 'border-red-300' : 'border-gray-300'
                   }`}
                   required
-                />
+                >
+                  <option value="">선택하세요</option>
+                  {Array.from({ length: 127 }, (_, i) => 2026 - i).map(year => (
+                    <option key={year} value={year}>{year}년</option>
+                  ))}
+                </select>
               </div>
               {errors.birthYear && <p className="mt-1 text-sm text-red-600">{errors.birthYear}</p>}
             </div>
@@ -203,7 +204,7 @@ export default function OAuthCompleteProfile() {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white ${
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.gender ? 'border-red-300' : 'border-gray-300'
                   }`}
                   required

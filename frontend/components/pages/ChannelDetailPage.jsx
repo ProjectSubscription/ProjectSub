@@ -11,7 +11,7 @@ import { getChannel, getSubscriptionPlans, getMySubscriptions, getChannelCoupons
 import { mockReviews } from '@/app/mockData';
 
 function normalizeChannelDetail(channelId, dto) {
-  // 백엔드 ChannelDetailResponse: { channelName, channelDescription, subscriberCount, subscribed }
+  // 백엔드 ChannelDetailResponse: { creatorId, creatorName, channelName, channelDescription, subscriberCount, subscribed }
   // UI에서 기대하는 형태로 최소 매핑
   const name = dto?.channelName ?? dto?.name ?? dto?.title ?? '';
   const description = dto?.channelDescription ?? dto?.description ?? '';
@@ -20,12 +20,13 @@ function normalizeChannelDetail(channelId, dto) {
 
   return {
     id: Number(channelId),
+    creatorId: dto?.creatorId ?? null,
+    creatorName: dto?.creatorName ?? dto?.creatorNickname ?? '',
     name,
     description,
     subscriberCount: dto?.subscriberCount ?? 0,
     // 백엔드 상세 응답에 category/creatorName/thumbnail이 없어 임시값 사용
     category: '',
-    creatorName: '',
     thumbnailUrl,
   };
 }
@@ -144,6 +145,11 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
         channel={channel}
         isSubscribed={isSubscribed}
         onSubscribeToggle={() => setIsSubscribed(!isSubscribed)}
+        onCreatorClick={() => {
+          if (channel?.creatorId) {
+            onNavigate('creator-detail', { creatorId: channel.creatorId });
+          }
+        }}
       />
 
       {/* 쿠폰 목록 - 크리에이터 정보와 구독 상품 사이 */}
