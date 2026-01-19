@@ -79,6 +79,26 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
           // 콘텐츠 정보 가져오기
           const id = typeof itemId === 'string' ? parseInt(itemId, 10) : itemId;
           const contentData = await getContent(id);
+          console.log('콘텐츠 데이터:', contentData); // 디버깅용
+          
+          // 채널 정보 가져오기
+          let channelName = '';
+          const contentChannelId = contentData.channelId;
+          console.log('콘텐츠의 채널 ID:', contentChannelId); // 디버깅용
+          
+          if (contentChannelId) {
+            try {
+              const channelData = await getChannel(contentChannelId);
+              console.log('채널 데이터:', channelData); // 디버깅용
+              channelName = channelData.channelName || channelData.title || channelData.name || '';
+              console.log('채널 이름:', channelName); // 디버깅용
+            } catch (err) {
+              console.warn('채널 정보 조회 실패:', err);
+            }
+          } else {
+            console.warn('콘텐츠 데이터에 channelId가 없습니다.');
+          }
+          
           // PaymentItemInfo에 맞는 형식으로 변환
           setItem({
             id: contentData.id || contentData.contentId || id,
@@ -87,6 +107,7 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
             price: contentData.price || 0,
             thumbnailUrl: contentData.mediaUrl || contentData.thumbnailUrl,
             accessType: contentData.accessType,
+            channelName: channelName,
           });
         } else if (type === 'subscription' && channelId && itemId) {
           // 구독 플랜 정보 가져오기
@@ -99,6 +120,17 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
             const plan = Array.isArray(plans) ? plans.find(p => p.planId === numericPlanId || p.id === numericPlanId) : null;
             
             if (plan) {
+              // 채널 정보 가져오기
+              let channelName = '';
+              try {
+                const channelData = await getChannel(numericChannelId);
+                console.log('채널 데이터 (구독):', channelData); // 디버깅용
+                channelName = channelData.channelName || channelData.title || channelData.name || '';
+                console.log('채널 이름 (구독):', channelName); // 디버깅용
+              } catch (err) {
+                console.warn('채널 정보 조회 실패:', err);
+              }
+              
               // 구독 플랜 정보 설정
               setItem({
                 id: plan.planId || plan.id,
@@ -107,6 +139,7 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
                 price: plan.price || 0,
                 planType: plan.planType,
                 channelId: numericChannelId,
+                channelName: channelName,
               });
             } else {
               throw new Error('구독 플랜을 찾을 수 없습니다.');
@@ -115,12 +148,14 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
             console.error('구독 플랜 정보 로딩 실패:', err);
             // 채널 정보로 fallback
             const channelData = await getChannel(numericChannelId);
+            const fallbackChannelName = channelData.channelName || channelData.title || channelData.name || '';
             setItem({
               id: numericPlanId,
-              title: channelData.title || channelData.name,
-              description: channelData.description || '',
+              title: channelData.channelName || channelData.title || channelData.name,
+              description: channelData.channelDescription || channelData.description || '',
               price: 0, // 가격 정보 없음
               channelId: numericChannelId,
+              channelName: fallbackChannelName,
             });
           }
         } else {
