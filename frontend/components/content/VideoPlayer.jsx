@@ -89,22 +89,52 @@ export function VideoPlayer({ content, hasAccess, onPurchase }) {
 
   // 비디오 콘텐츠
   if (isVideo) {
-    return (
-      <div className="bg-black rounded-2xl overflow-hidden">
-        <div className="aspect-video relative">
-          <img
-            src={content.thumbnailUrl || content.mediaUrl || '/placeholder-video.jpg'}
-            alt={content.title}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-50 transition-all cursor-pointer">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
-              <Play className="w-10 h-10 text-blue-600 ml-2" />
+    // PARTIAL 타입이고 접근 권한이 없을 때만 미리보기 표시
+    // PARTIAL이 아니고 접근 권한이 없으면 잠금 화면 (이미 위에서 처리됨)
+    // 접근 권한이 있으면 전체 비디오 표시
+    if (hasAccess) {
+      return (
+        <div className="bg-black rounded-2xl overflow-hidden">
+          <div className="aspect-video relative">
+            <img
+              src={content.thumbnailUrl || content.mediaUrl || '/placeholder-video.jpg'}
+              alt={content.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-50 transition-all cursor-pointer">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+                <Play className="w-10 h-10 text-blue-600 ml-2" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    } else if (isPartial && previewRatio) {
+      // PARTIAL 타입이고 접근 권한이 없을 때 미리보기만 표시
+      return (
+        <div className="bg-black rounded-2xl overflow-hidden">
+          <div className="aspect-video relative">
+            <img
+              src={content.thumbnailUrl || content.mediaUrl || '/placeholder-video.jpg'}
+              alt={content.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 hover:bg-opacity-50 transition-all cursor-pointer">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+                <Play className="w-10 h-10 text-blue-600 ml-2" />
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+              <p className="text-white text-sm">
+                미리보기 ({previewRatio}%) - 전체 내용을 보시려면 구매가 필요합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    // PARTIAL이 아니고 접근 권한이 없으면 잠금 화면 (이미 위에서 처리됨)
+    return null;
   }
 
   // 기본 (타입을 알 수 없는 경우)

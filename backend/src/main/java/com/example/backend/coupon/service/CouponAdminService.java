@@ -116,7 +116,14 @@ public class CouponAdminService {
         return coupons.map(coupon -> {
             Long issuedCount = memberCouponRepository.countByCouponId(coupon.getId());
             Long usedCount = memberCouponRepository.countUsedByCouponId(coupon.getId());
-            return CouponListResponse.fromEntity(coupon, issuedCount != null ? issuedCount : 0L, usedCount != null ? usedCount : 0L);
+            List<CouponTarget> targets = couponTargetRepository.findByCouponId(coupon.getId());
+            // 디버깅: targets 조회 결과 확인
+            if (targets != null && !targets.isEmpty()) {
+                System.out.println("쿠폰 " + coupon.getId() + "의 targets: " + targets.size() + "개");
+            } else {
+                System.out.println("쿠폰 " + coupon.getId() + "의 targets: 없음");
+            }
+            return CouponListResponse.fromEntity(coupon, issuedCount != null ? issuedCount : 0L, usedCount != null ? usedCount : 0L, targets);
         });
     }
 

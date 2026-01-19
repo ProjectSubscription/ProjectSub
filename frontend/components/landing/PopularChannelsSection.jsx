@@ -29,7 +29,7 @@ export function PopularChannelsSection({ channels, onNavigate, isAuthenticated =
             return (
               <div
                 key={channel.id}
-                onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
+                onClick={() => onNavigate('channel-detail', { channelId: channel.id })}
                 className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
               >
                 <div className="relative aspect-video">

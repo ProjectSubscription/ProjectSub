@@ -48,21 +48,73 @@ export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState('');
+  
+  // 쿠폰별 구독 상품 이름을 저장 (targetId와 channelId 조합으로 캐시)
+  const [subscriptionPlanNames, setSubscriptionPlanNames] = useState({});
 
   const loadCoupons = async () => {
     try {
       setListLoading(true);
       setListError('');
       const data = await getAdminCoupons();
+      
       // 배열 또는 Page 형태 모두 대응
       const list = Array.isArray(data) ? data : data?.content || [];
       setCoupons(list);
+      
+      // 각 쿠폰의 구독 상품 이름 로드
+      await loadSubscriptionPlanNames(list);
     } catch (err) {
       setListError(err.message || '쿠폰 목록을 불러오는 중 오류가 발생했습니다.');
       console.error('쿠폰 목록 조회 오류:', err);
     } finally {
       setListLoading(false);
     }
+  };
+
+  // 쿠폰별 구독 상품 이름 로드 (채널별로 한 번만 호출하도록 최적화)
+  const loadSubscriptionPlanNames = async (couponList) => {
+    const planNamesMap = {};
+    const channelPlansCache = {}; // 채널별 구독 상품 목록 캐시
+    
+    // 구독 상품 타겟이 있는 쿠폰들만 처리
+    for (const coupon of couponList) {
+      if (coupon.targets && Array.isArray(coupon.targets) && coupon.targets.length > 0) {
+        const target = coupon.targets[0]; // 첫 번째 target 사용
+        console.log(`쿠폰 ${coupon.id}의 target:`, target);
+        
+        // 구독 상품인 경우 구독 상품 이름 가져오기
+        const targetType = target.targetType?.toUpperCase?.() || target.targetType;
+        if (targetType === 'SUBSCRIPTION' && target.targetId && coupon.channelId) {
+          try {
+            // 채널별 구독 상품 목록을 캐시에서 가져오거나 새로 로드
+            let plans = channelPlansCache[coupon.channelId];
+            if (!plans) {
+              console.log(`채널 ${coupon.channelId}의 구독 상품 목록 로드 중...`);
+              const plansData = await getSubscriptionPlans(coupon.channelId);
+              plans = Array.isArray(plansData) ? plansData : plansData?.content || [];
+              channelPlansCache[coupon.channelId] = plans;
+              console.log(`채널 ${coupon.channelId}의 구독 상품 목록:`, plans);
+            }
+            
+            // targetId와 planId를 숫자로 비교
+            const targetIdNum = Number(target.targetId);
+            const plan = plans.find(p => {
+              const planId = Number(p.planId || p.id);
+              return planId === targetIdNum;
+            });
+            if (plan) {
+              const planTypeName = plan.planType === 'MONTHLY' ? '월간' : '연간';
+              planNamesMap[coupon.id] = `${planTypeName} 구독`;
+            } else {
+            }
+          } catch (err) {
+            console.error(`쿠폰 ${coupon.id}의 구독 상품 정보 조회 오류:`, err);
+          }
+        }
+      }
+    }
+    setSubscriptionPlanNames(planNamesMap);
   };
 
   useEffect(() => {
@@ -411,6 +463,15 @@ export default function AdminCouponsPage() {
                     할인 정보
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    채널 ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    적용 대상
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    구독 상품
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     환불 정책
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -424,6 +485,33 @@ export default function AdminCouponsPage() {
               <tbody className="divide-y divide-gray-200">
                 {coupons.map((coupon) => {
                   const status = getCouponStatus(coupon.expiredAt);
+                  const target = coupon.targets?.[0]; // 첫 번째 target 사용
+                  
+                  // 디버깅: target 정보 확인 (첫 번째 쿠폰만)
+                  if (coupon.id === coupons[0]?.id) {
+                    console.log('첫 번째 쿠폰 데이터:', {
+                      id: coupon.id,
+                      targets: coupon.targets,
+                      target: target,
+                      subscriptionPlanNames: subscriptionPlanNames
+                    });
+                  }
+                  
+                  // targetType이 문자열로 올 수 있으므로 대소문자 구분 없이 비교
+                  const targetType = target?.targetType?.toUpperCase?.() || target?.targetType;
+                  let targetTypeLabel = '-';
+                  if (target) {
+                    if (targetType === 'SUBSCRIPTION') {
+                      targetTypeLabel = target.targetId ? '구독 상품 (특정)' : '구독 상품 (전체)';
+                    } else if (targetType === 'CONTENT') {
+                      targetTypeLabel = target.targetId ? '콘텐츠 단건 구매 (특정)' : '콘텐츠 단건 구매 (전체)';
+                    }
+                  } else if (coupon.targets && coupon.targets.length > 0) {
+                    targetTypeLabel = '전체';
+                  }
+                  
+                  const planName = subscriptionPlanNames[coupon.id];
+                  
                   return (
                     <tr key={coupon.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 font-mono text-sm text-gray-900">
@@ -433,6 +521,15 @@ export default function AdminCouponsPage() {
                         {coupon.discountType === 'RATE'
                           ? `비율 ${coupon.discountValue}%`
                           : `금액 ${coupon.discountValue?.toLocaleString()}원`}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {coupon.channelId ? coupon.channelId : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {targetTypeLabel}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        {planName || '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700">
                         {coupon.refundType === 'EXPIRE_ON_REFUND'

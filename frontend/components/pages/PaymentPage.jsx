@@ -52,12 +52,38 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
         
         // usedAt이 null인 쿠폰만 필터링 (아직 사용하지 않은 쿠폰)
         // 백엔드에서 ISSUED 상태만 반환하지만, 프론트엔드에서도 한 번 더 필터링
-        const availableCouponsList = Array.isArray(myCoupons) 
+        const unusedCoupons = Array.isArray(myCoupons) 
           ? myCoupons.filter(coupon => !coupon.usedAt) // usedAt이 null이면 사용 가능
           : [];
         
-        console.log('사용 가능한 쿠폰 목록 (ISSUED 상태):', availableCouponsList); // 디버깅용
-        setAvailableCoupons(availableCouponsList);
+        // 결제 타입에 따라 쿠폰 필터링
+        const filteredCoupons = unusedCoupons.filter(coupon => {
+          // targets가 없거나 비어있으면 전체 대상 쿠폰 (항상 포함)
+          if (!coupon.targets || coupon.targets.length === 0) {
+            return true;
+          }
+          
+          // 모든 target의 targetId가 null이면 전체 대상 쿠폰 (항상 포함)
+          const isUniversalCoupon = coupon.targets.every(target => target.targetId === null);
+          if (isUniversalCoupon) {
+            return true;
+          }
+          
+          // 결제 타입에 따라 필터링
+          if (type === 'content') {
+            // 콘텐츠 결제: CONTENT 타입 쿠폰만 포함
+            return coupon.targets.some(target => target.targetType === 'CONTENT');
+          } else if (type === 'subscription') {
+            // 구독 결제: SUBSCRIPTION 타입 쿠폰만 포함
+            return coupon.targets.some(target => target.targetType === 'SUBSCRIPTION');
+          }
+          
+          // 타입이 명확하지 않은 경우 모든 쿠폰 포함
+          return true;
+        });
+        
+        console.log('사용 가능한 쿠폰 목록 (필터링 후):', filteredCoupons); // 디버깅용
+        setAvailableCoupons(filteredCoupons);
       } catch (err) {
         console.error('쿠폰 목록 로딩 실패:', err);
         // 로그인하지 않은 경우에도 에러를 표시하지 않고 빈 배열로 설정
@@ -68,7 +94,7 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
     };
 
     fetchAvailableCoupons();
-  }, []);
+  }, [type]);
 
   // 백엔드에서 아이템 정보 가져오기
   React.useEffect(() => {

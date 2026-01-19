@@ -7,6 +7,7 @@ export function ChannelListPage({ onNavigate }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [selectedCategory, setSelectedCategory] = React.useState('all');
+  const [selectedSort, setSelectedSort] = React.useState('new');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [page, setPage] = React.useState(0);
   const [totalPages, setTotalPages] = React.useState(0);
@@ -19,7 +20,8 @@ export function ChannelListPage({ onNavigate }) {
         setLoading(true);
         const params = {
           page: page,
-          size: 20
+          size: 20,
+          sort: selectedSort
         };
         
         if (selectedCategory !== 'all') {
@@ -41,7 +43,7 @@ export function ChannelListPage({ onNavigate }) {
     }
 
     loadChannels();
-  }, [selectedCategory, page]);
+  }, [selectedCategory, selectedSort, page]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -124,8 +126,8 @@ export function ChannelListPage({ onNavigate }) {
             />
           </div>
 
-          {/* 카테고리 필터 */}
-          <div className="flex items-center gap-2">
+          {/* 카테고리/정렬 필터 */}
+          <div className="flex items-center gap-2 flex-wrap">
             <Filter className="w-5 h-5 text-gray-500" />
             <select
               value={selectedCategory}
@@ -138,6 +140,17 @@ export function ChannelListPage({ onNavigate }) {
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
+            </select>
+            <select
+              value={selectedSort}
+              onChange={(e) => {
+                setSelectedSort(e.target.value);
+                setPage(0);
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="popular">인기순</option>
+              <option value="new">최신순</option>
             </select>
           </div>
         </div>
