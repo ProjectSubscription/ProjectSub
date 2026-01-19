@@ -522,6 +522,20 @@ export async function getComments(contentId) {
 }
 
 /**
+ * 리뷰 댓글 작성
+ */
+export async function createReviewComment(reviewId, data) {
+  return apiPost(`/api/reviews/${reviewId}/comments`, data);
+}
+
+/**
+ * 리뷰 댓글 조회
+ */
+export async function getReviewComments(reviewId) {
+  return apiGet(`/api/reviews/${reviewId}/comments`);
+}
+
+/**
  * 댓글 수정
  */
 export async function updateComment(id, data) {

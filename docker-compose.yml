@@ -13,7 +13,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./mysql-data:/var/lib/mysql
     networks:
       - app-network
     command:
@@ -33,46 +33,39 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: premium-be
-    restart: always
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/premiumdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      SPRING_MAIL_HOST: ${MAIL_HOST}
-      SPRING_MAIL_PORT: ${MAIL_PORT}
-      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
-      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
-    ports:
-      - "8080:8080"
-    networks:
-      - app-network
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: premium-fe
-    restart: always
-    depends_on:
-      - backend
-    environment:
-      NEXT_PUBLIC_API_URL: http://52.79.142.181:8080
-    ports:
-      - "3000:3000"
-    networks:
-      - app-network
+#  backend:
+#    build:
+#      context: ./backend
+#      dockerfile: Dockerfile
+#    container_name: premium-be
+#    restart: always
+#    depends_on:
+#      db:
+#        condition: service_healthy
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/premiumdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+#      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+#      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+#    ports:
+#      - "8080:8080"
+#    networks:
+#      - app-network
+#
+#  frontend:
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
+#    container_name: premium-fe
+#    restart: always
+#    depends_on:
+#      - backend
+#    environment:
+#      NEXT_PUBLIC_API_URL: http://localhost:8080
+#    ports:
+#      - "3000:3000"
+#    networks:
+#      - app-network
 
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  mysql_data:
