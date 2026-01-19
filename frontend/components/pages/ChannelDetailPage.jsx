@@ -300,6 +300,26 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
     }
   };
 
+  // 현재 구독이 월간 또는 연간 구독인지 확인 (Hooks는 early return 이전에 호출되어야 함)
+  const isMonthlyOrYearlySubscription = React.useMemo(() => {
+    if (!currentSubscription || !plans || plans.length === 0) {
+      return false;
+    }
+
+    const subscriptionPlanId = currentSubscription.planId;
+    const currentPlan = plans.find(
+      (plan) => (plan.planId || plan.id) === subscriptionPlanId
+    );
+
+    if (!currentPlan) {
+      return false;
+    }
+
+    const planType = currentPlan.planType || currentPlan.duration || '';
+    return planType === 'MONTHLY' || planType === 'YEARLY' || 
+           planType === '월간 구독' || planType === '연간 구독';
+  }, [currentSubscription, plans]);
+
   if (loading) {
     return <div className="text-center py-12">로딩 중...</div>;
   }
@@ -328,6 +348,7 @@ export function ChannelDetailPage({ channelId, onNavigate }) {
         isChannelOwner={isChannelOwner}
         onManagePlans={() => onNavigate('creator-subscription', {})}
         hasSubscriptionPlans={plans && plans.length > 0}
+        showSubscribeButton={isMonthlyOrYearlySubscription}
       />
 
       {/* 쿠폰 목록 - 크리에이터 정보와 구독 상품 사이 */}

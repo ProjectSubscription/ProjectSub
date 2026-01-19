@@ -11,6 +11,7 @@ export function ChannelHeader({
   isChannelOwner = false,
   onManagePlans,
   hasSubscriptionPlans = false,
+  showSubscribeButton = false,
 }) {
   const avatarUrl = channel?.thumbnailUrl ?? channel?.profileImageUrl ?? channel?.profileImage ?? '';
   const avatarInitial = channel?.name?.trim()?.slice(0, 1) ?? '?';
@@ -61,7 +62,7 @@ export function ChannelHeader({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {hasSubscriptionPlans && (
+            {showSubscribeButton && (
               <button
                 onClick={onSubscribeToggle}
                 className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors ${
