@@ -74,12 +74,22 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
 
     let eventSource = null;
     let reconnectTimeout = null;
+    let fallbackInterval = null;
     let reconnectAttempts = 0;
     const maxReconnectAttempts = 5;
     const reconnectDelay = 3000; // 3초
 
     const connectSSE = () => {
       try {
+        // 기존 연결이 있으면 먼저 닫기
+        if (eventSource) {
+          try {
+            eventSource.close();
+          } catch (e) {
+            // 무시
+          }
+        }
+
         console.log('SSE 연결 시도 중...');
         eventSource = subscribeNotifications();
 
@@ -144,31 +154,40 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
           }
         };
 
-        eventSource.onerror = (error) => {
-          console.error('❌ SSE 연결 오류:', error);
-          console.error('SSE 연결 상태:', eventSource.readyState);
+        eventSource.onerror = () => {
           // readyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-          if (eventSource.readyState === EventSource.CLOSED) {
-            console.error('SSE 연결이 닫혔습니다.');
+          const readyState = eventSource?.readyState;
+          
+          // 연결이 완전히 닫힌 상태일 때만 재연결 시도
+          if (readyState === EventSource.CLOSED) {
+            // 재연결 시도
+            if (reconnectAttempts < maxReconnectAttempts) {
+              reconnectAttempts++;
+              reconnectTimeout = setTimeout(() => {
+                console.log(`SSE 재연결 시도 ${reconnectAttempts}/${maxReconnectAttempts}`);
+                connectSSE();
+              }, reconnectDelay * reconnectAttempts);
+            } else {
+              console.warn('SSE 재연결 실패: 최대 시도 횟수 초과. 주기적 폴링으로 전환합니다.');
+              // 폴백: 주기적으로 갱신
+              if (!fallbackInterval) {
+                fallbackInterval = setInterval(loadUnreadCount, 30000);
+              }
+            }
           }
-          eventSource.close();
-
-          // 재연결 시도
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            reconnectTimeout = setTimeout(() => {
-              console.log(`SSE 재연결 시도 ${reconnectAttempts}/${maxReconnectAttempts}`);
-              connectSSE();
-            }, reconnectDelay * reconnectAttempts);
-          } else {
-            console.error('SSE 재연결 실패: 최대 시도 횟수 초과');
-            // 폴백: 주기적으로 갱신
-            const interval = setInterval(loadUnreadCount, 30000);
-            return () => clearInterval(interval);
-          }
+          // CONNECTING 또는 OPEN 상태의 에러는 EventSource가 자동으로 처리하므로
+          // 추가 로깅 없이 조용히 처리
         };
       } catch (err) {
         console.error('SSE 연결 생성 오류:', err);
+        // 생성 실패 시에도 재연결 시도
+        if (reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          reconnectTimeout = setTimeout(() => {
+            console.log(`SSE 재연결 시도 ${reconnectAttempts}/${maxReconnectAttempts}`);
+            connectSSE();
+          }, reconnectDelay * reconnectAttempts);
+        }
       }
     };
 
@@ -182,10 +201,17 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
     // 컴포넌트 언마운트 시 정리
     return () => {
       if (eventSource) {
-        eventSource.close();
+        try {
+          eventSource.close();
+        } catch (e) {
+          // 무시
+        }
       }
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
+      }
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
       }
     };
   }, [currentUser]);
