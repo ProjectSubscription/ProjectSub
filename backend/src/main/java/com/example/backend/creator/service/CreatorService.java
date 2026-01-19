@@ -15,6 +15,8 @@ import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.service.MemberService;
+import com.example.backend.settlement.dto.response.SettlementResponseDTO;
+import com.example.backend.settlement.service.SettlementService;
 import com.example.backend.subscription.dto.response.SubscriberStatisticsResponse;
 import com.example.backend.subscription.entity.SubscriptionStatus;
 import com.example.backend.subscription.repository.SubscriptionRepository;
@@ -38,6 +40,7 @@ public class CreatorService {
     private final ContentService contentService;
     private final ChannelServiceImpl channelService;
     private final SubscriptionRepository subscriptionRepository;
+    private final SettlementService settlementService;
 
     // 관리자가 승인했을 때 호출
     public void createCreator(Long memberId, CreatorApplicationDTO dto) {
@@ -115,6 +118,9 @@ public class CreatorService {
         Channel channel = channelService.getChannelByCreatorId(creator.getId());
         int totalSubscribers = channel.getSubscriberCount();
         // 정산 관련 dto 추가 예정
+        Long thisMonthExpectedRevenue = settlementService.getThisMonthExpectedRevenue(creator.getId());
+        List<SettlementResponseDTO> recentThreeMonthsRevenue =
+                settlementService.getRecentThreeMonthsRevenue(creator.getId());
 
         // 콘텐츠 관련 dto 추가 예정
         // 총 콘텐츠 수 - 콘텐츠 서비스
@@ -124,7 +130,8 @@ public class CreatorService {
         // 인기 콘텐츠 top 3 - 순위, 제목, 조회수, 좋아요 수 - 콘텐츠 서비스
         List<ContentListResponseDTO> featuredContents = contentService.getFeaturedContentsByChannelId(channel.getId());
 
-        return CreatorMyPageResponseDTO.create(creator, totalContentCount, totalViewCount, totalSubscribers, featuredContents);
+        return CreatorMyPageResponseDTO.create(creator, totalContentCount, totalViewCount, totalSubscribers, featuredContents,
+                thisMonthExpectedRevenue, recentThreeMonthsRevenue);
     }
 
     // 크리에이터 인지 검증
