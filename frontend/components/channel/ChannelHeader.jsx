@@ -1,7 +1,18 @@
 import React from 'react';
-import { Users, Star, Bell, BellOff } from 'lucide-react';
+import { Users, Star, Bell, BellOff, Settings } from 'lucide-react';
 
-export function ChannelHeader({ channel, isSubscribed, averageRating = 0, reviewCount = 0, onSubscribeToggle, onCreatorClick }) {
+export function ChannelHeader({
+  channel,
+  isSubscribed,
+  averageRating = 0,
+  reviewCount = 0,
+  onSubscribeToggle,
+  onCreatorClick,
+  isChannelOwner = false,
+  onManagePlans,
+  hasSubscriptionPlans = false,
+  showSubscribeButton = false,
+}) {
   const avatarUrl = channel?.thumbnailUrl ?? channel?.profileImageUrl ?? channel?.profileImage ?? '';
   const avatarInitial = channel?.name?.trim()?.slice(0, 1) ?? '?';
   const formattedRating = Number.isFinite(averageRating) ? averageRating.toFixed(1) : '0.0';
@@ -50,26 +61,41 @@ export function ChannelHeader({ channel, isSubscribed, averageRating = 0, review
               </div>
             </div>
           </div>
-          <button
-            onClick={onSubscribeToggle}
-            className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors ${
-              isSubscribed
-                ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
-                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            {isSubscribed ? (
-              <>
-                <BellOff className="w-5 h-5" />
-                <span>구독 중</span>
-              </>
-            ) : (
-              <>
-                <Bell className="w-5 h-5" />
-                <span>구독하기</span>
-              </>
+          <div className="flex items-center gap-3">
+            {showSubscribeButton && (
+              <button
+                onClick={onSubscribeToggle}
+                className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors ${
+                  isSubscribed
+                    ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {isSubscribed ? (
+                  <>
+                    <BellOff className="w-5 h-5" />
+                    <span>구독 중</span>
+                  </>
+                ) : (
+                  <>
+                    <Bell className="w-5 h-5" />
+                    <span>구독하기</span>
+                  </>
+                )}
+              </button>
             )}
-          </button>
+
+            {isChannelOwner && onManagePlans && (
+              <button
+                type="button"
+                onClick={onManagePlans}
+                className="px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors bg-white border border-gray-200 text-gray-600 hover:bg-gray-100"
+              >
+                <Settings className="w-5 h-5" />
+                <span>구독상품 관리</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

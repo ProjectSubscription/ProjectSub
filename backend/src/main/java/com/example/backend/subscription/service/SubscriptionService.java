@@ -74,7 +74,29 @@ public class SubscriptionService {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
 
-        subscription.cancel();
+        // 구독 플랜 정보 가져오기
+        SubscriptionPlan plan = subscriptionPlanRepository.findById(subscription.getPlanId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.SUBSCRIPTION_PLAN_NOT_FOUND));
+        
+        // 구독 시작 후 3일 이내인지 확인
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startedAt = subscription.getStartedAt();
+        long daysSinceStart = java.time.Duration.between(startedAt, now).toDays();
+        
+        if (daysSinceStart <= 3) {
+            // 3일 이내: 바로 취소
+            subscription.cancel();
+        } else {
+            // 3일 이후
+            if (plan.getPlanType() == PlanType.MONTHLY) {
+                // 월간 구독: 취소 불가
+                throw new BusinessException(ErrorCode.MONTHLY_SUBSCRIPTION_CANCEL_PERIOD_EXPIRED);
+            } else {
+                // 연간 구독: 시작일로부터 1개월 후로 만료일 설정하고 취소
+                subscription.cancelWithExtendedExpiry();
+            }
+        }
+        
         subscriptionRepository.save(subscription);
     }
 

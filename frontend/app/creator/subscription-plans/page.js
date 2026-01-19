@@ -1,9 +1,9 @@
 'use client';
 
-import { SubscriptionPlanManagement } from '@/components/pages/SubscriptionPlanManagement';
+import { SubscriptionPlansManagePage } from '@/components/subscription/SubscriptionPlansManagePage';
 import { useRouter } from 'next/navigation';
 
-export default function CreatorSubscriptionRoute() {
+export default function CreatorSubscriptionPlansRoute() {
   const router = useRouter();
 
   const handleNavigate = (page, params) => {
@@ -13,7 +13,7 @@ export default function CreatorSubscriptionRoute() {
       'creator-content': '/creator/content',
       'creator-content-new': '/creator/content/new',
       'creator-settlement': '/creator/settlement',
-      'creator-subscription': '/creator/subscription',
+      'creator-subscription': '/creator/subscription-plans',
     };
 
     const route = routeMap[page];
@@ -22,5 +22,5 @@ export default function CreatorSubscriptionRoute() {
     }
   };
 
-  return <SubscriptionPlanManagement onNavigate={handleNavigate} />;
+  return <SubscriptionPlansManagePage onNavigate={handleNavigate} />;
 }

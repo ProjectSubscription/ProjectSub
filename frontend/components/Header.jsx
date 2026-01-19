@@ -415,7 +415,7 @@ export function Header({ currentUser, currentPage, onNavigate, onLogout }) {
                             <button
                               onClick={() => {
                                 setShowUserMenu(false);
-                                onNavigate('my-subscriptions');
+                                onNavigate('creator-subscription');
                               }}
                               className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 flex items-center gap-3"
                             >

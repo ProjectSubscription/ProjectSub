@@ -58,7 +58,7 @@ export default function AdminSettlementsPage() {
     if (currentUser && !hasAdminRole()) {
       // 관리자가 아닌 경우 접근 거부
       alert('관리자만 접근할 수 있는 페이지입니다.');
-      router.push('/home');
+      router.push('/');
     }
   }, [currentUser, router]);
 
@@ -109,7 +109,7 @@ export default function AdminSettlementsPage() {
       if (err.response?.status === 403 || err.status === 403) {
         setError('관리자 권한이 필요합니다.');
         alert('관리자만 접근할 수 있는 페이지입니다.');
-        router.push('/home');
+        router.push('/');
         return;
       }
       setError(err.message || '데이터를 불러오는 중 오류가 발생했습니다.');

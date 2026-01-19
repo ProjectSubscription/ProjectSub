@@ -91,7 +91,7 @@ export default function OAuthCompleteProfile() {
 
       await completeOAuthProfile(token, submitData);
       alert('회원가입이 완료되었습니다.');
-      router.push('/home');
+      router.push('/');
     } catch (error) {
       console.error('OAuth profile completion error:', error);
       alert(error.message || '회원가입에 실패했습니다. 다시 시도해주세요.');
