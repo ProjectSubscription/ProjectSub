@@ -2,15 +2,21 @@ import React from 'react';
 import { Star } from 'lucide-react';
 
 export function ContentSidebar({ channel, relatedContents, onNavigate }) {
+  const handleChannelClick = () => {
+    if (channel?.id) {
+      onNavigate('channel-detail', { channelId: channel.id });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Channel Card */}
       <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div
-          onClick={() => onNavigate('channel-detail', { channelId: channel.id })}
-          className="cursor-pointer"
-        >
-          <div className="flex items-center gap-3 mb-4">
+        <div className="cursor-pointer">
+          <div 
+            onClick={handleChannelClick}
+            className="flex items-center gap-3 mb-4"
+          >
             {channel.thumbnailUrl ? (
               <img
                 src={channel.thumbnailUrl}
@@ -33,7 +39,10 @@ export function ContentSidebar({ channel, relatedContents, onNavigate }) {
             <span>•</span>
             <span>{channel.subscriberCount.toLocaleString()} 구독자</span>
           </div>
-          <button className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+          <button 
+            onClick={handleChannelClick}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
             채널 방문하기
           </button>
         </div>
