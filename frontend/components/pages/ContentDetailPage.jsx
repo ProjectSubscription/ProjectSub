@@ -3,8 +3,7 @@ import { VideoPlayer } from '@/components/content/VideoPlayer';
 import { ContentInfo } from '@/components/content/ContentInfo';
 import { ReviewSection } from '@/components/content/ReviewSection';
 import { ContentSidebar } from '@/components/content/ContentSidebar';
-import CouponList from '@/components/coupon/CouponList';
-import { getContent, getContentCoupons, getChannel, getFeaturedContents, likeContent, unlikeContent, createReview, getReviews } from '@/app/lib/api';
+import { getContent, getChannel, getFeaturedContents, likeContent, unlikeContent, createReview, getReviews } from '@/app/lib/api';
 import { useUser } from '@/components/contexts/UserContext';
 
 export function ContentDetailPage({ contentId, onNavigate }) {
@@ -14,7 +13,6 @@ export function ContentDetailPage({ contentId, onNavigate }) {
   const [rating, setRating] = React.useState(5);
   const [review, setReview] = React.useState('');
   const [reviews, setReviews] = React.useState([]);
-  const [coupons, setCoupons] = React.useState([]);
   const [content, setContent] = React.useState(null);
   const [channel, setChannel] = React.useState(null);
   const [relatedContents, setRelatedContents] = React.useState([]);
@@ -62,15 +60,6 @@ export function ContentDetailPage({ contentId, onNavigate }) {
           } catch (err) {
             console.warn('채널 정보 조회 실패:', err);
           }
-        }
-
-        // 쿠폰 목록 조회
-        try {
-          const couponsData = await getContentCoupons(id);
-          setCoupons(couponsData || []);
-        } catch (err) {
-          console.warn('쿠폰 목록 조회 실패:', err);
-          setCoupons([]);
         }
 
         // 리뷰 목록 조회
@@ -246,24 +235,6 @@ export function ContentDetailPage({ contentId, onNavigate }) {
           hasAccess={hasFullAccess}
           onPurchase={handlePurchase}
         />
-      )}
-
-      {/* 쿠폰 목록 */}
-      {coupons.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">다운로드 가능한 쿠폰</h2>
-          <CouponList
-            coupons={coupons}
-            onRefresh={async () => {
-              try {
-                const refreshedCoupons = await getContentCoupons(contentId);
-                setCoupons(refreshedCoupons || []);
-              } catch (err) {
-                console.error('쿠폰 목록 새로고침 실패:', err);
-              }
-            }}
-          />
-        </div>
       )}
 
       <div className="grid lg:grid-cols-3 gap-6">
