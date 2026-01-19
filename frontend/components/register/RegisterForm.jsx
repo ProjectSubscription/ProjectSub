@@ -93,7 +93,7 @@ export function RegisterForm({ onSubmit, onNavigate }) {
             value={formData.email}
             onChange={handleChange}
             placeholder="example@email.com"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
               errors.email ? 'border-red-300' : 'border-gray-300'
             }`}
             required
@@ -114,7 +114,7 @@ export function RegisterForm({ onSubmit, onNavigate }) {
             value={formData.password}
             onChange={handleChange}
             placeholder="8자 이상"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
               errors.password ? 'border-red-300' : 'border-gray-300'
             }`}
             required
@@ -135,7 +135,7 @@ export function RegisterForm({ onSubmit, onNavigate }) {
             value={formData.confirmPassword}
             onChange={handleChange}
             placeholder="비밀번호를 다시 입력하세요"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
               errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
             }`}
             required
@@ -156,7 +156,7 @@ export function RegisterForm({ onSubmit, onNavigate }) {
             value={formData.nickname}
             onChange={handleChange}
             placeholder="닉네임을 입력하세요"
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
               errors.nickname ? 'border-red-300' : 'border-gray-300'
             }`}
             required
@@ -175,7 +175,7 @@ export function RegisterForm({ onSubmit, onNavigate }) {
             name="birthYear"
             value={formData.birthYear}
             onChange={handleChange}
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white ${
+            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white text-gray-900 ${
               errors.birthYear ? 'border-red-300' : 'border-gray-300'
             }`}
             required
@@ -199,7 +199,7 @@ export function RegisterForm({ onSubmit, onNavigate }) {
             name="gender"
             value={formData.gender}
             onChange={handleChange}
-            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 ${
               errors.gender ? 'border-red-300' : 'border-gray-300'
             }`}
             required

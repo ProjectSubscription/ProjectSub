@@ -18,5 +18,10 @@ public interface SettlementDetailRepository extends JpaRepository<SettlementDeta
            "WHERE sd.settlement.id = :settlementId " +
            "ORDER BY sd.createdAt DESC")
     List<SettlementDetail> findBySettlementIdWithPayment(@Param("settlementId") Long settlementId);
+
+    /**
+     * 정산과 결제로 상세 내역 존재 여부 확인 (중복 체크용)
+     */
+    boolean existsBySettlementIdAndPaymentId(Long settlementId, Long paymentId);
 }
 

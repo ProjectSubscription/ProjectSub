@@ -208,9 +208,9 @@ export function ContentDetailPage({ contentId, onNavigate }) {
     hasAccess: content.hasAccess,
   };
 
-  const channelForSidebar = channel ? {
-    id: channel.id,
-    name: channel.title || channel.name,
+  const channelForSidebar = channel && content?.channelId ? {
+    id: content.channelId, // content.channelId를 우선 사용 (확실한 값)
+    name: channel.title || channel.name || channel.channelName,
     creatorName: channel.creatorId ? `크리에이터 ${channel.creatorId}` : '크리에이터',
     thumbnailUrl: '/placeholder-channel.jpg',
     subscriberCount: channel.subscriberCount || 0,
@@ -249,6 +249,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
 
           <ReviewSection
             reviews={reviews}
+            contentId={contentId}
             hasAccess={hasAccess}
             showReviewForm={showReviewForm}
             onToggleReviewForm={() => {
@@ -266,6 +267,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
             onReviewChange={setReview}
             currentUser={currentUser}
             onNavigate={onNavigate}
+            onReviewUpdate={fetchReviews}
           />
         </div>
 

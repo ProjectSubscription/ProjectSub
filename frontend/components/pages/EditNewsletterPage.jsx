@@ -144,7 +144,7 @@ export function EditNewsletterPage({ newsletterId }) {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
               placeholder="뉴스레터 제목을 입력하세요"
               required
             />
@@ -160,7 +160,7 @@ export function EditNewsletterPage({ newsletterId }) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={20}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm text-gray-900"
               placeholder="뉴스레터 내용을 입력하세요&#10;&#10;HTML 태그를 사용할 수 있습니다."
               required
             />

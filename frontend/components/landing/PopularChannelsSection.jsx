@@ -21,46 +21,52 @@ export function PopularChannelsSection({ channels, onNavigate, isAuthenticated =
           </button>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {channels.map((channel) => (
-            <div
-              key={channel.id}
-              onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
-              className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
-            >
-              <div className="relative aspect-video">
-                {channel.thumbnailUrl ? (
-                  <img
-                    src={channel.thumbnailUrl}
-                    alt={channel.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold">
-                    {channel.name?.slice(0, 1) || '?'}
-                  </div>
-                )}
-                <div className="absolute top-3 right-3 text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
-                  {channel.category}
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
-                  {channel.name}
-                </h3>
-                <p className="text-sm text-gray-500 mb-3">{channel.creatorName}</p>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <Users className="w-4 h-4" />
-                    <span>{channel.subscriberCount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span className="text-gray-700">4.8</span>
+          {channels.map((channel) => {
+            const formattedRating = Number.isFinite(channel.averageRating)
+              ? channel.averageRating.toFixed(1)
+              : '0.0';
+
+            return (
+              <div
+                key={channel.id}
+                onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
+                className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
+              >
+                <div className="relative aspect-video">
+                  {channel.thumbnailUrl ? (
+                    <img
+                      src={channel.thumbnailUrl}
+                      alt={channel.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold">
+                      {channel.name?.slice(0, 1) || '?'}
+                    </div>
+                  )}
+                  <div className="absolute top-3 right-3 text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                    {channel.category}
                   </div>
                 </div>
+                <div className="p-4">
+                  <h3 className="font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                    {channel.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-3">{channel.creatorName}</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-1 text-gray-600">
+                      <Users className="w-4 h-4" />
+                      <span>{channel.subscriberCount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-yellow-500">
+                      <Star className="w-4 h-4 fill-current" />
+                      <span className="text-gray-700">{formattedRating}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

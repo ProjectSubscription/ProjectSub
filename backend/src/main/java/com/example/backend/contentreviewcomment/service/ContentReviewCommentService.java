@@ -53,13 +53,16 @@ public class ContentReviewCommentService {
 
         ContentReviewComment comment = ContentReviewComment.create(contentReview, member, request.getComment(), parent);
         ContentReviewComment savedComment = contentReviewCommentRepository.save(comment);
-        return new ContentReviewCommentResponseDto(savedComment);
+        // Member는 이미 findMemberIncludingDeleted로 조회했으므로 그대로 사용
+        return new ContentReviewCommentResponseDto(savedComment, member);
     }
 
     public ContentReviewCommentResponseDto getComment(Long commentId) {
         ContentReviewComment comment = contentReviewCommentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
-        return new ContentReviewCommentResponseDto(comment);
+        // Member를 탈퇴한 사용자 포함하여 조회
+        Member member = memberService.findMemberIncludingDeleted(comment.getMember().getId());
+        return new ContentReviewCommentResponseDto(comment, member);
     }
 
     @Transactional
@@ -76,14 +79,31 @@ public class ContentReviewCommentService {
 
         comment.update(request.getComment());
 
-        return new ContentReviewCommentResponseDto(comment);
+        // Member를 탈퇴한 사용자 포함하여 조회
+        Member member = memberService.findMemberIncludingDeleted(comment.getMember().getId());
+        return new ContentReviewCommentResponseDto(comment, member);
     }
 
     public List<ContentReviewCommentResponseDto> getCommentsByReview(Long reviewId) {
         // 페치 조인이 포함된 메서드 호출 - 대댓글 관련 조회 시 DB에 너무 많이 접근함
-        return contentReviewCommentRepository.findByContentReviewIdWithAllRelations(reviewId)
-                .stream()
-                .map(ContentReviewCommentResponseDto::new)
+        List<ContentReviewComment> comments = contentReviewCommentRepository.findByContentReviewIdWithAllRelations(reviewId);
+        
+        // 각 댓글의 Member를 탈퇴한 사용자 포함하여 조회하고 DTO 생성
+        return comments.stream()
+                .map(comment -> {
+                    // 부모 댓글의 Member를 탈퇴한 사용자 포함하여 조회
+                    Member member = memberService.findMemberIncludingDeleted(comment.getMember().getId());
+                    // 자식 댓글도 처리
+                    List<ContentReviewCommentResponseDto> childrenDtos = comment.getChildren().stream()
+                            .map(child -> {
+                                Member childMember = memberService.findMemberIncludingDeleted(child.getMember().getId());
+                                return new ContentReviewCommentResponseDto(child, childMember);
+                            })
+                            .collect(Collectors.toList());
+                    ContentReviewCommentResponseDto dto = new ContentReviewCommentResponseDto(comment, member);
+                    dto.setChildren(childrenDtos);
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 

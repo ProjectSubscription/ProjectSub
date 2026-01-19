@@ -45,13 +45,17 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     /**
      * 관리자용: 전체 정산 목록 조회 (필터링, 페이징)
      */
-    @Query("SELECT s FROM Settlement s " +
-           "LEFT JOIN FETCH s.creator c " +
-           "LEFT JOIN FETCH c.member m " +
+    @Query(value = "SELECT s FROM Settlement s " +
+           "JOIN FETCH s.creator c " +
+           "JOIN FETCH c.member " +
            "WHERE (:creatorId IS NULL OR s.creator.id = :creatorId) " +
            "AND (:settlementPeriod IS NULL OR s.settlementPeriod = :settlementPeriod) " +
            "AND (:status IS NULL OR s.status = :status) " +
-           "ORDER BY s.settlementPeriod DESC, s.createdAt DESC")
+           "ORDER BY s.settlementPeriod DESC, s.createdAt DESC",
+           countQuery = "SELECT COUNT(s) FROM Settlement s " +
+           "WHERE (:creatorId IS NULL OR s.creator.id = :creatorId) " +
+           "AND (:settlementPeriod IS NULL OR s.settlementPeriod = :settlementPeriod) " +
+           "AND (:status IS NULL OR s.status = :status)")
     Page<Settlement> findAllWithFilters(
             @Param("creatorId") Long creatorId,
             @Param("settlementPeriod") String settlementPeriod,
@@ -62,13 +66,19 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     /**
      * 관리자용: 크리에이터 닉네임으로 검색
      */
-    @Query("SELECT s FROM Settlement s " +
-           "LEFT JOIN FETCH s.creator c " +
-           "LEFT JOIN FETCH c.member m " +
-           "WHERE (:creatorNickname IS NULL OR m.nickname LIKE %:creatorNickname%) " +
+    @Query(value = "SELECT s FROM Settlement s " +
+           "JOIN FETCH s.creator c " +
+           "JOIN FETCH c.member m " +
+           "WHERE (:creatorNickname IS NULL OR m.nickname LIKE CONCAT('%', :creatorNickname, '%')) " +
            "AND (:settlementPeriod IS NULL OR s.settlementPeriod = :settlementPeriod) " +
            "AND (:status IS NULL OR s.status = :status) " +
-           "ORDER BY s.settlementPeriod DESC, s.createdAt DESC")
+           "ORDER BY s.settlementPeriod DESC, s.createdAt DESC",
+           countQuery = "SELECT COUNT(s) FROM Settlement s " +
+           "JOIN s.creator c " +
+           "JOIN c.member m " +
+           "WHERE (:creatorNickname IS NULL OR m.nickname LIKE CONCAT('%', :creatorNickname, '%')) " +
+           "AND (:settlementPeriod IS NULL OR s.settlementPeriod = :settlementPeriod) " +
+           "AND (:status IS NULL OR s.status = :status)")
     Page<Settlement> findAllByCreatorNickname(
             @Param("creatorNickname") String creatorNickname,
             @Param("settlementPeriod") String settlementPeriod,
@@ -103,5 +113,14 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
            "WHERE s.status = 'FAILED' " +
            "AND s.retryCount < :maxRetryCount")
     Long countRetryNeeded(@Param("maxRetryCount") Integer maxRetryCount);
+
+    /**
+     * 관리자용: 정산 상세 조회 (Creator와 Member 포함)
+     */
+    @Query("SELECT s FROM Settlement s " +
+           "JOIN FETCH s.creator c " +
+           "JOIN FETCH c.member " +
+           "WHERE s.id = :settlementId")
+    Optional<Settlement> findByIdWithCreatorAndMember(@Param("settlementId") Long settlementId);
 }
 

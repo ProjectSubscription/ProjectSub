@@ -8,6 +8,7 @@ import com.example.backend.settlement.dto.response.SettlementDetailResponseDTO;
 import com.example.backend.settlement.dto.response.SettlementResponseDTO;
 import com.example.backend.settlement.dto.response.SettlementStatisticsResponseDTO;
 import com.example.backend.settlement.entity.Settlement;
+import com.example.backend.settlement.entity.SettlementDetail;
 import com.example.backend.settlement.entity.SettlementStatus;
 import com.example.backend.settlement.repository.SettlementDetailRepository;
 import com.example.backend.settlement.repository.SettlementRepository;
@@ -24,7 +25,7 @@ import com.example.backend.channel.repository.ChannelRepository;
 import com.example.backend.order.entity.OrderType;
 import com.example.backend.payment.entity.Payment;
 import com.example.backend.payment.entity.PaymentStatus;
-import com.example.backend.payment.service.PaymentService;
+import com.example.backend.payment.repository.PaymentRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -40,7 +41,7 @@ public class SettlementService {
     private final SettlementDetailRepository settlementDetailRepository;
     private final CreatorRepository creatorRepository;
     private final SettlementPayoutService settlementPayoutService;
-    private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
     private final ChannelRepository channelRepository;
 
     @Value("${settlement.payout.max-retry-count:3}")
@@ -119,13 +120,14 @@ public class SettlementService {
             SettlementStatus status,
             Pageable pageable
     ) {
-        log.info("관리자용 정산 목록 조회 - creatorId: {}, creatorNickname: {}, settlementPeriod: {}, status: {}",
-                creatorId, creatorNickname, settlementPeriod, status);
+        log.info("관리자용 정산 목록 조회 - creatorId: {}, creatorNickname: {}, settlementPeriod: {}, status: {}, page: {}, size: {}",
+                creatorId, creatorNickname, settlementPeriod, status, pageable.getPageNumber(), pageable.getPageSize());
 
         Page<Settlement> settlements;
 
         // 크리에이터 닉네임으로 검색하는 경우
         if (creatorNickname != null && !creatorNickname.trim().isEmpty()) {
+            log.info("크리에이터 닉네임으로 검색: {}", creatorNickname);
             settlements = settlementRepository.findAllByCreatorNickname(
                     creatorNickname.trim(),
                     settlementPeriod,
@@ -133,6 +135,8 @@ public class SettlementService {
                     pageable
             );
         } else {
+            log.info("필터 조건으로 검색 - creatorId: {}, settlementPeriod: {}, status: {}", 
+                    creatorId, settlementPeriod, status);
             settlements = settlementRepository.findAllWithFilters(
                     creatorId,
                     settlementPeriod,
@@ -140,6 +144,9 @@ public class SettlementService {
                     pageable
             );
         }
+
+        log.info("관리자용 정산 목록 조회 결과 - 총 {}건, 현재 페이지 {}건", 
+                settlements.getTotalElements(), settlements.getNumberOfElements());
 
         // DTO 변환 (결제 내역 건수 포함, details는 null로 설정하여 성능 최적화)
         return settlements.map(settlement -> {
@@ -157,7 +164,8 @@ public class SettlementService {
     public SettlementResponseDTO getSettlementByIdForAdmin(Long settlementId) {
         log.info("관리자용 정산 상세 조회 - settlementId: {}", settlementId);
 
-        Settlement settlement = settlementRepository.findById(settlementId)
+        // Creator와 Member를 함께 조회
+        Settlement settlement = settlementRepository.findByIdWithCreatorAndMember(settlementId)
                 .orElseThrow(() -> {
                     log.error("정산을 찾을 수 없습니다. settlementId: {}", settlementId);
                     return new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
@@ -170,7 +178,8 @@ public class SettlementService {
                 .map(SettlementDetailResponseDTO::from)
                 .collect(Collectors.toList());
 
-        return SettlementResponseDTO.from(settlement, details);
+        // 관리자용 DTO 생성 (크리에이터 정보 포함)
+        return SettlementResponseDTO.fromForAdmin(settlement, details, details.size());
     }
 
     /**
@@ -261,8 +270,8 @@ public class SettlementService {
         LocalDateTime startDateTime = thisMonthFirstDay.atStartOfDay();
         LocalDateTime endDateTime = today.atTime(23, 59, 59);
 
-        // 이번달 PAID 결제 내역 조회 (PaymentService를 통해 접근)
-        List<Payment> paidPayments = paymentService.findPaidPaymentsInPeriod(
+        // 이번달 PAID 결제 내역 조회 (PaymentRepository를 통해 직접 접근)
+        List<Payment> paidPayments = paymentRepository.findPaidPaymentsInPeriod(
                 PaymentStatus.PAID,
                 startDateTime,
                 endDateTime
@@ -325,6 +334,76 @@ public class SettlementService {
         log.info("최근 3개월 수익 조회 완료 - creatorId: {}, count: {}", creatorId, result.size());
 
         return result;
+    }
+
+    /**
+     * 결제 완료 시 정산 내역 생성 또는 업데이트
+     * @param payment 결제 완료된 Payment
+     */
+    @Transactional
+    public void processSettlementForPayment(Payment payment) {
+        log.info("결제 완료 시 정산 처리 시작 - paymentId: {}, paymentKey: {}, amount: {}", 
+                payment.getId(), payment.getPaymentKey(), payment.getAmount());
+
+        // Payment에서 Creator ID 추출
+        Long creatorId = getCreatorIdFromPayment(payment);
+        if (creatorId == null) {
+            log.warn("Payment ID {}에서 Creator를 찾을 수 없습니다. 정산 처리를 스킵합니다.", payment.getId());
+            return;
+        }
+
+        // 정산 기간 계산 (결제 승인일 기준)
+        LocalDate paymentDate = payment.getApprovedAt() != null 
+                ? payment.getApprovedAt().toLocalDate() 
+                : LocalDate.now();
+        String settlementPeriod = paymentDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+
+        log.info("정산 처리 - creatorId: {}, settlementPeriod: {}, paymentAmount: {}", 
+                creatorId, settlementPeriod, payment.getAmount());
+
+        // 크리에이터 조회
+        Creator creator = creatorRepository.findById(creatorId)
+                .orElseThrow(() -> {
+                    log.error("크리에이터를 찾을 수 없습니다. creatorId: {}", creatorId);
+                    return new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
+                });
+
+        // 해당 기간의 정산이 존재하는지 확인
+        java.util.Optional<Settlement> existingSettlementOpt = settlementRepository
+                .findByCreatorIdAndSettlementPeriod(creatorId, settlementPeriod);
+
+        Settlement settlement;
+        if (existingSettlementOpt.isPresent()) {
+            // 기존 정산이 있으면 금액 업데이트
+            settlement = existingSettlementOpt.get();
+            settlement.addSalesAmount(payment.getAmount());
+            settlementRepository.save(settlement);
+            log.info("기존 정산 업데이트 - settlementId: {}, 새로운 총 매출: {}", 
+                    settlement.getId(), settlement.getTotalSalesAmount());
+        } else {
+            // 기존 정산이 없으면 새로 생성
+            settlement = Settlement.create(creator, settlementPeriod, payment.getAmount());
+            settlement = settlementRepository.save(settlement);
+            log.info("새 정산 생성 - settlementId: {}, 총 매출: {}", 
+                    settlement.getId(), settlement.getTotalSalesAmount());
+        }
+
+        // SettlementDetail 생성 (중복 체크)
+        boolean detailExists = settlementDetailRepository.existsBySettlementIdAndPaymentId(
+                settlement.getId(), payment.getId());
+        
+        if (!detailExists) {
+            SettlementDetail settlementDetail = SettlementDetail.create(
+                    settlement, payment, payment.getAmount());
+            settlementDetailRepository.save(settlementDetail);
+            log.info("정산 상세 내역 추가 - settlementDetailId: {}, paymentId: {}", 
+                    settlementDetail.getId(), payment.getId());
+        } else {
+            log.info("정산 상세 내역이 이미 존재합니다. 스킵 - paymentId: {}", payment.getId());
+        }
+
+        log.info("결제 완료 시 정산 처리 완료 - settlementId: {}, creatorId: {}, settlementPeriod: {}", 
+                settlement.getId(), creatorId, settlementPeriod);
     }
 
     /**

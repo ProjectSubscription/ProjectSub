@@ -8,7 +8,7 @@ import { FreeContentSection } from '@/components/landing/FreeContentSection';
 import { CategoryRankingSection } from '@/components/landing/CategoryRankingSection';
 import { CTASection } from '@/components/landing/CTASection';
 import { useAuth } from '@/components/auth/AuthContext';
-import { getChannels, getContents, getChannelCategories } from '@/app/lib/api';
+import { getChannels, getContents, getChannelCategories, getReviews } from '@/app/lib/api';
 
 const DEFAULT_CONTENT_THUMBNAIL_URL =
   'https://images.unsplash.com/photo-1526378722484-bd91ca387e72?w=800&auto=format&fit=crop&q=60';
@@ -40,6 +40,46 @@ function toLandingContentCard(dto, channelCategoryById) {
     creatorName: '',
     category: channelCategoryById?.get?.(channelId) ?? '',
   };
+}
+
+async function summarizeChannelReviews(channelId, maxContents = 10) {
+  const contentsResponse = await getContents({ channelId, size: maxContents, page: 0 });
+  const contents = contentsResponse?.content || [];
+  const contentIds = contents
+    .map((content) => content.contentId || content.id)
+    .filter((id) => id !== undefined && id !== null);
+
+  if (contentIds.length === 0) {
+    return { averageRating: 0, reviewCount: 0 };
+  }
+
+  const reviewLists = await Promise.all(
+    contentIds.map((contentId) =>
+      getReviews(contentId).catch(() => [])
+    )
+  );
+  const reviews = reviewLists.flat();
+  const reviewCount = reviews.length;
+  const averageRating = reviewCount
+    ? reviews.reduce((sum, review) => sum + (review?.rating ?? 0), 0) / reviewCount
+    : 0;
+
+  return { averageRating, reviewCount };
+}
+
+async function attachReviewSummary(channels) {
+  const summaries = await Promise.all(
+    channels.map(async (channel) => {
+      try {
+        const summary = await summarizeChannelReviews(channel.id);
+        return { ...channel, ...summary };
+      } catch {
+        return { ...channel, averageRating: 0, reviewCount: 0 };
+      }
+    })
+  );
+
+  return summaries;
 }
 
 export function LandingPage({ onNavigate }) {
@@ -90,8 +130,10 @@ export function LandingPage({ onNavigate }) {
 
         const initialCategory = derivedCategories[0] ?? '';
 
+        const enrichedPopular = await attachReviewSummary(popular);
+
         if (cancelled) return;
-        setPopularChannels(popular);
+        setPopularChannels(enrichedPopular);
         setFreeContents(contentCards.filter((c) => c.accessType === 'FREE').slice(0, 3));
         setCategories(derivedCategories);
         setSelectedCategory((prev) => prev || initialCategory);
