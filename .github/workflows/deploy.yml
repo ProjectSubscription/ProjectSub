@@ -55,8 +55,8 @@ jobs:
             NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
 
             # Toss Payments
-            TOSS_PAYMENTS_SECRET_KEY=${{ secrets.TOSS_PAYMENTS_SECRET_KEY }}
-            TOSS_PAYMENTS_BASE_URL=${{ secrets.TOSS_PAYMENTS_BASE_URL }}
+            TOSS_SECRET_KEY=${{ secrets.TOSS_SECRET_KEY }}
+            TOSS_BASE_URL=${{ secrets.TOSS_BASE_URL }}
 
             # API URL
             NEXT_PUBLIC_API_URL=http://52.79.142.181:8080
