@@ -28,7 +28,7 @@ public class Coupon extends CreatedAtEntity {
     private Integer discountValue;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "refund_type", nullable = false)
+    @Column(name = "refund_type", nullable = false, columnDefinition = "VARCHAR(255) DEFAULT 'EXPIRE_ON_REFUND'")
     private RefundType refundType;
 
     @Column(name = "expired_at", nullable = false)
@@ -49,7 +49,7 @@ public class Coupon extends CreatedAtEntity {
                 .code(code)
                 .discountType(discountType)
                 .discountValue(discountValue)
-                .refundType(refundType != null ? refundType : RefundType.RESTORE_ON_REFUND)
+                .refundType(refundType != null ? refundType : RefundType.EXPIRE_ON_REFUND)
                 .expiredAt(expiredAt)
                 .channelId(channelId)
                 .build();
