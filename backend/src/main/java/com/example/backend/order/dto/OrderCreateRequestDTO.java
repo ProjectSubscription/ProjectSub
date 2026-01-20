@@ -9,4 +9,5 @@ public class OrderCreateRequestDTO {
     private Long targetId;
     private Long originalAmount; // 원래 가격
     private Long discountAmount; // 할인 적용 후 가격 (쿠폰 미적용 시 originalAmount와 동일)
+    private Long couponId; // member_coupons 테이블의 ID (쿠폰 사용 시)
 }
