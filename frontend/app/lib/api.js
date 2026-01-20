@@ -3,7 +3,7 @@
  * 백엔드 Spring Boot API와 연동
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://52.79.142.181:8080';
 
 /**
  * API 요청 헬퍼 함수

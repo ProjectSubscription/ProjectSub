@@ -169,7 +169,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:3001",
-                "http://127.0.0.1:3000"
+                "http://127.0.0.1:3000",
+                "http://52.79.142.181:3000"
         ));
 
         // 허용할 HTTP 메서드
