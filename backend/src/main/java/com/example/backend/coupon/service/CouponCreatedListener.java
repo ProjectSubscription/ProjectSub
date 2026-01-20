@@ -1,7 +1,6 @@
 package com.example.backend.coupon.service;
 
 import com.example.backend.coupon.dto.event.CouponCreatedEvent;
-import com.example.backend.member.entity.Member;
 import com.example.backend.member.service.MemberService;
 import com.example.backend.notification.dto.request.NotificationDTO;
 import com.example.backend.notification.entity.NotificationType;
@@ -28,7 +27,7 @@ public class CouponCreatedListener {
     public void handle(CouponCreatedEvent event) {
 
         // 모든 활동중인 회원들 List<Long> 으로 가져오기
-        List<Long> activeMemberIds = memberService.findAllRegisteredMemberIds();
+        List<Long> activeMemberIds = memberService.findAllNonAdminMemberIds();
 
         // 이벤트 알림 켜져있는 회원들만 다시 List<Long>으로 가져오기
         List<Long> targetMemberIds = notificationSettingService.getTargetMemberIds(activeMemberIds, NotificationType.EVENT);
