@@ -74,5 +74,32 @@ public class SettlementResponseDTO {
                 .paymentCount(paymentCount != null ? paymentCount : (details != null ? details.size() : null))
                 .build();
     }
+
+    /**
+     * 집계 데이터용 정산 DTO 생성 (월별 집계 등)
+     */
+    public static SettlementResponseDTO fromAggregated(
+            String settlementPeriod,
+            Long totalSalesAmount,
+            Long platformFeeAmount,
+            Long payoutAmount,
+            SettlementStatus status
+    ) {
+        return SettlementResponseDTO.builder()
+                .id(null)
+                .creatorId(null)
+                .creatorNickname(null)
+                .settlementPeriod(settlementPeriod)
+                .totalSalesAmount(totalSalesAmount)
+                .platformFeeAmount(platformFeeAmount)
+                .payoutAmount(payoutAmount)
+                .status(status)
+                .settledAt(null)
+                .retryCount(null)
+                .createdAt(null)
+                .details(null)
+                .paymentCount(null)
+                .build();
+    }
 }
 

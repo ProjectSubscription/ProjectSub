@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -308,6 +309,7 @@ public class SettlementService {
 
     /**
      * 최근 3개월 수익 조회 (크리에이터별)
+     * 주간 정산 데이터를 월별로 집계하여 반환
      * @param creatorId 크리에이터 ID
      * @return 최근 3개월 수익 목록 (월, 수수료, 정산상태, 최종 수익금)
      */
@@ -322,24 +324,84 @@ public class SettlementService {
                     return new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
                 });
 
-        // 최근 3개월 정산 기간 계산
+        // 최근 3개월 기간 계산 (오늘 기준 3개월 전 1일부터 오늘까지)
         LocalDate today = LocalDate.now();
-        List<String> recentMonths = List.of(
-                today.minusMonths(2).format(DateTimeFormatter.ofPattern("yyyy-MM")),
-                today.minusMonths(1).format(DateTimeFormatter.ofPattern("yyyy-MM")),
-                today.format(DateTimeFormatter.ofPattern("yyyy-MM"))
-        );
-
-        // 최근 3개월 정산 내역 조회
-        List<Settlement> settlements = recentMonths.stream()
-                .map(month -> settlementRepository.findByCreatorIdAndSettlementPeriod(creatorId, month))
-                .filter(java.util.Optional::isPresent)
-                .map(java.util.Optional::get)
+        LocalDate threeMonthsAgo = today.minusMonths(3).withDayOfMonth(1); // 3개월 전 1일
+        
+        // 최근 3개월 동안의 모든 정산 내역 조회 (주간 정산 포함)
+        List<Settlement> allSettlements = settlementRepository.findByCreatorIdOrderBySettlementPeriodDesc(creatorId);
+        
+        // 최근 3개월 기간에 속하는 정산만 필터링
+        List<Settlement> recentSettlements = allSettlements.stream()
+                .filter(settlement -> {
+                    // settlementPeriod 형식: "yyyy-MM-dd~yyyy-MM-dd"
+                    String period = settlement.getSettlementPeriod();
+                    if (period == null || !period.contains("~")) {
+                        return false;
+                    }
+                    try {
+                        String startDateStr = period.split("~")[0];
+                        LocalDate startDate = LocalDate.parse(startDateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                        return !startDate.isBefore(threeMonthsAgo);
+                    } catch (Exception e) {
+                        log.warn("정산 기간 파싱 실패 - settlementId: {}, period: {}", settlement.getId(), period);
+                        return false;
+                    }
+                })
                 .collect(Collectors.toList());
 
-        // DTO 변환 (details는 null로 설정 - 최근 3개월 수익 조회에서는 상세 내역 불필요)
-        List<SettlementResponseDTO> result = settlements.stream()
-                .map(settlement -> SettlementResponseDTO.from(settlement, null))
+        // 월별로 그룹화하여 집계
+        Map<String, List<Settlement>> settlementsByMonth = recentSettlements.stream()
+                .collect(Collectors.groupingBy(settlement -> {
+                    String period = settlement.getSettlementPeriod();
+                    String startDateStr = period.split("~")[0];
+                    LocalDate startDate = LocalDate.parse(startDateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    return startDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+                }));
+
+        // 최근 3개월 월 목록 생성 (최신순)
+        List<String> recentMonths = List.of(
+                today.format(DateTimeFormatter.ofPattern("yyyy-MM")),
+                today.minusMonths(1).format(DateTimeFormatter.ofPattern("yyyy-MM")),
+                today.minusMonths(2).format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        );
+
+        // 월별로 집계하여 DTO 생성
+        List<SettlementResponseDTO> result = recentMonths.stream()
+                .map(month -> {
+                    List<Settlement> monthSettlements = settlementsByMonth.getOrDefault(month, List.of());
+                    if (monthSettlements.isEmpty()) {
+                        return null; // 해당 월에 정산 데이터가 없으면 null 반환
+                    }
+                    
+                    // 해당 월의 모든 정산 금액 합계
+                    Long totalSalesAmount = monthSettlements.stream()
+                            .mapToLong(Settlement::getTotalSalesAmount)
+                            .sum();
+                    Long platformFeeAmount = monthSettlements.stream()
+                            .mapToLong(Settlement::getPlatformFeeAmount)
+                            .sum();
+                    Long payoutAmount = monthSettlements.stream()
+                            .mapToLong(Settlement::getPayoutAmount)
+                            .sum();
+                    
+                    // 가장 최근 정산의 상태를 사용 (또는 COMPLETED가 있으면 COMPLETED 우선)
+                    SettlementStatus status = monthSettlements.stream()
+                            .filter(s -> s.getStatus() == SettlementStatus.COMPLETED)
+                            .findFirst()
+                            .map(Settlement::getStatus)
+                            .orElse(monthSettlements.get(0).getStatus());
+                    
+                    // 집계된 데이터로 SettlementResponseDTO 생성
+                    return SettlementResponseDTO.fromAggregated(
+                            month,
+                            totalSalesAmount,
+                            platformFeeAmount,
+                            payoutAmount,
+                            status
+                    );
+                })
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
 
         log.info("최근 3개월 수익 조회 완료 - creatorId: {}, count: {}", creatorId, result.size());
