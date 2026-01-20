@@ -16,10 +16,7 @@ export function FreeContentSection({ contents, onNavigate, isAuthenticated = fal
             <div
               key={content.id}
               onClick={() =>
-                onNavigate(
-                  isAuthenticated ? 'content-detail' : 'login',
-                  isAuthenticated ? { contentId: content.id } : undefined
-                )
+                onNavigate('content-detail', { contentId: content.id })
               }
               className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer"
             >
