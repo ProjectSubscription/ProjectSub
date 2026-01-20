@@ -1,11 +1,13 @@
 package com.example.backend.member.repository;
 
 import com.example.backend.member.entity.Member;
+import com.example.backend.member.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,7 +35,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query(value = "select * from members",nativeQuery = true)
     List<Member> findAllIncludingDeleted();
 
-    @Query("select m.id from Member m")
-    List<Long> findAllIds();
+    @Query("SELECT m.id FROM Member m WHERE 'ROLE_ADMIN' NOT MEMBER OF m.roles")
+    List<Long> findAllNonAdminIds();
 
 }

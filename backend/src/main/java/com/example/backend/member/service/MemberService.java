@@ -196,11 +196,11 @@ public class MemberService {
         return members;
     }
 
-    //가입중인 유저id 값 전체 조회
+    //가입중인 유저 id 값 전체 조회 (어드민 계정 제외)
     @Transactional(readOnly = true)
-    public List<Long> findAllRegisteredMemberIds() {
+    public List<Long> findAllNonAdminMemberIds() {
         log.info("회원 id 값 전체 조회");
-        List<Long> memberIds =  memberRepository.findAllIds();
+        List<Long> memberIds =  memberRepository.findAllNonAdminIds();
 
         return memberIds;
     }
