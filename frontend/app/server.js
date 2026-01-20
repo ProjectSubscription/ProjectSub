@@ -5,7 +5,7 @@ const app = express();
 
 // CORS 설정 (cors 패키지 없이 직접 설정)
 app.use((req, res, next) => {
-  const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001'];
+  const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://52.79.142.181:3000'];
   const origin = req.headers.origin;
   
   if (allowedOrigins.includes(origin)) {
@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 const widgetSecretKey = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6";
 
 // 백엔드 API URL
-const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8080";
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://52.79.142.181:8080";
 
 app.post("/confirm", function (req, res) {
   const { paymentKey, orderId, amount } = req.body;
