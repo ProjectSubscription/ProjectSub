@@ -26,9 +26,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // 특정 회원이 특정 콘텐츠를 구매했는지 확인 (결제 완료된 주문만)
     // COUNT를 사용하지만 단일 쿼리로 실행되며 N+1 문제 발생하지 않음
-    // o.member.id와 o.content.id는 JPQL에서 자동으로 외래키를 사용하므로 JOIN 최적화됨
+    // o.contentId 필드를 직접 사용하여 LAZY 로딩 문제 방지
     @Query("SELECT COUNT(o) > 0 FROM Order o WHERE o.member.id = :memberId " +
-           "AND o.content.id = :contentId " +
+           "AND o.contentId = :contentId " +
            "AND o.orderType = :orderType " +
            "AND o.status = :status")
     boolean existsByMemberIdAndContentIdAndOrderTypeAndStatus(

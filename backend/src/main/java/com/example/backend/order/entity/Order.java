@@ -37,8 +37,13 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     private Subscription subscription;
 
-    // CONTENT 타입일 때 사용: 콘텐츠
+    // CONTENT 타입일 때 사용: 콘텐츠 ID (직접 저장)
+    @Column(name = "content_id", insertable = false, updatable = false)
+    private Long contentId;
+
+    // CONTENT 타입일 때 사용: 콘텐츠 (엔티티 관계)
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "content_id")
     private Content content;
 
     private Long originalAmount;
