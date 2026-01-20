@@ -26,13 +26,12 @@ public class SettlementBatchScheduler {
     }
 
 
-    // 10분마다 실행 (테스트용)
+    // 매월 1일 00:00:00에 실행
     // cron 표현식: 초 분 시 일 월 요일
-    // "0 */10 * * * ?" = 10분마다 실행
-    //
-    // 프로덕션에서는 "0 0 0 1 * ?" (매월 1일 00:00:00)로 변경 필요
+    // "0 0 0 1 * ?" = 매월 1일 00:00:00에 실행
+    // 전월 정산 처리를 수행
 
-    @Scheduled(cron = "0 */10 * * * ?")
+    @Scheduled(cron = "0 0 0 1 * ?")
     public void runSettlementJob() {
         try {
             log.info("정산 배치 스케줄러: 전월 정산 처리 시작");
