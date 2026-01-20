@@ -10,7 +10,16 @@ spring:
     port: ${SPRING_MAIL_PORT}
     username: ${SPRING_MAIL_USERNAME}      # 여기에 실제 Gmail 입력
     password: ${SPRING_MAIL_PASSWORD}         # 여기에 앱 비밀번호 입력
-
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
   # 데이터소스 설정 (MySQL)
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -24,16 +33,7 @@ spring:
       ddl-auto: update  # 개발 환경: update, 운영 환경: validate 또는 none
     #    show-sql: true  # 개발 환경에서 SQL 로그 출력
     show-sql: false  # 개발 환경에서 SQL 로그 출력
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+
   data:
     redis:
       host: ${SPRING_REDIS_HOST}
