@@ -1,21 +1,44 @@
 spring:
   application:
     name: backend
+  profiles:
+    active: local
+
+  # 메일 설정 (로컬 개발용)
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}      # 여기에 실제 Gmail 입력
+    password: ${MAIL_PASSWORD}         # 여기에 앱 비밀번호 입력
 
   # 데이터소스 설정 (MySQL)
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/premiumdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # JPA 설정
+    # JPA 설정
   jpa:
     hibernate:
       ddl-auto: update  # 개발 환경: update, 운영 환경: validate 또는 none
-#    show-sql: true  # 개발 환경에서 SQL 로그 출력
+    #    show-sql: true  # 개발 환경에서 SQL 로그 출력
     show-sql: false  # 개발 환경에서 SQL 로그 출력
     properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
       hibernate:
         format_sql: true  # SQL 포맷팅
         dialect: org.hibernate.dialect.MySQL8Dialect
@@ -85,8 +108,8 @@ logging:
     root: INFO
     com.example.backend: DEBUG
     org.springframework.security: DEBUG
-#    org.hibernate.SQL: DEBUG
-#    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    #    org.hibernate.SQL: DEBUG
+    #    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.hibernate.SQL: off
     org.hibernate.type.descriptor.sql.BasicBinder: off
   pattern:
