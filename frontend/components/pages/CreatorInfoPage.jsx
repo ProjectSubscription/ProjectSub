@@ -127,12 +127,12 @@ export function CreatorInfoPage({ creatorId, onNavigate }) {
             <h2 className="text-xl font-bold text-gray-900">구독자 통계</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
-            {creatorInfo.subscriberStatisticsResponse.ageDistribution && (
+            {creatorInfo.subscriberStatisticsResponse.ageGroupDistribution && (
               <div className="bg-gray-50 rounded-lg p-5 border border-gray-100">
                 <h3 className="text-sm font-semibold text-gray-700 mb-4">연령대별 구독자</h3>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart
-                    data={Object.entries(creatorInfo.subscriberStatisticsResponse.ageDistribution).map(([age, count]) => ({
+                    data={Object.entries(creatorInfo.subscriberStatisticsResponse.ageGroupDistribution).map(([age, count]) => ({
                       age: `${age}대`,
                       count: count
                     }))}

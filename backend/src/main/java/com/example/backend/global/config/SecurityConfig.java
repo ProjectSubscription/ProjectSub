@@ -40,8 +40,6 @@ public class SecurityConfig {
                 // ✅ CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // ✅ CSRF 비활성화 (H2 Console 사용 시 필수)
-                //todo: 배포 시 수정해야함.
                 .csrf(csrf -> csrf.disable()
                 )
 
@@ -63,8 +61,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/oauth/complete-profile").permitAll()
 
                         // 비밀번호 찾기/비밀번호 재설정 비로그인 허용
-                        .requestMatchers(HttpMethod.POST, "api/members/reset-password/request").permitAll()
-                        .requestMatchers(HttpMethod.POST, "api/members/reset-password").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/members/reset-password/request").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/members/reset-password").permitAll()
                         
                         // 로그인 API는 비로그인 허용
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
@@ -169,7 +167,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:3001",
-                "http://127.0.0.1:3000"
+                "http://127.0.0.1:3000",
+                "http://52.79.142.181:3000"
         ));
 
         // 허용할 HTTP 메서드

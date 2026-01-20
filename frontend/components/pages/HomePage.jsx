@@ -4,6 +4,7 @@ import React from 'react';
 import { HeroBanner } from '@/components/home/HeroBanner';
 import { TrendingChannels } from '@/components/home/TrendingChannels';
 import { NewContent } from '@/components/home/NewContent';
+import { PopularContent } from '@/components/home/PopularContent';
 import { CategoryChannels } from '@/components/home/CategoryChannels';
 import { TopReviews } from '@/components/home/TopReviews';
 import { getChannels, getContents, getChannelCategories, getTopReviews, getReviews } from '@/app/lib/api';
@@ -69,6 +70,8 @@ export function HomePage({ onNavigate }) {
   const [channelError, setChannelError] = React.useState(null);
   const [newContents, setNewContents] = React.useState([]);
   const [loadingContents, setLoadingContents] = React.useState(true);
+  const [popularContents, setPopularContents] = React.useState([]);
+  const [loadingPopularContents, setLoadingPopularContents] = React.useState(true);
   const [topReviews, setTopReviews] = React.useState([]);
   const [loadingTopReviews, setLoadingTopReviews] = React.useState(true);
   const [categoryOptions, setCategoryOptions] = React.useState([{ id: 'all', name: '전체' }]);
@@ -135,6 +138,44 @@ export function HomePage({ onNavigate }) {
     };
 
     fetchNewContents();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 인기 콘텐츠 (좋아요 수 순)
+  React.useEffect(() => {
+    let cancelled = false;
+
+    const fetchPopularContents = async () => {
+      try {
+        setLoadingPopularContents(true);
+        const response = await getContents({ 
+          sort: 'likeCount,desc', 
+          size: 12,
+          page: 0
+        });
+        const items = response?.content ?? [];
+        
+        // 발행된 콘텐츠만 필터링 (publishedAt이 null이 아니고 현재 시점 이전인 것만)
+        const now = new Date();
+        const publishedItems = items.filter(content => {
+          if (!content.publishedAt) return false;
+          const publishedAt = new Date(content.publishedAt);
+          return publishedAt <= now;
+        });
+        
+        if (!cancelled) setPopularContents(publishedItems);
+      } catch (e) {
+        if (!cancelled) {
+          setPopularContents([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingPopularContents(false);
+      }
+    };
+
+    fetchPopularContents();
     return () => {
       cancelled = true;
     };
@@ -233,6 +274,11 @@ export function HomePage({ onNavigate }) {
         <div className="text-center py-8 text-gray-600">최신 콘텐츠를 불러오는 중...</div>
       ) : newContents.length > 0 ? (
         <NewContent contents={newContents} onNavigate={onNavigate} />
+      ) : null}
+      {loadingPopularContents ? (
+        <div className="text-center py-8 text-gray-600">인기 콘텐츠를 불러오는 중...</div>
+      ) : popularContents.length > 0 ? (
+        <PopularContent contents={popularContents} onNavigate={onNavigate} />
       ) : null}
       {loadingChannels && (
         <div className="text-center -mt-6 text-gray-600">채널을 불러오는 중...</div>

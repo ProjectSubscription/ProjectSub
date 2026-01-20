@@ -2,6 +2,8 @@ package com.example.backend.order.service;
 
 import com.example.backend.content.entity.Content;
 import com.example.backend.content.repository.ContentRepository;
+import com.example.backend.global.exception.BusinessException;
+import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.member.entity.Member;
 import com.example.backend.member.service.MemberService;
 import com.example.backend.order.dto.OrderCreateRequestDTO;
@@ -84,6 +86,9 @@ public class OrderService {
         // 주문 코드 생성 (UUID 기반)
         String orderCode = generateOrderCode();
 
+        // 쿠폰 ID (member_coupons 테이블의 ID)
+        Long memberCouponId = request.getCouponId();
+
         // 주문 타입에 따라 주문 생성
         Order order;
         if (request.getOrderType() == OrderType.SUBSCRIPTION) {
@@ -93,7 +98,8 @@ public class OrderService {
                     member,
                     subscriptionPlan.getId(),
                     originalAmount,
-                    discountAmount
+                    discountAmount,
+                    memberCouponId
             );
         } else {
             // CONTENT 타입: content 저장
@@ -102,7 +108,8 @@ public class OrderService {
                     member,
                     content,
                     originalAmount,
-                    discountAmount
+                    discountAmount,
+                    memberCouponId
             );
         }
 
@@ -202,5 +209,45 @@ public class OrderService {
         // contentId 필드를 직접 사용하므로 JOIN FETCH 불필요
         Page<Order> orders = orderRepository.findByMemberIdOrderByCreatedAtDesc(memberId, pageable);
         return orders.map(order -> OrderListResponseDTO.from(order, getOrderName(order)));
+    }
+
+    /**
+     * 구독 ID로 주문 조회
+     * @param subscriptionId 구독 ID
+     * @return 주문 엔티티
+     */
+    public Order findBySubscriptionId(Long subscriptionId) {
+        return orderRepository.findBySubscriptionId(subscriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+    }
+
+    /**
+     * 구독 플랜 ID와 회원 ID로 3일 이내 Paid 상태인 주문 조회
+     * @param planId 구독 플랜 ID
+     * @param memberId 회원 ID
+     * @param subscriptionStartDate 구독 시작일
+     * @return 주문 엔티티 (Optional)
+     */
+    public java.util.Optional<Order> findPaidOrderWithin3DaysByPlanId(Long planId, Long memberId, java.time.LocalDateTime subscriptionStartDate) {
+        java.time.LocalDateTime endDate = subscriptionStartDate.plusDays(3);
+        return orderRepository.findByPlanIdAndMemberIdAndOrderTypeAndStatusAndCreatedAtBetween(
+                planId,
+                memberId,
+                com.example.backend.order.entity.OrderType.SUBSCRIPTION,
+                com.example.backend.order.entity.OrderStatus.PAID,
+                subscriptionStartDate,
+                endDate
+        );
+    }
+
+    /**
+     * 주문 ID로 주문 취소
+     * @param orderId 주문 ID
+     */
+    public void cancelOrderById(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+        order.markCancelled();
+        orderRepository.save(order);
     }
 }

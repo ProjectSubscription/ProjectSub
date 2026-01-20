@@ -19,17 +19,16 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   const [memberId, setMemberId] = React.useState(null);
   const [availableCoupons, setAvailableCoupons] = React.useState([]);
   const [couponsLoading, setCouponsLoading] = React.useState(false);
+  const [currentChannelId, setCurrentChannelId] = React.useState(null);
 
   // 현재 로그인한 사용자 정보 가져오기
   React.useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const userInfo = await getMyInfo();
-        console.log('사용자 정보:', userInfo); // 디버깅용
         // MyInfoResponse는 id 필드를 가지고 있음
         if (userInfo && (userInfo.id || userInfo.memberId)) {
           setMemberId(userInfo.id || userInfo.memberId);
-          console.log('memberId 설정:', userInfo.id || userInfo.memberId); // 디버깅용
         } else {
           console.warn('사용자 정보에 id가 없습니다:', userInfo);
         }
@@ -45,6 +44,11 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
   // 사용 가능한 쿠폰 목록 가져오기 (member_coupons에서 ISSUED 상태인 쿠폰만)
   React.useEffect(() => {
     const fetchAvailableCoupons = async () => {
+      // item이 로드되지 않았으면 쿠폰 필터링을 건너뛰기
+      if ((type === 'content' || type === 'subscription') && !item?.id) {
+        return;
+      }
+      
       try {
         setCouponsLoading(true);
         // 사용자가 발급받은 쿠폰 목록 가져오기 (ISSUED 상태인 것만 백엔드에서 반환)
@@ -62,30 +66,47 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
           if (!coupon.targets || coupon.targets.length === 0) {
             return true;
           }
-          
-          // 모든 target의 targetId가 null이면 전체 대상 쿠폰 (항상 포함)
-          const isUniversalCoupon = coupon.targets.every(target => target.targetId === null);
-          if (isUniversalCoupon) {
-            return true;
-          }
-          
-          // 결제 타입에 따라 필터링
           if (type === 'content') {
-            // 콘텐츠 결제: CONTENT 타입 쿠폰만 포함
-            return coupon.targets.some(target => target.targetType === 'CONTENT');
+            const currentContentId = item?.id ? (typeof item.id === 'string' ? parseInt(item.id, 10) : item.id) : null;
+            return coupon.targets.some(target => {
+              if (target.targetType !== 'CONTENT') {
+                return false;
+              }
+              if (target.targetId === null) {
+                return true;
+              }
+              if (currentContentId && target.targetId === currentContentId) {
+                return true;
+              }
+              if (currentChannelId && target.targetId === currentChannelId) {
+                return true;
+              }
+              return false;
+            });
           } else if (type === 'subscription') {
-            // 구독 결제: SUBSCRIPTION 타입 쿠폰만 포함
-            return coupon.targets.some(target => target.targetType === 'SUBSCRIPTION');
+            const currentPlanId = item?.id ? (typeof item.id === 'string' ? parseInt(item.id, 10) : item.id) : null;
+            return coupon.targets.some(target => {
+              if (target.targetType !== 'SUBSCRIPTION') {
+                return false;
+              }
+              if (target.targetId === null) {
+                return true;
+              }
+              if (currentPlanId && target.targetId === currentPlanId) {
+                return true;
+              }
+              if (currentChannelId && target.targetId === currentChannelId) {
+                return true;
+              }
+              return false;
+            });
           }
           
-          // 타입이 명확하지 않은 경우 모든 쿠폰 포함
           return true;
         });
         
-        console.log('사용 가능한 쿠폰 목록 (필터링 후):', filteredCoupons); // 디버깅용
         setAvailableCoupons(filteredCoupons);
       } catch (err) {
-        console.error('쿠폰 목록 로딩 실패:', err);
         // 로그인하지 않은 경우에도 에러를 표시하지 않고 빈 배열로 설정
         setAvailableCoupons([]);
       } finally {
@@ -94,7 +115,7 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
     };
 
     fetchAvailableCoupons();
-  }, [type]);
+  }, [type, currentChannelId, item?.id]);
 
   // 백엔드에서 아이템 정보 가져오기
   React.useEffect(() => {
@@ -105,19 +126,15 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
           // 콘텐츠 정보 가져오기
           const id = typeof itemId === 'string' ? parseInt(itemId, 10) : itemId;
           const contentData = await getContent(id);
-          console.log('콘텐츠 데이터:', contentData); // 디버깅용
-          
+
           // 채널 정보 가져오기
           let channelName = '';
           const contentChannelId = contentData.channelId;
-          console.log('콘텐츠의 채널 ID:', contentChannelId); // 디버깅용
-          
+
           if (contentChannelId) {
             try {
               const channelData = await getChannel(contentChannelId);
-              console.log('채널 데이터:', channelData); // 디버깅용
               channelName = channelData.channelName || channelData.title || channelData.name || '';
-              console.log('채널 이름:', channelName); // 디버깅용
             } catch (err) {
               console.warn('채널 정보 조회 실패:', err);
             }
@@ -134,7 +151,11 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
             thumbnailUrl: contentData.mediaUrl || contentData.thumbnailUrl,
             accessType: contentData.accessType,
             channelName: channelName,
+            channelId: contentChannelId, // 채널 ID 저장
           });
+          
+          // 채널 ID 저장 (쿠폰 필터링용)
+          setCurrentChannelId(contentChannelId);
         } else if (type === 'subscription' && channelId && itemId) {
           // 구독 플랜 정보 가져오기
           const numericChannelId = typeof channelId === 'string' ? parseInt(channelId, 10) : channelId;
@@ -150,9 +171,7 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
               let channelName = '';
               try {
                 const channelData = await getChannel(numericChannelId);
-                console.log('채널 데이터 (구독):', channelData); // 디버깅용
                 channelName = channelData.channelName || channelData.title || channelData.name || '';
-                console.log('채널 이름 (구독):', channelName); // 디버깅용
               } catch (err) {
                 console.warn('채널 정보 조회 실패:', err);
               }
@@ -167,11 +186,13 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
                 channelId: numericChannelId,
                 channelName: channelName,
               });
+              
+              // 채널 ID 저장 (쿠폰 필터링용)
+              setCurrentChannelId(numericChannelId);
             } else {
               throw new Error('구독 플랜을 찾을 수 없습니다.');
             }
           } catch (err) {
-            console.error('구독 플랜 정보 로딩 실패:', err);
             // 채널 정보로 fallback
             const channelData = await getChannel(numericChannelId);
             const fallbackChannelName = channelData.channelName || channelData.title || channelData.name || '';
@@ -183,6 +204,9 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
               channelId: numericChannelId,
               channelName: fallbackChannelName,
             });
+            
+            // 채널 ID 저장 (쿠폰 필터링용)
+            setCurrentChannelId(numericChannelId);
           }
         } else {
           // fallback: mockData 사용
@@ -192,7 +216,6 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
           }
         }
       } catch (err) {
-        console.error('아이템 정보 로딩 실패:', err);
         setError('결제 정보를 불러오는데 실패했습니다.');
       } finally {
         setItemLoading(false);
@@ -272,11 +295,9 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
           alert(validationResult?.errorCode || '쿠폰을 사용할 수 없습니다.');
         }
       } catch (validateErr) {
-        console.error('쿠폰 검증 실패:', validateErr);
         alert(validateErr.message || '쿠폰 검증 중 오류가 발생했습니다.');
       }
     } catch (err) {
-      console.error('쿠폰 적용 중 오류:', err);
       alert('쿠폰 적용 중 오류가 발생했습니다.');
     }
   };

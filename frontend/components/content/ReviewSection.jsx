@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Star, ThumbsUp, CornerDownRight, MessageCircle } from 'lucide-react';
-import { createReviewComment, getReviewComments, toggleReviewLike } from '@/app/lib/api';
+import { MessageSquare, Star, ThumbsUp, CornerDownRight, MessageCircle, Trash2 } from 'lucide-react';
+import { createReviewComment, getReviewComments, toggleReviewLike, deleteReview, deleteComment } from '@/app/lib/api';
 
 // Recursive Comment Item Component
-function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
+function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate, onDelete }) {
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleReplyClick = () => {
     if (!currentUser) {
@@ -25,6 +26,28 @@ function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
     setReplyText('');
   };
 
+  const handleDelete = async () => {
+    if (!confirm('댓글을 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteComment(comment.id);
+      if (onDelete) {
+        onDelete();
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      alert(error.message || '댓글 삭제에 실패했습니다.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const isMyComment = currentUser && comment.memberId === currentUser.id;
+  const isDeleted = comment.isDeleted === true;
+
   return (
     <div className={`mt-3 ${depth > 0 ? 'ml-6 border-l-2 border-gray-100 pl-4' : ''}`}>
       <div className="bg-gray-50 rounded-lg p-3">
@@ -35,19 +58,35 @@ function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
               {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ''}
             </span>
           </div>
-          <button 
-            onClick={handleReplyClick}
-            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-          >
-            <MessageCircle className="w-3 h-3" />
-            답글
-          </button>
+          <div className="flex items-center gap-2">
+            {!isDeleted && currentUser && (
+              <button 
+                onClick={handleReplyClick}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+              >
+                <MessageCircle className="w-3 h-3" />
+                답글
+              </button>
+            )}
+            {isMyComment && !isDeleted && (
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1 disabled:opacity-50"
+              >
+                <Trash2 className="w-3 h-3" />
+                삭제
+              </button>
+            )}
+          </div>
         </div>
-        <p className="text-sm text-gray-700">{comment.comment}</p>
+        <p className={`text-sm ${isDeleted ? 'text-gray-400 italic' : 'text-gray-700'}`}>
+          {isDeleted ? '삭제된 댓글입니다.' : comment.comment}
+        </p>
       </div>
 
       {/* Reply Form */}
-      {isReplying && (
+      {isReplying && !isDeleted && (
         <form onSubmit={handleReplySubmit} className="mt-2 flex gap-2">
           <div className="relative flex-1">
             <CornerDownRight className="absolute top-3 left-3 w-4 h-4 text-gray-400" />
@@ -90,6 +129,7 @@ function CommentItem({ comment, onReply, depth = 0, currentUser, onNavigate }) {
               depth={depth + 1}
               currentUser={currentUser}
               onNavigate={onNavigate}
+              onDelete={onDelete}
             />
           ))}
         </div>
@@ -106,6 +146,7 @@ function ReviewItem({ review, contentId, currentUser, onNavigate, onReviewUpdate
   const [isLiked, setIsLiked] = useState(review.isLiked || false);
   const [likeCount, setLikeCount] = useState(review.likeCount || 0);
   const [isLiking, setIsLiking] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (review.id) {
@@ -207,6 +248,40 @@ function ReviewItem({ review, contentId, currentUser, onNavigate, onReviewUpdate
     }
   };
 
+  const handleDeleteReview = async () => {
+    if (comments.length > 0) {
+      alert('댓글이 있는 리뷰는 삭제할 수 없습니다.');
+      return;
+    }
+
+    if (!confirm('리뷰를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      const id = typeof contentId === 'string' ? parseInt(contentId, 10) : contentId;
+      await deleteReview(id, review.id);
+      
+      // Notify parent component to update reviews list
+      if (onReviewUpdate) {
+        onReviewUpdate();
+      }
+    } catch (error) {
+      console.error('Failed to delete review:', error);
+      alert(error.message || '리뷰 삭제에 실패했습니다.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCommentDelete = () => {
+    // 댓글 삭제 후 댓글 목록 새로고침
+    fetchComments();
+  };
+
+  const isMyReview = currentUser && review.memberId === currentUser.id;
+
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm">
       <div className="flex items-start justify-between mb-3">
@@ -230,9 +305,24 @@ function ReviewItem({ review, contentId, currentUser, onNavigate, onReviewUpdate
             </div>
           </div>
         </div>
-        <span className="text-sm text-gray-500">
-          {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">
+            {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
+          </span>
+          {isMyReview && (
+            <button
+              onClick={handleDeleteReview}
+              disabled={isDeleting || comments.length > 0}
+              className={`text-sm text-red-600 hover:text-red-800 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed ${
+                comments.length > 0 ? 'cursor-not-allowed' : ''
+              }`}
+              title={comments.length > 0 ? '댓글이 있는 리뷰는 삭제할 수 없습니다.' : '리뷰 삭제'}
+            >
+              <Trash2 className="w-4 h-4" />
+              삭제
+            </button>
+          )}
+        </div>
       </div>
       <p className="text-gray-700 mb-4">{review.comment}</p>
       
@@ -266,6 +356,7 @@ function ReviewItem({ review, contentId, currentUser, onNavigate, onReviewUpdate
                 onReply={(text, parentId) => handleSubmitComment(text, parentId)} 
                 currentUser={currentUser}
                 onNavigate={onNavigate}
+                onDelete={handleCommentDelete}
               />
             ))}
           </div>

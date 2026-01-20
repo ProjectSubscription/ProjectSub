@@ -3,6 +3,9 @@ package com.example.backend.subscription.service;
 import com.example.backend.channel.repository.ChannelRepository;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
+import com.example.backend.order.entity.Order;
+import com.example.backend.order.service.OrderService;
+import com.example.backend.payment.service.PaymentService;
 import com.example.backend.subscription.dto.response.SubscriptionResponse;
 import com.example.backend.subscription.entity.PlanType;
 import com.example.backend.subscription.entity.Subscription;
@@ -16,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +28,8 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final ChannelRepository channelRepository;
+    private final OrderService orderService;
+    private final PaymentService paymentService;
 
     public Long subscribe(Long memberId, Long channelId, Long planId) {
         if(subscriptionRepository.existsByMemberIdAndChannelIdAndStatus(memberId, channelId, SubscriptionStatus.ACTIVE)) {
@@ -83,21 +89,36 @@ public class SubscriptionService {
         LocalDateTime startedAt = subscription.getStartedAt();
         long daysSinceStart = java.time.Duration.between(startedAt, now).toDays();
         
+        // 구독 플랜 ID와 회원 ID로 3일 이내 Paid 상태인 주문 찾기
+        Optional<Order> orderOpt = orderService.findPaidOrderWithin3DaysByPlanId(plan.getId(), memberId, startedAt);
+        
         if (daysSinceStart <= 3) {
-            // 3일 이내: 바로 취소
+            // 3일 이내: 구독 취소, 결제 취소, 주문 취소
             subscription.cancel();
+            subscriptionRepository.save(subscription);
+            
+            if (orderOpt.isPresent()) {
+                Order order = orderOpt.get();
+                paymentService.cancelPaymentByOrderId(order.getId());
+                orderService.cancelOrderById(order.getId());
+            }
         } else {
             // 3일 이후
             if (plan.getPlanType() == PlanType.MONTHLY) {
                 // 월간 구독: 취소 불가
                 throw new BusinessException(ErrorCode.MONTHLY_SUBSCRIPTION_CANCEL_PERIOD_EXPIRED);
             } else {
-                // 연간 구독: 시작일로부터 1개월 후로 만료일 설정하고 취소
+                // 연간 구독: 시작일로부터 1개월 후로 만료일 설정하고 결제 취소
                 subscription.cancelWithExtendedExpiry();
+                subscriptionRepository.save(subscription);
+                
+                if (orderOpt.isPresent()) {
+                    Order order = orderOpt.get();
+                    paymentService.cancelPaymentByOrderId(order.getId());
+                    orderService.cancelOrderById(order.getId());
+                }
             }
         }
-        
-        subscriptionRepository.save(subscription);
     }
 
     @Transactional(readOnly = true)

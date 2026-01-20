@@ -9,8 +9,8 @@ const DISCOUNT_TYPES = [
 ];
 
 const REFUND_TYPES = [
-  { value: 'RESTORE_ON_REFUND', label: '환불 시 쿠폰 복원' },
   { value: 'EXPIRE_ON_REFUND', label: '환불 시 쿠폰 소멸' },
+  { value: 'RESTORE_ON_REFUND', label: '환불 시 쿠폰 복원' },
 ];
 
 const TARGET_TYPES = [
@@ -29,7 +29,7 @@ const getCouponStatus = (expiredAt) => {
 export default function AdminCouponsPage() {
   const [discountType, setDiscountType] = useState('RATE');
   const [discountValue, setDiscountValue] = useState('');
-  const [refundType, setRefundType] = useState('RESTORE_ON_REFUND');
+  const [refundType, setRefundType] = useState('EXPIRE_ON_REFUND');
   const [expiredAt, setExpiredAt] = useState('');
 
   const [targetType, setTargetType] = useState('');

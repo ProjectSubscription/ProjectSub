@@ -104,11 +104,18 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 콘텐츠에 대한 리뷰를 작성했습니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_ACCESS_DENIED(HttpStatus.FORBIDDEN, "리뷰를 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다."),
+    REVIEW_HAS_COMMENTS(HttpStatus.BAD_REQUEST, "댓글이 있는 리뷰는 삭제할 수 없습니다."),
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다."),
 
     /* ===== Content Review Comment ===== */
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
-    COMMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "댓글을 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다.");
+    COMMENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "댓글을 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다."),
+
+    /* ===== Order ===== */
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
+
+    /* ===== Payment ===== */
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다.");
 
 
     private final HttpStatus status;

@@ -22,7 +22,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class PasswordResetService {
-    //todo: 상수 env 파일로 옮기기, AWS SES
     private final JavaMailSender mailSender;  // 이메일 발송용
 
     @Value("${PASSWORD_RESET_LINK}")
@@ -58,7 +57,7 @@ public class PasswordResetService {
 
         // 3. 이메일 발송
         //String resetLink = "http://localhost:3000/password-reset?token=" + token;
-        String resetLinkWithToken = resetLink + "?token" + token;
+        String resetLinkWithToken = resetLink + "?token=" + token;
         sendEmail(member.getEmail(), resetLinkWithToken);
 
         log.info("비밀번호 재설정 이메일 발송: {}", member.getEmail());

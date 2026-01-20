@@ -1,5 +1,6 @@
 package com.example.backend.payment.service;
 
+import com.example.backend.coupon.service.CouponUseService;
 import com.example.backend.order.entity.Order;
 import com.example.backend.order.entity.OrderStatus;
 import com.example.backend.order.service.OrderService;
@@ -38,6 +39,7 @@ public class PaymentService {
     private final OrderService orderService;
     private final PaymentRepository paymentRepository;
     private final SettlementService settlementService;
+    private final CouponUseService couponUseService;
 
     /**
      * 결제 승인 처리
@@ -104,6 +106,15 @@ public class PaymentService {
 
         // 주문 상태를 PAID로 변경
         orderService.markOrderAsPaid(order.getOrderCode());
+
+        // 쿠폰 사용 처리
+        try {
+            couponUseService.useCoupon(order, payment);
+        } catch (Exception e) {
+            // 쿠폰 사용 처리 실패해도 결제는 성공 처리 (로깅만 하고 예외는 전파하지 않음)
+            log.error("결제 완료 후 쿠폰 사용 처리 중 오류 발생 - orderCode={}, paymentId={}, error: {}", 
+                    order.getOrderCode(), payment.getId(), e.getMessage(), e);
+        }
 
         // 정산 내역 생성 또는 업데이트
         try {
@@ -246,5 +257,21 @@ public class PaymentService {
                 .requestedAt(payment.getRequestedAt())
                 .approvedAt(payment.getApprovedAt())
                 .build();
+    }
+
+    /**
+     * 주문 ID로 결제 취소
+     * @param orderId 주문 ID
+     */
+    public void cancelPaymentByOrderId(Long orderId) {
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("결제를 찾을 수 없습니다."));
+
+        PaymentCancelRequestDTO cancelRequest = new PaymentCancelRequestDTO();
+        cancelRequest.setPaymentKey(payment.getPaymentKey());
+        cancelRequest.setCancelReason("구독 취소");
+        cancelRequest.setCancelAmount(payment.getAmount());
+        
+        cancelPayment(cancelRequest);
     }
 }

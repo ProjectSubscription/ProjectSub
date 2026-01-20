@@ -3,7 +3,7 @@ import { VideoPlayer } from '@/components/content/VideoPlayer';
 import { ContentInfo } from '@/components/content/ContentInfo';
 import { ReviewSection } from '@/components/content/ReviewSection';
 import { ContentSidebar } from '@/components/content/ContentSidebar';
-import { getContent, getChannel, getFeaturedContents, likeContent, unlikeContent, createReview, getReviews } from '@/app/lib/api';
+import { getContent, getChannel, getFeaturedContents, likeContent, unlikeContent, createReview, getReviews, getContents } from '@/app/lib/api';
 import { useUser } from '@/components/contexts/UserContext';
 
 export function ContentDetailPage({ contentId, onNavigate }) {
@@ -16,6 +16,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
   const [content, setContent] = React.useState(null);
   const [channel, setChannel] = React.useState(null);
   const [relatedContents, setRelatedContents] = React.useState([]);
+  const [channelAverageRating, setChannelAverageRating] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
 
@@ -56,6 +57,44 @@ export function ContentDetailPage({ contentId, onNavigate }) {
             } catch (err) {
               console.warn('관련 콘텐츠 조회 실패:', err);
               setRelatedContents([]);
+            }
+
+            // 채널 평점 계산 (채널의 모든 콘텐츠 리뷰 평균)
+            try {
+              const contentsResponse = await getContents({ channelId: contentData.channelId });
+              const channelContents = contentsResponse?.content || [];
+              
+              if (channelContents.length > 0) {
+                const contentIds = channelContents
+                  .map((c) => c.contentId || c.id)
+                  .filter((id) => id !== undefined && id !== null);
+
+                const reviewTargets = contentIds.slice(0, 10);
+                const reviewResponses = await Promise.all(
+                  reviewTargets.map((contentId) =>
+                    getReviews(contentId).catch((err) => {
+                      console.warn('리뷰 목록 조회 실패:', err);
+                      return [];
+                    })
+                  )
+                );
+
+                const allReviews = reviewResponses.flat().map((review) => ({
+                  rating: review?.rating ?? 0,
+                }));
+
+                const reviewCount = allReviews.length;
+                const averageRating = reviewCount
+                  ? allReviews.reduce((sum, review) => sum + (review.rating || 0), 0) / reviewCount
+                  : 0;
+
+                setChannelAverageRating(averageRating);
+              } else {
+                setChannelAverageRating(0);
+              }
+            } catch (err) {
+              console.warn('채널 평점 계산 실패:', err);
+              setChannelAverageRating(0);
             }
           } catch (err) {
             console.warn('채널 정보 조회 실패:', err);
@@ -283,6 +322,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
             channel={channelForSidebar}
             relatedContents={relatedContentsForSidebar}
             onNavigate={onNavigate}
+            averageRating={channelAverageRating}
           />
         )}
       </div>

@@ -335,7 +335,7 @@ export default function AdminSettlementsPage() {
                 value={filters.creatorNickname}
                 onChange={(e) => handleFilterChange('creatorNickname', e.target.value)}
                 placeholder="크리에이터명 검색..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400"
               />
             </div>
           </div>
@@ -348,7 +348,7 @@ export default function AdminSettlementsPage() {
               value={filters.settlementPeriod}
               onChange={(e) => handleFilterChange('settlementPeriod', e.target.value)}
               placeholder="YYYY-MM (예: 2024-12)"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400"
             />
           </div>
           <div>
@@ -358,7 +358,7 @@ export default function AdminSettlementsPage() {
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             >
               <option value="">전체</option>
               <option value="READY">대기중</option>
