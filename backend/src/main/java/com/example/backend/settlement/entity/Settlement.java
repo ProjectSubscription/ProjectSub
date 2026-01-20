@@ -24,8 +24,8 @@ public class Settlement extends CreatedAtEntity {
     @JoinColumn(name = "creator_id", nullable = false)
     private Creator creator;
 
-    /** 정산 기간 (YYYY-MM 형식) */
-    @Column(name = "settlement_period", nullable = false, length = 7)
+    /** 정산 기간 (YYYY-MM-DD~YYYY-MM-DD 형식, 주간 정산) */
+    @Column(name = "settlement_period", nullable = false, length = 21)
     private String settlementPeriod;
 
     /** 해당 기간 전체 매출 */
@@ -85,6 +85,10 @@ public class Settlement extends CreatedAtEntity {
         this.status = SettlementStatus.FAILED;
     }
 
+    public void markReady() {
+        this.status = SettlementStatus.READY;
+    }
+
     /**
      * 재시도 횟수 증가 및 마지막 재시도 시점 업데이트
      */
@@ -106,6 +110,16 @@ public class Settlement extends CreatedAtEntity {
      */
     public void addSalesAmount(Long additionalAmount) {
         this.totalSalesAmount += additionalAmount;
+        this.platformFeeAmount = (long) (this.totalSalesAmount * 0.1);
+        this.payoutAmount = this.totalSalesAmount - this.platformFeeAmount;
+    }
+
+    /**
+     * 정산 금액 차감 (결제 취소 시 매출 금액 감소)
+     * @param cancelledAmount 취소되는 결제 금액
+     */
+    public void subtractSalesAmount(Long cancelledAmount) {
+        this.totalSalesAmount = Math.max(0, this.totalSalesAmount - cancelledAmount);
         this.platformFeeAmount = (long) (this.totalSalesAmount * 0.1);
         this.payoutAmount = this.totalSalesAmount - this.platformFeeAmount;
     }
