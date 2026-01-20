@@ -166,6 +166,15 @@ public class PaymentService {
         Order order = payment.getOrder();
         // Order 엔티티에 취소 상태가 있다면 추가 필요
 
+        // 정산 취소 처리
+        try {
+            settlementService.handleCancelledPayment(payment);
+        } catch (Exception e) {
+            // 정산 취소 처리 실패해도 결제 취소는 성공 처리 (로깅만 하고 예외는 전파하지 않음)
+            log.error("결제 취소 후 정산 취소 처리 중 오류 발생 - paymentId: {}, error: {}",
+                    payment.getId(), e.getMessage(), e);
+        }
+
         log.info("결제 취소 완료: paymentKey={}, orderCode={}",
                 payment.getPaymentKey(), order.getOrderCode());
 
