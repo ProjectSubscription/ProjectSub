@@ -596,6 +596,13 @@ export async function toggleReviewLike(contentId, reviewId) {
 }
 
 /**
+ * 리뷰 삭제
+ */
+export async function deleteReview(contentId, reviewId) {
+  return apiDelete(`/api/contents/${contentId}/reviews/${reviewId}`);
+}
+
+/**
  * 가장 추천이 많은 리뷰 조회 (콘텐츠 정보 포함)
  */
 export async function getTopReviews(limit = 5) {
