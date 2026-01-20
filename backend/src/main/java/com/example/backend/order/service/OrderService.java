@@ -52,17 +52,15 @@ public class OrderService {
             throw new IllegalArgumentException("원래 가격이 올바르지 않습니다.");
         }
         
-        // discountAmount가 null이면 originalAmount와 동일하게 처리 (할인 없음)
-        if (discountAmount == null) {
-            discountAmount = originalAmount;
-        }
-        
-        // discountAmount 검증
-        if (discountAmount <= 0) {
-            throw new IllegalArgumentException("할인 적용 가격이 올바르지 않습니다.");
-        }
-        if (discountAmount > originalAmount) {
-            throw new IllegalArgumentException("할인 적용 가격은 원래 가격보다 클 수 없습니다.");
+        // discountAmount가 null이면 할인 없음 (null로 저장)
+        // discountAmount가 있으면 검증
+        if (discountAmount != null) {
+            if (discountAmount <= 0) {
+                throw new IllegalArgumentException("할인 적용 가격이 올바르지 않습니다.");
+            }
+            if (discountAmount > originalAmount) {
+                throw new IllegalArgumentException("할인 적용 가격은 원래 가격보다 클 수 없습니다.");
+            }
         }
 
         String orderName = "";
@@ -110,7 +108,9 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        return new OrderCreateResponseDTO(orderCode, discountAmount, orderName);
+        // 응답에는 discountAmount가 null이면 originalAmount 사용 (결제 금액 표시용)
+        Long responseAmount = discountAmount != null ? discountAmount : originalAmount;
+        return new OrderCreateResponseDTO(orderCode, responseAmount, orderName);
     }
 
     /**
@@ -185,6 +185,7 @@ public class OrderService {
      * @return 주문 목록
      */
     public List<OrderListResponseDTO> getOrdersByMemberId(Long memberId) {
+        // contentId 필드를 직접 사용하므로 JOIN FETCH 불필요
         List<Order> orders = orderRepository.findByMemberIdOrderByCreatedAtDesc(memberId);
         return orders.stream()
                 .map(order -> OrderListResponseDTO.from(order, getOrderName(order)))
@@ -198,6 +199,7 @@ public class OrderService {
      * @return 주문 목록 (페이징)
      */
     public Page<OrderListResponseDTO> getOrdersByMemberId(Long memberId, Pageable pageable) {
+        // contentId 필드를 직접 사용하므로 JOIN FETCH 불필요
         Page<Order> orders = orderRepository.findByMemberIdOrderByCreatedAtDesc(memberId, pageable);
         return orders.map(order -> OrderListResponseDTO.from(order, getOrderName(order)));
     }

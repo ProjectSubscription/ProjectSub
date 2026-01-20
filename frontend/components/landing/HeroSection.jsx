@@ -26,7 +26,9 @@ export function HeroSection({ onNavigate, isAuthenticated = false }) {
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
-                onClick={() => onNavigate(isAuthenticated ? 'channels' : 'login')}
+                onClick={() => {
+                  window.location.href = '/contents?accessType=FREE';
+                }}
                 className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-lg font-medium hover:bg-white hover:text-blue-600 transition-colors"
               >
                 무료 콘텐츠 둘러보기
