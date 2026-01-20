@@ -1,7 +1,7 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 
-export function ContentSidebar({ channel, relatedContents, onNavigate }) {
+export function ContentSidebar({ channel, relatedContents, onNavigate, averageRating = 0 }) {
   const handleChannelClick = () => {
     if (channel?.id) {
       onNavigate('channel-detail', { channelId: channel.id });
@@ -35,7 +35,7 @@ export function ContentSidebar({ channel, relatedContents, onNavigate }) {
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
             <Star className="w-4 h-4 fill-current text-yellow-500" />
-            <span>4.8 평점</span>
+            <span>{averageRating > 0 ? averageRating.toFixed(1) : '0.0'} 평점</span>
             <span>•</span>
             <span>{channel.subscriberCount.toLocaleString()} 구독자</span>
           </div>

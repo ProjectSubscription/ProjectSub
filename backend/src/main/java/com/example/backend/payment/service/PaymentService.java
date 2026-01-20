@@ -258,4 +258,20 @@ public class PaymentService {
                 .approvedAt(payment.getApprovedAt())
                 .build();
     }
+
+    /**
+     * 주문 ID로 결제 취소
+     * @param orderId 주문 ID
+     */
+    public void cancelPaymentByOrderId(Long orderId) {
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("결제를 찾을 수 없습니다."));
+
+        PaymentCancelRequestDTO cancelRequest = new PaymentCancelRequestDTO();
+        cancelRequest.setPaymentKey(payment.getPaymentKey());
+        cancelRequest.setCancelReason("구독 취소");
+        cancelRequest.setCancelAmount(payment.getAmount());
+        
+        cancelPayment(cancelRequest);
+    }
 }
