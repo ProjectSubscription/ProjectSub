@@ -6,10 +6,10 @@ spring:
 
   # 메일 설정 (로컬 개발용)
   mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
-    username: ${MAIL_USERNAME}      # 여기에 실제 Gmail 입력
-    password: ${MAIL_PASSWORD}         # 여기에 앱 비밀번호 입력
+    host: ${SPRING_MAIL_HOST}
+    port: ${SPRING_MAIL_PORT}
+    username: ${SPRING_MAIL_USERNAME}      # 여기에 실제 Gmail 입력
+    password: ${SPRING_MAIL_PASSWORD}         # 여기에 앱 비밀번호 입력
 
   # 데이터소스 설정 (MySQL)
   datasource:
@@ -36,9 +36,9 @@ spring:
           writetimeout: 5000
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
+      host: ${SPRING_REDIS_HOST}
+      port: ${SPRING_REDIS_PORT}
+      password: ${SPRING_REDIS_PASSWORD}
       hibernate:
         format_sql: true  # SQL 포맷팅
         dialect: org.hibernate.dialect.MySQL8Dialect
@@ -58,14 +58,14 @@ spring:
       client:
         registration:
           google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-id: ${SPRING_GOOGLE_CLIENT_ID}
+            client-secret: ${SPRING_GOOGLE_CLIENT_SECRET}
             scope:
               - email
 
           naver:
-            client-id: ${NAVER_CLIENT_ID}
-            client-secret: ${NAVER_CLIENT_SECRET}
+            client-id: ${SPRING_NAVER_CLIENT_ID}
+            client-secret: ${SPRING_NAVER_CLIENT_SECRET}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/naver"
@@ -73,8 +73,8 @@ spring:
               - email
 
           kakao:
-            client-id: ${KAKAO_CLIENT_ID}
-            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-id: ${SPRING_KAKAO_CLIENT_ID}
+            client-secret: ${SPRING_KAKAO_CLIENT_SECRET}
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
@@ -118,5 +118,5 @@ logging:
 
 toss:
   payments:
-    secret-key: ${TOSS_SECRET_KEY}  # 환경변수에서 가져오거나 기본값 사용
-    base-url: ${TOSS_BASE_URL}  # 테스트: https://api.tosspayments.com, 운영: https://api.tosspayments.com
+    secret-key: ${SPRING_TOSS_SECRET_KEY}  # 환경변수에서 가져오거나 기본값 사용
+    base-url: ${SPRING_TOSS_BASE_URL}  # 테스트: https://api.tosspayments.com, 운영: https://api.tosspayments.com
