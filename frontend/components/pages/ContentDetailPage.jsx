@@ -32,7 +32,7 @@ export function ContentDetailPage({ contentId, onNavigate }) {
           throw new Error('유효하지 않은 콘텐츠 ID입니다.');
         }
 
-        // 콘텐츠 상세 조회
+        // 콘텐츠 상세 조회 (무료 콘텐츠는 인증 없이도 조회 가능)
         const contentData = await getContent(id);
         setContent(contentData);
         setIsLiked(contentData.isLiked || false);
@@ -72,7 +72,14 @@ export function ContentDetailPage({ contentId, onNavigate }) {
         }
       } catch (err) {
         console.error('콘텐츠 로딩 실패:', err);
-        setError(err.message || '콘텐츠를 불러오는데 실패했습니다.');
+        // 인증 관련 에러는 무시 (무료 콘텐츠는 인증 없이도 조회 가능)
+        if (!err.message || (!err.message.includes('인증') && !err.message.includes('로그인') && !err.message.includes('401'))) {
+          setError(err.message || '콘텐츠를 불러오는데 실패했습니다.');
+        } else {
+          // 인증 에러는 무시 (무료 콘텐츠일 수 있음)
+          console.warn('인증 없이 콘텐츠 조회 실패, 계속 진행:', err.message);
+          setError(null);
+        }
       } finally {
         setLoading(false);
       }

@@ -307,12 +307,13 @@ export function PaymentPage({ type, itemId, channelId, onNavigate }) {
       }
 
       // 주문 생성 API 호출
-      // discountAmount에는 할인 적용 후 최종 가격(finalAmount)을 전달
+      // discountAmount에는 쿠폰이 적용된 경우에만 할인 적용 후 최종 가격(finalAmount)을 전달
+      // 쿠폰이 없으면 null로 전달 (할인 없음)
       const requestBody = {
         orderType: type.toUpperCase(), // "subscription" -> "SUBSCRIPTION", "content" -> "CONTENT"
         targetId: targetId,
         originalAmount: baseAmount,
-        discountAmount: finalAmount, // 할인 적용 후 최종 가격
+        discountAmount: appliedCoupon ? finalAmount : null, // 쿠폰이 있을 때만 할인 적용 후 최종 가격
         couponId: appliedCoupon ? appliedCoupon.id : null, // 쿠폰 ID 추가
       };
       
