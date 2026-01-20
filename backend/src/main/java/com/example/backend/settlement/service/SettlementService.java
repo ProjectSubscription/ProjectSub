@@ -26,6 +26,9 @@ import com.example.backend.order.entity.OrderType;
 import com.example.backend.payment.entity.Payment;
 import com.example.backend.payment.entity.PaymentStatus;
 import com.example.backend.payment.repository.PaymentRepository;
+import com.example.backend.subscription.entity.SubscriptionPlan;
+import com.example.backend.subscription.repository.SubscriptionPlanRepository;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -43,6 +46,7 @@ public class SettlementService {
     private final SettlementPayoutService settlementPayoutService;
     private final PaymentRepository paymentRepository;
     private final ChannelRepository channelRepository;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     @Value("${settlement.payout.max-retry-count:3}")
     private int maxRetryCount;
@@ -189,11 +193,18 @@ public class SettlementService {
     public SettlementStatisticsResponseDTO getSettlementStatistics() {
         log.info("정산 통계 조회");
 
-        // 이번 달 계산
-        String thisMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        // 이번 주 계산 (이번 주 월요일 ~ 일요일)
+        LocalDate today = LocalDate.now();
+        DayOfWeek todayDayOfWeek = today.getDayOfWeek();
+        int daysToSubtract = todayDayOfWeek.getValue() == 1 ? 0 : todayDayOfWeek.getValue() - 1;
+        LocalDate thisWeekMonday = today.minusDays(daysToSubtract);
+        LocalDate thisWeekSunday = thisWeekMonday.plusDays(6);
+        String thisWeekPeriod = thisWeekMonday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + 
+                                "~" + 
+                                thisWeekSunday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 
         Long totalSettlementAmount = settlementRepository.getTotalSettlementAmount();
-        Long thisMonthSettlementAmount = settlementRepository.getThisMonthSettlementAmount(thisMonth);
+        Long thisWeekSettlementAmount = settlementRepository.getThisWeekSettlementAmount(thisWeekPeriod);
         Long readyCount = settlementRepository.countByStatus(SettlementStatus.READY);
         Long completedCount = settlementRepository.countByStatus(SettlementStatus.COMPLETED);
         Long failedCount = settlementRepository.countByStatus(SettlementStatus.FAILED);
@@ -201,7 +212,7 @@ public class SettlementService {
 
         return SettlementStatisticsResponseDTO.create(
                 totalSettlementAmount,
-                thisMonthSettlementAmount,
+                thisWeekSettlementAmount,
                 readyCount,
                 completedCount,
                 failedCount,
@@ -352,11 +363,21 @@ public class SettlementService {
             return;
         }
 
-        // 정산 기간 계산 (결제 승인일 기준)
+        // 정산 기간 계산 (결제 승인일이 속한 주의 월요일~일요일)
         LocalDate paymentDate = payment.getApprovedAt() != null 
                 ? payment.getApprovedAt().toLocalDate() 
                 : LocalDate.now();
-        String settlementPeriod = paymentDate.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        
+        // 결제일이 속한 주의 월요일 찾기
+        DayOfWeek paymentDayOfWeek = paymentDate.getDayOfWeek();
+        int daysToSubtract = paymentDayOfWeek.getValue() == 1 ? 0 : paymentDayOfWeek.getValue() - 1;
+        LocalDate weekMonday = paymentDate.minusDays(daysToSubtract);
+        LocalDate weekSunday = weekMonday.plusDays(6);
+        
+        // 정산 기간 형식: "2024-01-01~2024-01-07"
+        String settlementPeriod = weekMonday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + 
+                                  "~" + 
+                                  weekSunday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 
         log.info("정산 처리 - creatorId: {}, settlementPeriod: {}, paymentAmount: {}", 
                 creatorId, settlementPeriod, payment.getAmount());
@@ -419,11 +440,22 @@ public class SettlementService {
 
         // OrderType이 SUBSCRIPTION인 경우
         if (order.getOrderType() == OrderType.SUBSCRIPTION) {
+            // 먼저 subscription이 연결되어 있는지 확인
             if (order.getSubscription() != null) {
                 Long channelId = order.getSubscription().getChannelId();
                 Channel channel = channelRepository.findById(channelId).orElse(null);
                 if (channel != null) {
                     return channel.getCreatorId();
+                }
+            }
+            // subscription이 아직 연결되지 않은 경우 planId를 통해 조회
+            if (order.getPlanId() != null) {
+                SubscriptionPlan plan = subscriptionPlanRepository.findById(order.getPlanId()).orElse(null);
+                if (plan != null) {
+                    Channel channel = channelRepository.findById(plan.getChannelId()).orElse(null);
+                    if (channel != null) {
+                        return channel.getCreatorId();
+                    }
                 }
             }
         }
@@ -436,6 +468,117 @@ public class SettlementService {
         }
 
         return null;
+    }
+
+    /**
+     * 결제 취소 시 정산 처리
+     * - 정산 처리 전 취소: SettlementDetail 삭제, Settlement 금액 차감
+     * - 정산 처리 후 취소: 다음 주차 정산 금액에서 차감
+     * @param payment 취소된 결제
+     */
+    @Transactional
+    public void handleCancelledPayment(Payment payment) {
+        log.info("결제 취소로 인한 정산 처리 시작 - paymentId: {}", payment.getId());
+
+        // 해당 결제가 포함된 정산 상세 내역 조회
+        List<SettlementDetail> settlementDetails = settlementDetailRepository.findByPaymentId(payment.getId());
+
+        if (settlementDetails.isEmpty()) {
+            log.info("결제 ID {}에 대한 정산 상세 내역이 없습니다. 정산 조정이 필요하지 않습니다.", payment.getId());
+            return;
+        }
+
+        log.info("결제 ID {}에 대한 정산 상세 내역 수: {}건", payment.getId(), settlementDetails.size());
+
+        // 각 정산 상세 내역에 대해 정산 금액 조정
+        for (SettlementDetail detail : settlementDetails) {
+            Settlement settlement = detail.getSettlement();
+            Long cancelledAmount = detail.getAmount();
+
+            log.info("정산 금액 조정 - Settlement ID: {}, 상태: {}, 취소 금액: {}", 
+                    settlement.getId(), settlement.getStatus(), cancelledAmount);
+
+            // 정산 상태에 따라 처리 분기
+            if (settlement.getStatus() == SettlementStatus.COMPLETED) {
+                // 정산 처리 후 취소: 다음 주차 정산 금액에서 차감
+                handlePostSettlementCancellation(settlement, cancelledAmount, payment);
+            } else {
+                // 정산 처리 전 취소: SettlementDetail 삭제, Settlement 금액 차감
+                settlement.subtractSalesAmount(cancelledAmount);
+                settlementRepository.save(settlement);
+                log.info("정산 금액 차감 완료 - Settlement ID: {}, 조정 후 총 매출: {}, 실 지급 금액: {}",
+                        settlement.getId(), settlement.getTotalSalesAmount(), settlement.getPayoutAmount());
+            }
+
+            // SettlementDetail 삭제
+            settlementDetailRepository.delete(detail);
+            log.info("정산 상세 내역 삭제 완료 - SettlementDetail ID: {}", detail.getId());
+        }
+
+        log.info("결제 취소로 인한 정산 처리 완료 - paymentId: {}", payment.getId());
+    }
+
+    /**
+     * 정산 처리 후 취소 시 다음 주차 정산 금액에서 차감
+     * @param completedSettlement 완료된 정산
+     * @param cancelledAmount 취소 금액
+     * @param payment 취소된 결제
+     */
+    private void handlePostSettlementCancellation(Settlement completedSettlement, Long cancelledAmount, Payment payment) {
+        log.info("정산 완료 후 취소 처리 시작 - Settlement ID: {}, 취소 금액: {}", 
+                completedSettlement.getId(), cancelledAmount);
+
+        // 결제 승인일 기준으로 다음 주차 계산
+        LocalDate paymentDate = payment.getApprovedAt() != null 
+                ? payment.getApprovedAt().toLocalDate() 
+                : LocalDate.now();
+        
+        // 결제일이 속한 주의 월요일 찾기
+        DayOfWeek paymentDayOfWeek = paymentDate.getDayOfWeek();
+        int daysToSubtract = paymentDayOfWeek.getValue() == 1 ? 0 : paymentDayOfWeek.getValue() - 1;
+        LocalDate weekMonday = paymentDate.minusDays(daysToSubtract);
+        
+        // 다음 주차 월요일
+        LocalDate nextWeekMonday = weekMonday.plusDays(7);
+        LocalDate nextWeekSunday = nextWeekMonday.plusDays(6);
+        
+        // 다음 주차 정산 기간 형식: "2024-01-08~2024-01-14"
+        String nextWeekPeriod = nextWeekMonday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + 
+                               "~" + 
+                               nextWeekSunday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        log.info("다음 주차 정산 기간: {}", nextWeekPeriod);
+
+        // 다음 주차 정산 조회 또는 생성
+        Long creatorId = completedSettlement.getCreator().getId();
+        java.util.Optional<Settlement> nextWeekSettlementOpt = settlementRepository
+                .findByCreatorIdAndSettlementPeriod(creatorId, nextWeekPeriod);
+
+        Settlement nextWeekSettlement;
+        if (nextWeekSettlementOpt.isPresent()) {
+            // 다음 주차 정산이 이미 존재하면 금액 차감
+            nextWeekSettlement = nextWeekSettlementOpt.get();
+            nextWeekSettlement.subtractSalesAmount(cancelledAmount);
+            settlementRepository.save(nextWeekSettlement);
+            log.info("다음 주차 정산 금액 차감 완료 - Settlement ID: {}, 차감 후 총 매출: {}, 실 지급 금액: {}",
+                    nextWeekSettlement.getId(), nextWeekSettlement.getTotalSalesAmount(), nextWeekSettlement.getPayoutAmount());
+        } else {
+            // 다음 주차 정산이 없으면 차감 금액을 반영하여 생성
+            // 음수 금액이 될 수 있으므로 0과 비교하여 최소값 보장
+            Creator creator = creatorRepository.findById(creatorId)
+                    .orElseThrow(() -> {
+                        log.error("크리에이터를 찾을 수 없습니다. creatorId: {}", creatorId);
+                        return new BusinessException(ErrorCode.CREATOR_NOT_FOUND);
+                    });
+            
+            // 차감 금액을 반영하여 다음 주차 정산 생성
+            // totalSalesAmount가 음수가 될 수 있지만, 다음 주차에 다른 결제가 있으면 자동으로 상쇄됨
+            Long initialAmount = -cancelledAmount;
+            nextWeekSettlement = Settlement.create(creator, nextWeekPeriod, initialAmount);
+            nextWeekSettlement = settlementRepository.save(nextWeekSettlement);
+            log.info("다음 주차 정산 생성 (차감 금액 반영) - Settlement ID: {}, 총 매출: {}, 실 지급 금액: {}",
+                    nextWeekSettlement.getId(), nextWeekSettlement.getTotalSalesAmount(), nextWeekSettlement.getPayoutAmount());
+        }
     }
 }
 

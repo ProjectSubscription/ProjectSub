@@ -93,12 +93,20 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     Long getTotalSettlementAmount();
 
     /**
-     * 정산 통계: 이번 달 정산 금액 합계
+     * 정산 통계: 이번 달 정산 금액 합계 (하위 호환성 유지)
      */
     @Query("SELECT COALESCE(SUM(s.payoutAmount), 0) FROM Settlement s " +
            "WHERE s.status = 'COMPLETED' " +
            "AND s.settlementPeriod = :thisMonth")
     Long getThisMonthSettlementAmount(@Param("thisMonth") String thisMonth);
+
+    /**
+     * 정산 통계: 이번 주 정산 금액 합계
+     */
+    @Query("SELECT COALESCE(SUM(s.payoutAmount), 0) FROM Settlement s " +
+           "WHERE s.status = 'COMPLETED' " +
+           "AND s.settlementPeriod = :thisWeekPeriod")
+    Long getThisWeekSettlementAmount(@Param("thisWeekPeriod") String thisWeekPeriod);
 
     /**
      * 정산 통계: 상태별 건수

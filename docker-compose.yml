@@ -14,6 +14,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - ./mysql-data:/var/lib/mysql
+      - ./init-batch-tables.sql:/docker-entrypoint-initdb.d/01-init-batch-tables.sql
     networks:
       - app-network
     command:

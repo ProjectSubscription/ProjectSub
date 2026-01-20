@@ -84,10 +84,14 @@ public class SettlementPayoutService {
             // 재시도 횟수 증가
             settlement.incrementRetryCount();
             
+            // 실패 시 즉시 FAILED 상태로 변경 (재시도 스케줄러에서 처리)
             // 최대 재시도 횟수 초과 시 영구 실패 처리
             if (settlement.isMaxRetryExceeded(maxRetryCount)) {
                 log.error("최대 재시도 횟수 초과 - Settlement ID: {}, Creator ID: {}", 
                         settlement.getId(), creator.getId());
+                settlement.markFailed();
+            } else {
+                // 재시도 가능한 경우 FAILED 상태로 변경하여 재시도 스케줄러에서 처리
                 settlement.markFailed();
             }
             
@@ -130,16 +134,25 @@ public class SettlementPayoutService {
                 Creator creator = creatorRepository.findById(settlement.getCreator().getId())
                         .orElseThrow(() -> new RuntimeException("Creator를 찾을 수 없습니다: " + settlement.getCreator().getId()));
                 
-                log.info("정산 재시도 시작 - Settlement ID: {}, Creator ID: {}, 재시도 횟수: {}", 
-                        settlement.getId(), creator.getId(), settlement.getRetryCount() + 1);
+                log.info("정산 재시도 시작 - Settlement ID: {}, Creator ID: {}, 재시도 횟수: {}/{}", 
+                        settlement.getId(), creator.getId(), settlement.getRetryCount() + 1, maxRetryCount);
+                
+                // 재시도 전 상태를 READY로 변경 (processPayout에서 처리 가능하도록)
+                if (settlement.getStatus() == SettlementStatus.FAILED) {
+                    settlement.markReady();
+                }
                 
                 // 지급 재시도
                 boolean success = processPayout(settlement, creator);
                 
                 if (success) {
                     successCount++;
+                    log.info("정산 재시도 성공 - Settlement ID: {}, Creator ID: {}", 
+                            settlement.getId(), creator.getId());
                 } else {
                     failCount++;
+                    log.warn("정산 재시도 실패 - Settlement ID: {}, Creator ID: {}, 재시도 횟수: {}/{}", 
+                            settlement.getId(), creator.getId(), settlement.getRetryCount(), maxRetryCount);
                 }
             } catch (Exception e) {
                 log.error("정산 재시도 중 오류 발생 - Settlement ID: {}", settlement.getId(), e);

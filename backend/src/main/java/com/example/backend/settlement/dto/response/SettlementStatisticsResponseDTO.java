@@ -11,7 +11,7 @@ import lombok.Getter;
 public class SettlementStatisticsResponseDTO {
 
     private Long totalSettlementAmount; // 전체 정산 금액
-    private Long thisMonthSettlementAmount; // 이번 달 정산 금액
+    private Long thisWeekSettlementAmount; // 이번 주 정산 금액
     private Long readyCount; // 대기중 건수
     private Long completedCount; // 완료 건수
     private Long failedCount; // 실패 건수
@@ -19,7 +19,7 @@ public class SettlementStatisticsResponseDTO {
 
     public static SettlementStatisticsResponseDTO create(
             Long totalSettlementAmount,
-            Long thisMonthSettlementAmount,
+            Long thisWeekSettlementAmount,
             Long readyCount,
             Long completedCount,
             Long failedCount,
@@ -27,7 +27,7 @@ public class SettlementStatisticsResponseDTO {
     ) {
         return SettlementStatisticsResponseDTO.builder()
                 .totalSettlementAmount(totalSettlementAmount)
-                .thisMonthSettlementAmount(thisMonthSettlementAmount)
+                .thisWeekSettlementAmount(thisWeekSettlementAmount)
                 .readyCount(readyCount)
                 .completedCount(completedCount)
                 .failedCount(failedCount)

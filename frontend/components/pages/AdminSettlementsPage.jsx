@@ -109,7 +109,7 @@ export default function AdminSettlementsPage() {
       if (err.response?.status === 403 || err.status === 403) {
         setError('관리자 권한이 필요합니다.');
         alert('관리자만 접근할 수 있는 페이지입니다.');
-        router.push('/');
+        router.push('/home');
         return;
       }
       setError(err.message || '데이터를 불러오는 중 오류가 발생했습니다.');
@@ -199,6 +199,37 @@ export default function AdminSettlementsPage() {
     });
   };
 
+  const formatSettlementPeriod = (period) => {
+    if (!period) return '-';
+    
+    // 주간 형식: "2024-01-01~2024-01-07"
+    if (period.includes('~')) {
+      const [startDate, endDate] = period.split('~');
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      
+      const startMonth = start.toLocaleDateString('ko-KR', { month: 'long' });
+      const startDay = start.getDate();
+      const endMonth = end.toLocaleDateString('ko-KR', { month: 'long' });
+      const endDay = end.getDate();
+      
+      // 같은 달이면 "2024년 1월 1일~7일", 다른 달이면 "2024년 12월 31일~1월 6일"
+      if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+        return `${start.getFullYear()}년 ${startMonth} ${startDay}일~${endDay}일`;
+      } else {
+        return `${start.getFullYear()}년 ${startMonth} ${startDay}일~${end.getFullYear()}년 ${endMonth} ${endDay}일`;
+      }
+    }
+    
+    // 기존 월별 형식 (하위 호환성): "2024-01"
+    if (period.match(/^\d{4}-\d{2}$/)) {
+      const [year, month] = period.split('-');
+      return `${year}년 ${parseInt(month)}월`;
+    }
+    
+    return period;
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       READY: { label: '대기중', color: 'bg-gray-100 text-gray-700', icon: Clock },
@@ -281,9 +312,9 @@ export default function AdminSettlementsPage() {
             <div className="flex items-center justify-between mb-2">
               <TrendingUp className="w-8 h-8 text-green-600" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">이번 달 정산</p>
+            <p className="text-sm text-gray-600 mb-1">이번 주 정산</p>
             <p className="text-2xl font-bold text-gray-900">
-              {formatCurrency(statistics.thisMonthSettlementAmount)}
+              {formatCurrency(statistics.thisWeekSettlementAmount)}
             </p>
           </div>
           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
@@ -347,7 +378,7 @@ export default function AdminSettlementsPage() {
               type="text"
               value={filters.settlementPeriod}
               onChange={(e) => handleFilterChange('settlementPeriod', e.target.value)}
-              placeholder="YYYY-MM (예: 2024-12)"
+              placeholder="YYYY-MM-DD~YYYY-MM-DD (예: 2024-01-01~2024-01-07)"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400"
             />
           </div>
@@ -403,7 +434,7 @@ export default function AdminSettlementsPage() {
                       <div className="flex items-center gap-3 mb-2">
                         <Calendar className="w-5 h-5 text-gray-400" />
                         <h3 className="text-xl font-bold text-gray-900">
-                          {settlement.settlementPeriod} 정산
+                          {formatSettlementPeriod(settlement.settlementPeriod)} 정산
                         </h3>
                       </div>
                       <p className="text-sm text-gray-600 ml-8">
@@ -492,7 +523,7 @@ export default function AdminSettlementsPage() {
         {/* 정산 상세 정보 */}
         <div className="lg:col-span-1">
           {selectedSettlement ? (
-            <div className="bg-white rounded-xl p-6 shadow-sm sticky top-6">
+            <div className="bg-white rounded-xl p-6 shadow-sm sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto">
               <h3 className="text-lg font-bold text-gray-900 mb-4">정산 상세</h3>
               
               <div className="space-y-4">
@@ -505,7 +536,7 @@ export default function AdminSettlementsPage() {
 
                 <div>
                   <p className="text-sm text-gray-600 mb-1">정산 기간</p>
-                  <p className="font-medium text-gray-900">{selectedSettlement.settlementPeriod}</p>
+                  <p className="font-medium text-gray-900">{formatSettlementPeriod(selectedSettlement.settlementPeriod)}</p>
                 </div>
 
                 <div>

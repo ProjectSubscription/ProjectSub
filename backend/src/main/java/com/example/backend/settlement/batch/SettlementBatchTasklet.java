@@ -8,6 +8,8 @@ import com.example.backend.order.entity.OrderType;
 import com.example.backend.payment.entity.Payment;
 import com.example.backend.payment.entity.PaymentStatus;
 import com.example.backend.payment.repository.PaymentRepository;
+import com.example.backend.subscription.entity.SubscriptionPlan;
+import com.example.backend.subscription.repository.SubscriptionPlanRepository;
 import com.example.backend.settlement.entity.Settlement;
 import com.example.backend.settlement.entity.SettlementDetail;
 import com.example.backend.settlement.entity.SettlementStatus;
@@ -24,6 +26,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -44,23 +47,35 @@ public class SettlementBatchTasklet implements Tasklet {
     private final SettlementDetailRepository settlementDetailRepository;
     private final EntityManager entityManager;
     private final SettlementPayoutService settlementPayoutService;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     @Override
     @Transactional
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
         log.info("정산 배치 시작");
 
-        // 전월 1일 00:00:00 ~ 전월 말일 23:59:59 계산
+        // 전주 월요일 00:00:00 ~ 일요일 23:59:59 계산
         LocalDate today = LocalDate.now();
-        LocalDate lastMonthFirstDay = today.minusMonths(1).withDayOfMonth(1);
-        LocalDate lastMonthLastDay = today.minusMonths(1).withDayOfMonth(today.minusMonths(1).lengthOfMonth());
         
-        LocalDateTime startDateTime = lastMonthFirstDay.atStartOfDay();
-        LocalDateTime endDateTime = lastMonthLastDay.atTime(23, 59, 59);
+        // 오늘 기준으로 전주 월요일 찾기
+        // 오늘이 월요일이면 지난주 월요일, 그 외에는 이번 주 월요일에서 7일 빼기
+        LocalDate lastWeekMonday;
+        DayOfWeek todayDayOfWeek = today.getDayOfWeek();
+        int daysToSubtract = todayDayOfWeek.getValue() == 1 ? 7 : todayDayOfWeek.getValue() - 1 + 7;
+        lastWeekMonday = today.minusDays(daysToSubtract);
         
-        String settlementPeriod = lastMonthFirstDay.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+        // 전주 일요일 (월요일 + 6일)
+        LocalDate lastWeekSunday = lastWeekMonday.plusDays(6);
         
-        log.info("정산 기간: {} ~ {} ({}월)", startDateTime, endDateTime, settlementPeriod);
+        LocalDateTime startDateTime = lastWeekMonday.atStartOfDay();
+        LocalDateTime endDateTime = lastWeekSunday.atTime(23, 59, 59, 999999999);
+        
+        // 정산 기간 형식: "2024-01-01~2024-01-07"
+        String settlementPeriod = lastWeekMonday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")) + 
+                                  "~" + 
+                                  lastWeekSunday.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        
+        log.info("정산 기간: {} ~ {} ({}주)", startDateTime, endDateTime, settlementPeriod);
 
         // 전월 PAID 결제 내역 조회 (Creator별로 그룹화) - PaymentRepository를 통해 직접 접근
         List<Payment> paidPayments = paymentRepository.findPaidPaymentsInPeriod(
@@ -124,7 +139,7 @@ public class SettlementBatchTasklet implements Tasklet {
                 
                 // READY 상태인 정산은 지급 처리 수행
                 if (existingSettlement.getStatus() == SettlementStatus.READY) {
-                    log.info("Creator ID {}의 {}월 정산이 READY 상태입니다. 지급 처리를 수행합니다.", creatorId, settlementPeriod);
+                    log.info("Creator ID {}의 {}주 정산이 READY 상태입니다. 지급 처리를 수행합니다.", creatorId, settlementPeriod);
                     Creator creator = creatorRepository.findById(creatorId)
                             .orElseThrow(() -> new RuntimeException("Creator를 찾을 수 없습니다: " + creatorId));
                     
@@ -132,7 +147,7 @@ public class SettlementBatchTasklet implements Tasklet {
                     if (!payoutSuccess) {
                         log.warn("Creator ID {}의 정산금 지급 실패 - 재시도 스케줄러에서 자동 재시도됩니다.", creatorId);
                     } else {
-                        log.info("Creator ID {}의 {}월 정산 지급 처리 완료", creatorId, settlementPeriod);
+                        log.info("Creator ID {}의 {}주 정산 지급 처리 완료", creatorId, settlementPeriod);
                         settlementCount++;
                     }
                     
@@ -142,7 +157,7 @@ public class SettlementBatchTasklet implements Tasklet {
                     continue;
                 } else {
                     skippedCount++;
-                    log.info("Creator ID {}의 {}월 정산이 이미 존재하며 상태는 {}입니다. 스킵합니다.", 
+                    log.info("Creator ID {}의 {}주 정산이 이미 존재하며 상태는 {}입니다. 스킵합니다.", 
                             creatorId, settlementPeriod, existingSettlement.getStatus());
                     continue;
                 }
@@ -176,7 +191,7 @@ public class SettlementBatchTasklet implements Tasklet {
 
             settlementDetailRepository.saveAll(settlementDetails);
 
-            log.info("Creator ID {}의 {}월 정산 완료: 총 매출 {}, 실 지급 금액 {}", 
+            log.info("Creator ID {}의 {}주 정산 완료: 총 매출 {}, 실 지급 금액 {}", 
                     creatorId, settlementPeriod, totalSalesAmount, settlement.getPayoutAmount());
             
             // 정산 후처리: 계좌 지급 처리
@@ -219,11 +234,22 @@ public class SettlementBatchTasklet implements Tasklet {
         
         // OrderType이 SUBSCRIPTION인 경우
         if (order.getOrderType() == OrderType.SUBSCRIPTION) {
+            // 먼저 subscription이 연결되어 있는지 확인
             if (order.getSubscription() != null) {
                 Long channelId = order.getSubscription().getChannelId();
                 Channel channel = channelRepository.findById(channelId).orElse(null);
                 if (channel != null) {
                     return channel.getCreatorId();
+                }
+            }
+            // subscription이 아직 연결되지 않은 경우 planId를 통해 조회
+            if (order.getPlanId() != null) {
+                SubscriptionPlan plan = subscriptionPlanRepository.findById(order.getPlanId()).orElse(null);
+                if (plan != null) {
+                    Channel channel = channelRepository.findById(plan.getChannelId()).orElse(null);
+                    if (channel != null) {
+                        return channel.getCreatorId();
+                    }
                 }
             }
         }
