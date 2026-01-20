@@ -20,6 +20,8 @@ public class OrderListResponseDTO {
     private OrderType orderType;
     private String orderName; // 콘텐츠 제목 또는 구독 플랜명
     private Long contentId; // CONTENT 타입일 때 콘텐츠 ID
+    private Long planId; // SUBSCRIPTION 타입일 때 구독 플랜 ID
+    private Long subscriptionId; // 결제 완료 후 생성된 구독 ID
     private Long originalAmount;
     private Long discountAmount;
     private OrderStatus status;
@@ -36,12 +38,24 @@ public class OrderListResponseDTO {
             }
         }
         
+        // subscriptionId는 subscription 엔티티에서 가져오기
+        Long subscriptionIdValue = null;
+        if (order.getSubscription() != null) {
+            try {
+                subscriptionIdValue = order.getSubscription().getId();
+            } catch (Exception e) {
+                // LAZY 로딩 실패 시 무시
+            }
+        }
+        
         return OrderListResponseDTO.builder()
                 .id(order.getId())
                 .orderCode(order.getOrderCode())
                 .orderType(order.getOrderType())
                 .orderName(orderName)
                 .contentId(contentIdValue)
+                .planId(order.getPlanId())
+                .subscriptionId(subscriptionIdValue)
                 .originalAmount(order.getOriginalAmount())
                 .discountAmount(order.getDiscountAmount())
                 .status(order.getStatus())
