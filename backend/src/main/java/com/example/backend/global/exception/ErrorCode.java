@@ -104,6 +104,7 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 해당 콘텐츠에 대한 리뷰를 작성했습니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
     REVIEW_ACCESS_DENIED(HttpStatus.FORBIDDEN, "리뷰를 작성하려면 해당 콘텐츠를 구매하거나 구독해야 합니다."),
+    REVIEW_HAS_COMMENTS(HttpStatus.BAD_REQUEST, "댓글이 있는 리뷰는 삭제할 수 없습니다."),
     CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "콘텐츠를 찾을 수 없습니다."),
 
     /* ===== Content Review Comment ===== */

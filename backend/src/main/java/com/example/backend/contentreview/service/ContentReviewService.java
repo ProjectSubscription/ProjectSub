@@ -10,6 +10,7 @@ import com.example.backend.contentreview.dto.response.ContentReviewResponseDto;
 import com.example.backend.contentreview.dto.response.TopReviewWithContentResponseDto;
 import com.example.backend.contentreview.repository.ContentReviewRepository;
 import com.example.backend.contentreview.repository.ContentReviewLikeRepository;
+import com.example.backend.contentreviewcomment.repository.ContentReviewCommentRepository;
 import com.example.backend.global.exception.BusinessException;
 import com.example.backend.global.exception.ErrorCode;
 import com.example.backend.member.entity.Member;
@@ -38,6 +39,7 @@ public class ContentReviewService {
 
     private final ContentReviewRepository contentReviewRepository;
     private final ContentReviewLikeRepository contentReviewLikeRepository;
+    private final ContentReviewCommentRepository contentReviewCommentRepository;
     private final MemberService memberService;
     private final ContentRepository contentRepository;
     private final OrderRepository orderRepository;
@@ -79,6 +81,12 @@ public class ContentReviewService {
     @Transactional
     public void deleteReview(Long reviewId) {
         ContentReview contentReview = findContentReviewById(reviewId);
+        
+        // 댓글이 있는 경우 삭제 불가
+        if (contentReviewCommentRepository.existsByContentReviewIdAndIsDeletedFalse(reviewId)) {
+            throw new BusinessException(ErrorCode.REVIEW_HAS_COMMENTS);
+        }
+        
         contentReview.changeDeleteStatus();
     }
 

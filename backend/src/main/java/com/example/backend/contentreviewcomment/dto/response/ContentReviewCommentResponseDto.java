@@ -17,6 +17,7 @@ public class ContentReviewCommentResponseDto {
     private String nickname;
     private Long parentId;
     private String comment;
+    private Boolean isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<ContentReviewCommentResponseDto> children = new ArrayList<>();
@@ -36,6 +37,7 @@ public class ContentReviewCommentResponseDto {
                 : comment.getMember().getNickname();
         this.parentId = comment.getParent() != null ? comment.getParent().getId() : null;
         this.comment = comment.getComment();
+        this.isDeleted = comment.isDeleted();
         this.createdAt = comment.getCreatedAt();
         this.updatedAt = comment.getUpdatedAt();
         this.children = comment.getChildren().stream()
@@ -57,6 +59,7 @@ public class ContentReviewCommentResponseDto {
                 : member.getNickname();
         this.parentId = comment.getParent() != null ? comment.getParent().getId() : null;
         this.comment = comment.getComment();
+        this.isDeleted = comment.isDeleted();
         this.createdAt = comment.getCreatedAt();
         this.updatedAt = comment.getUpdatedAt();
         // 자식 댓글도 Member를 별도로 조회해야 하므로, Service에서 처리하도록 수정 필요
