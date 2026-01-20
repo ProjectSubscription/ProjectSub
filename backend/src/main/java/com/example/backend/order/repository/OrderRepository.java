@@ -37,5 +37,25 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("orderType") OrderType orderType,
             @Param("status") OrderStatus status
     );
+
+    // 구독으로 주문 조회
+    @Query("SELECT o FROM Order o WHERE o.subscription.id = :subscriptionId")
+    Optional<Order> findBySubscriptionId(@Param("subscriptionId") Long subscriptionId);
+
+    // 구독 플랜 ID와 회원 ID로 3일 이내 Paid 상태인 주문 조회
+    @Query("SELECT o FROM Order o WHERE o.planId = :planId " +
+           "AND o.member.id = :memberId " +
+           "AND o.orderType = :orderType " +
+           "AND o.status = :status " +
+           "AND o.createdAt >= :startDate " +
+           "AND o.createdAt <= :endDate")
+    Optional<Order> findByPlanIdAndMemberIdAndOrderTypeAndStatusAndCreatedAtBetween(
+            @Param("planId") Long planId,
+            @Param("memberId") Long memberId,
+            @Param("orderType") OrderType orderType,
+            @Param("status") OrderStatus status,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
 }
 

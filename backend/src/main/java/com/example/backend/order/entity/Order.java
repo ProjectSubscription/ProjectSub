@@ -49,7 +49,7 @@ public class Order {
     private Long originalAmount;
     private Long discountAmount;
 
-    // 쿠폰 사용 시 member_coupons 테이블의 ID
+    // 쿠폰 ID (member_coupons 테이블의 ID)
     private Long memberCouponId;
 
     @Enumerated(EnumType.STRING)
@@ -111,6 +111,10 @@ public class Order {
 
     public void markPaid() {
         this.status = OrderStatus.PAID;
+    }
+
+    public void markCancelled() {
+        this.status = OrderStatus.CANCELLED;
     }
 
     /**
