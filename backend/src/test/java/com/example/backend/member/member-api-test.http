@@ -1,0 +1,496 @@
+### Member TEST API 테스트 (인증 없이 테스트)
+### ⚠️ 이 파일은 개발/테스트 전용입니다!
+### 서버 설정
+@baseUrl = http://localhost:8080
+@testUrl = {{baseUrl}}/api/members
+@contentType = application/json
+
+###############################################
+# 1. 일반 회원가입 테스트
+###############################################
+
+### 1-1. 일반 회원가입 (성공)
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "password1234",
+  "nickname": "테스트유저",
+  "birthYear": 1995,
+  "gender": "MALE"
+}
+
+### 1-2. 회원가입 실패 - 이메일 중복
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "password1234",
+  "nickname": "다른닉네임",
+  "birthYear": 1995,
+  "gender": "FEMALE"
+}
+
+### 1-3. 회원가입 실패 - 닉네임 중복
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "another@example.com",
+  "password": "password1234",
+  "nickname": "테스트유저",
+  "birthYear": 1995,
+  "gender": "MALE"
+}
+
+### 1-4. 회원가입 실패 - 이메일 형식 오류
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "invalid-email",
+  "password": "password1234",
+  "nickname": "유저3",
+  "birthYear": 1995,
+  "gender": "MALE"
+}
+
+### 1-5. 회원가입 실패 - 비밀번호 짧음
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "user4@example.com",
+  "password": "short",
+  "nickname": "유저4",
+  "birthYear": 1995,
+  "gender": "FEMALE"
+}
+
+###############################################
+# 2. OAuth 회원가입 테스트 (2단계)
+###############################################
+
+### 2-1. OAuth 임시 가입 - 이메일 제공됨 (카카오)
+POST {{testUrl}}/oauth/register?provider=KAKAO&providerUserId=kakao123456&email=kakao@example.com
+
+### 2-2. OAuth 임시 가입 - 이메일 없음 (네이버)
+POST {{testUrl}}/oauth/register?provider=NAVER&providerUserId=naver789012
+
+### 2-2-1. OAuth 임시 가입 - 이메일 없음 (라인, 2-5 테스트용)
+POST {{testUrl}}/oauth/register?provider=LINE&providerUserId=line888
+
+### 2-2-2. OAuth 임시 가입 - 이메일 있음 (트위터, 2-6 테스트용)
+POST {{testUrl}}/oauth/register?provider=TWITTER&providerUserId=twitter999&email=twitter@example.com
+
+### 📌 여기서 전체 조회로 memberId 확인하세요!
+### 3-3. 전체 회원 조회 (ID 확인용)
+GET {{testUrl}}
+Accept: {{contentType}}
+
+### 2-3. OAuth 프로필 완성 (성공) - memberId=2 (이메일 있는 경우)
+# ⚠️ 위 조회에서 확인한 실제 ID로 변경하세요
+POST {{testUrl}}/2/complete-profile
+Content-Type: {{contentType}}
+
+{
+  "nickname": "카카오유저",
+  "gender": "FEMALE",
+  "birthYear": 1995
+}
+
+### 2-4. OAuth 프로필 완성 (성공) - memberId=3 (이메일 없는 경우)
+# ⚠️ 위 조회에서 확인한 실제 ID로 변경하세요
+POST {{testUrl}}/3/complete-profile
+Content-Type: {{contentType}}
+
+{
+  "nickname": "네이버유저",
+  "gender": "MALE",
+  "email": "naver-email@example.com",
+  "birthYear": 1992
+}
+
+### 2-5. OAuth 프로필 완성 실패 - 이메일 필수인데 없음
+# ⚠️ memberId=4 (LINE 유저, 이메일 없음)
+POST {{testUrl}}/4/complete-profile
+Content-Type: {{contentType}}
+
+{
+  "nickname": "라인유저",
+  "gender": "MALE",
+  "birthYear": 1992
+}
+
+### 2-6. OAuth 프로필 완성 실패 - 닉네임 중복
+# ⚠️ memberId=5 (TWITTER 유저, 아직 프로필 완성 안 함)
+POST {{testUrl}}/5/complete-profile
+Content-Type: {{contentType}}
+
+{
+  "nickname": "테스트유저",
+  "gender": "FEMALE",
+  "birthYear": 1995
+}
+
+### 2-7. OAuth 프로필 완성 실패 - 이미 완료됨
+# ⚠️ memberId=2 (이미 2-3에서 완성함)
+POST {{testUrl}}/2/complete-profile
+Content-Type: {{contentType}}
+
+{
+  "nickname": "새로운닉네임",
+  "gender": "FEMALE",
+  "birthYear": 1995
+}
+
+### 2-8. OAuth 프로필 완성 실패 - OAuth 회원이 아님 (일반 회원)
+# ⚠️ memberId=1 (일반 회원)
+POST {{testUrl}}/1/complete-profile
+Content-Type: {{contentType}}
+
+{
+  "nickname": "새닉네임",
+  "gender": "MALE",
+  "birthYear": 1990
+}
+
+###############################################
+# 3. 회원 조회 테스트
+###############################################
+
+### 3-1. 단건 조회 (성공) - memberId=1
+GET {{testUrl}}/1
+Accept: {{contentType}}
+
+### 3-2. 단건 조회 - 존재하지 않는 회원
+GET {{testUrl}}/999
+Accept: {{contentType}}
+
+### 3-3. 전체 회원 조회 (성공)
+GET {{testUrl}}
+Accept: {{contentType}}
+
+###############################################
+# 4. 비밀번호 변경 테스트
+###############################################
+
+### 4-1. 비밀번호 변경 (성공) - memberId=1
+PATCH {{testUrl}}/1/password
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "password1234",
+  "newPassword": "newPassword5678"
+}
+
+### 4-2. 비밀번호 변경 실패 - 현재 비밀번호 불일치
+PATCH {{testUrl}}/1/password
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "wrongPassword",
+  "newPassword": "newPassword5678"
+}
+
+### 4-3. 비밀번호 변경 실패 - 기존 비밀번호와 동일
+# ⚠️ 4-1이 성공해야 이 테스트가 제대로 동작함
+PATCH {{testUrl}}/1/password
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "newPassword5678",
+  "newPassword": "newPassword5678"
+}
+
+### 4-4. 비밀번호 변경 실패 - OAuth 회원 (memberId=2)
+PATCH {{testUrl}}/2/password
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "anypassword",
+  "newPassword": "newPassword1234"
+}
+
+### 4-5. 비밀번호 변경 실패 - 짧은 비밀번호
+PATCH {{testUrl}}/1/password
+Content-Type: {{contentType}}
+
+{
+  "currentPassword": "newPassword5678",
+  "newPassword": "short"
+}
+
+###############################################
+# 5. 닉네임 변경 테스트
+###############################################
+
+### 5-1. 닉네임 변경 (성공) - memberId=1
+PATCH {{testUrl}}/1/nickname
+Content-Type: {{contentType}}
+
+{
+  "newNickname": "변경된닉네임"
+}
+
+### 5-2. 닉네임 변경 실패 - 기존 닉네임과 동일
+# ⚠️ 5-1이 성공해야 이 테스트가 제대로 동작함
+PATCH {{testUrl}}/1/nickname
+Content-Type: {{contentType}}
+
+{
+  "newNickname": "변경된닉네임"
+}
+
+### 5-3. 닉네임 변경 실패 - 이미 사용 중인 닉네임
+PATCH {{testUrl}}/1/nickname
+Content-Type: {{contentType}}
+
+{
+  "newNickname": "카카오유저"
+}
+
+### 5-4. 닉네임 변경 실패 - 빈 문자열
+PATCH {{testUrl}}/1/nickname
+Content-Type: {{contentType}}
+
+{
+  "newNickname": ""
+}
+
+###############################################
+# 6. 생년 입력 테스트
+###############################################
+
+### 6-1. OAuth 회원가입 (생년 없이)
+POST {{testUrl}}/oauth/register?provider=GOOGLE&providerUserId=google111&email=google@example.com
+
+### 6-2. OAuth 프로필 완성 (생년 없이)
+# ⚠️ memberId는 전체 조회로 확인 (아마 6번일 거예요)
+POST {{testUrl}}/6/complete-profile
+Content-Type: {{contentType}}
+
+{
+  "nickname": "구글유저",
+  "gender": "MALE"
+}
+
+### 6-3. 생년 최초 입력 (성공) - memberId=6
+PATCH {{testUrl}}/6/birthyear
+Content-Type: {{contentType}}
+
+{
+  "birthYear": 1992
+}
+
+### 6-4. 생년 입력 실패 - 이미 입력됨
+# ⚠️ 6-3이 성공해야 이 테스트가 제대로 동작함
+PATCH {{testUrl}}/6/birthyear
+Content-Type: {{contentType}}
+
+{
+  "birthYear": 1993
+}
+
+### 6-5. 생년 입력 실패 - 잘못된 범위 (너무 옛날)
+PATCH {{testUrl}}/6/birthyear
+Content-Type: {{contentType}}
+
+{
+  "birthYear": 1800
+}
+
+### 6-6. 생년 입력 실패 - 미래 연도
+PATCH {{testUrl}}/6/birthyear
+Content-Type: {{contentType}}
+
+{
+  "birthYear": 2030
+}
+
+###############################################
+# 7. 회원 탈퇴 테스트
+###############################################
+
+### 7-1. 회원 탈퇴 (성공) - memberId=1
+DELETE {{testUrl}}/1
+
+### 7-2. 회원 탈퇴 실패 - 이미 탈퇴함
+DELETE {{testUrl}}/1
+
+### 7-3. 탈퇴한 회원 조회 - 조회 안 됨 (@SQLRestriction)
+GET {{testUrl}}/1
+Accept: {{contentType}}
+
+### 7-4. 탈퇴한 회원은 전체 조회에도 안 나옴
+GET {{testUrl}}
+Accept: {{contentType}}
+
+###############################################
+# 8. 통합 시나리오 테스트
+###############################################
+
+### 시나리오 1: 일반 회원 전체 플로우
+# 1) 회원가입
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "scenario1@example.com",
+  "password": "password1234",
+  "nickname": "시나리오유저1",
+  "gender": "MALE"
+}
+
+# 2) 회원 조회 (memberId 확인)
+# GET {{testUrl}}/7
+
+# 3) 생년 입력
+# PATCH {{testUrl}}/7/birthyear
+# { "birthYear": 1995 }
+
+# 4) 비밀번호 변경
+# PATCH {{testUrl}}/7/password
+# { "currentPassword": "password1234", "newPassword": "newPass5678" }
+
+# 5) 닉네임 변경
+# PATCH {{testUrl}}/7/nickname
+# { "newNickname": "새로운닉네임" }
+
+# 6) 회원 탈퇴
+# DELETE {{testUrl}}/7
+
+### 시나리오 2: OAuth 회원 전체 플로우
+# 1) OAuth 임시 가입 (이메일 있음)
+POST {{testUrl}}/oauth/register?provider=KAKAO&providerUserId=scenario_kakao&email=scenario-kakao@example.com
+
+# 2) 회원 조회 (memberId 확인, profileCompleted=false 확인)
+# GET {{testUrl}}/8
+
+# 3) 프로필 완성
+# POST {{testUrl}}/8/complete-profile
+# {
+#   "nickname": "시나리오카카오",
+#   "gender": "FEMALE",
+#   "birthYear": 1990
+# }
+
+# 4) 회원 조회 (profileCompleted=true 확인)
+# GET {{testUrl}}/8
+
+# 5) 닉네임 변경
+# PATCH {{testUrl}}/8/nickname
+# { "newNickname": "변경된카카오" }
+
+# 6) 비밀번호 변경 시도 (실패 - OAuth 회원)
+# PATCH {{testUrl}}/8/password
+# { "currentPassword": "any", "newPassword": "newPass1234" }
+
+# 7) 회원 탈퇴
+# DELETE {{testUrl}}/8
+
+###############################################
+# 9. 에지 케이스 테스트
+###############################################
+
+### 9-1. Gender null 체크
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "edge1@example.com",
+  "password": "password1234",
+  "nickname": "에지케이스1"
+}
+
+### 9-2. 매우 긴 닉네임
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "edge2@example.com",
+  "password": "password1234",
+  "nickname": "이것은매우긴닉네임입니다정말정말긴닉네임이에요",
+  "gender": "MALE"
+}
+
+### 9-3. 특수문자 포함 닉네임
+POST {{testUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "edge3@example.com",
+  "password": "password1234",
+  "nickname": "닉네임!@#$",
+  "gender": "FEMALE"
+}
+
+###############################################
+# 참고사항
+###############################################
+
+# 1. 이 파일은 인증 없이 테스트하기 위한 목적입니다
+# 2. 실제 운영에서는 TestMemberController를 제거하거나 프로필로 비활성화해야 합니다
+# 3. 테스트 순서대로 실행하면 데이터 의존성 문제 발생 (DB 초기화 권장)
+# 4. memberId는 실제 생성된 ID로 변경해서 사용하세요
+# 5. OAuth 프로필 완성은 OAuth 임시 가입 후에만 가능합니다
+
+###############################################
+# 테스트 순서 추천 (순서 중요!)
+###############################################
+
+# ✅ 순서 1: 기본 생성 테스트
+# 1-1 (일반 회원가입)
+# 2-1, 2-2, 2-2-1, 2-2-2 (OAuth 임시 가입 4개)
+# 3-3 (전체 조회로 ID 확인!)  ← 중요!
+
+# ✅ 순서 2: OAuth 프로필 완성
+# 2-3 (카카오 - 이메일 있음)
+# 2-4 (네이버 - 이메일 없음, 입력)
+# 2-5 (라인 - 이메일 필수인데 없음, 실패)
+# 2-6 (트위터 - 닉네임 중복, 실패)
+# 2-7 (카카오 - 이미 완료, 실패)
+# 2-8 (일반 회원 - OAuth 아님, 실패)
+
+# ✅ 순서 3: 변경 기능 테스트 (순서대로!)
+# 4-1 (비밀번호 변경)
+# 4-3 (동일 비밀번호, 실패)
+# 5-1 (닉네임 변경)
+# 5-2 (동일 닉네임, 실패)
+# 6-1, 6-2, 6-3 (생년 입력)
+# 6-4 (이미 입력, 실패)
+
+# ✅ 순서 4: 실패 케이스
+# 1-2, 1-3, 1-4, 1-5 (가입 실패)
+# 4-2, 4-4, 4-5 (비밀번호 변경 실패)
+# 5-3, 5-4 (닉네임 변경 실패)
+# 6-5, 6-6 (생년 입력 실패)
+
+# ✅ 순서 5: 탈퇴 테스트 (마지막!)
+# 7-1, 7-2, 7-3, 7-4
+
+###############################################
+# 예상 memberId 매핑
+###############################################
+
+# memberId=1: 일반 회원 (test@example.com)
+# memberId=2: 카카오 (프로필 완성됨)
+# memberId=3: 네이버 (프로필 완성됨)
+# memberId=4: 라인 (프로필 미완성, 이메일 없음)
+# memberId=5: 트위터 (프로필 미완성, 이메일 있음)
+# memberId=6: 구글 (프로필 완성됨, 생년 테스트용)
+
+###############################################
+# 환경별 설정 (선택사항)
+###############################################
+
+### Local 환경
+# @baseUrl = http://localhost:8080
+
+### Dev 환경
+# @baseUrl = https://dev-api.example.com
+
+### Prod 환경 (⚠️ TestController는 Prod에 배포 금지!)
+# @baseUrl = https://api.example.com
