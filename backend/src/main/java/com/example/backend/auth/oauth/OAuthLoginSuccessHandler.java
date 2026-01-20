@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class OAuthLoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    @Value("${app.frontend-base-url:http://localhost:3000}")
+    @Value("${app.frontend-base-url:http://52.79.142.181:3000}")
     private String frontendBaseUrl;
     private final MemberService memberService;
     private final OAuthTempTokenService oAuthTempTokenService;
