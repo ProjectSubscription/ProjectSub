@@ -23,5 +23,13 @@ public interface SettlementDetailRepository extends JpaRepository<SettlementDeta
      * 정산과 결제로 상세 내역 존재 여부 확인 (중복 체크용)
      */
     boolean existsBySettlementIdAndPaymentId(Long settlementId, Long paymentId);
+
+    /**
+     * 결제 ID로 정산 상세 내역 조회
+     */
+    @Query("SELECT sd FROM SettlementDetail sd " +
+           "LEFT JOIN FETCH sd.settlement s " +
+           "WHERE sd.payment.id = :paymentId")
+    List<SettlementDetail> findByPaymentId(@Param("paymentId") Long paymentId);
 }
 

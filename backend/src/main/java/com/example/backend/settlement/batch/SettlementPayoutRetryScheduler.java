@@ -15,11 +15,11 @@ public class SettlementPayoutRetryScheduler {
 
 
     // 지급 실패 정산 재시도 스케줄러
-    // 30분마다 실행 (설정 가능)
+    // 5분마다 실행 (정산 실패 후 5분 간격으로 재시도)
     // cron 표현식: 초 분 시 일 월 요일
-    // "0 */30 * * * ?" = 30분마다 실행
+    // "0 */5 * * * ?" = 5분마다 실행
 
-    @Scheduled(cron = "0 */30 * * * ?")
+    @Scheduled(cron = "0 */5 * * * ?")
     public void retryFailedSettlements() {
         try {
             log.info("지급 실패 정산 재시도 스케줄러 실행");
