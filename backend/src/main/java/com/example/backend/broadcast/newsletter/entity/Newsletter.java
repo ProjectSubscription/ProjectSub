@@ -22,7 +22,7 @@ public class Newsletter {
     private String title;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String content;
 
     @Enumerated(value = EnumType.STRING)
